@@ -7,7 +7,7 @@ Below is a concise tech stack table tailored for **Phase 0** of the SynergyHub p
 | **Backend Core**         | Java (Spring Boot), Spring Security     | Main business logic, API endpoints, auth/RBAC    |
 | **Real-Time/Async**      | Go (Gin or Fiber), Kafka/RabbitMQ       | Lightweight services, event-driven comms         |
 | **API Gateway**          | Spring Cloud Gateway, Kong, or Traefik  | Routing, API security, rate limiting             |
-| **Database (Relational)**| PostgreSQL                              | User, project, and transactional data            |
+| **Database (Relational)**| MySQL, PostgreSQL                              | User, project, and transactional data            |
 | **Database (NoSQL/Cache)**| MongoDB, Redis                         | Unstructured data, caching tasks/sessions        |
 | **Web Frontend**         | React (w/ TypeScript) **or** Angular    | Single Page Application; choose for main module  |
 | **UI/Design Framework**  | Material-UI (React) / Angular Material / Ant Design | Unified look & feel                |

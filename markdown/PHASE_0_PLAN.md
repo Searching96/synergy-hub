@@ -5,6 +5,7 @@
 - **Clarify Key Use Cases**: Product backlog, sprint management (Agile/Scrum), task assignment, role management.
 - **Target Platform**: Web-first (desktop) application with future mobile (Flutter) expansion.
 - **Architecture Paradigm**: Modular microservices for easy expandability and team autonomy.
+- **Database Note:** MySQL will be used as the initial database for all services. PostgreSQL support will be added in a later phase to enable polyglot persistence and advanced features.
 - **Non-Functional Requirements**: Security, scalability, RESTful APIs, API-first design, modern DevOps practices.
 
 ## 2. Select and Justify Technology Stack

@@ -1,0 +1,22 @@
+# Java
+target/
+*.class
+*.jar
+*.war
+
+# Node
+node_modules/
+dist/
+build/
+
+# Python
+_pycache__/
+*._pycache__
+
+# Env
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
