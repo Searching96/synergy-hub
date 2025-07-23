@@ -19,16 +19,16 @@ services:
       retries: 5
 
   # Example for a backend service (uncomment and adjust as needed)
-  # user-auth-service:
-  #   build: ../../backend/user-auth-service
-  #   environment:
-  #     SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/synergy-hub
-  #     SPRING_DATASOURCE_USERNAME: root
-  #     SPRING_DATASOURCE_PASSWORD: user
-  #   depends_on:
-  #     - mysql
-  #   ports:
-  #     - "8080:8080"
+  user-auth-service:
+    build: ../../backend/user-auth-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/synergy-hub
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: user
+    depends_on:
+      - mysql
+    ports:
+      - "8080:8080"
 
 volumes:
   mysql_data:
