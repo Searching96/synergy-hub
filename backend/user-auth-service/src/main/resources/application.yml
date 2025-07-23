@@ -2,9 +2,6 @@ spring:
   application:
     name: user-auth-service
   datasource:
-    url: jdbc:mysql://localhost:3307/synergy-hub
-    username: user
-    password: user
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -13,3 +10,9 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
