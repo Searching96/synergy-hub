@@ -55,9 +55,6 @@ build.log
 *.iml
 *.ipr
 
-# NetBeans (already present)
-# VS Code (already present)
-
 # NetBeans
 /nbproject/private/
 /nbbuild/
