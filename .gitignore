@@ -50,6 +50,14 @@ build.log
 *.sln
 *.sw?
 
+# IntelliJ IDEA
+*.iws
+*.iml
+*.ipr
+
+# NetBeans (already present)
+# VS Code (already present)
+
 # NetBeans
 /nbproject/private/
 /nbbuild/
