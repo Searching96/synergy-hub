@@ -27,7 +27,8 @@ services:
       SPRING_SECURITY_USER_NAME: user
       SPRING_SECURITY_USER_PASSWORD: user
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     ports:
       - "8080:8080"
     healthcheck:
