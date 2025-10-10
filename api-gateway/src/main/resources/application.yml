@@ -14,7 +14,7 @@ spring:
           uri: http://user-auth-service:8080
           predicates:
             - Path=/login
-            - Method=POST
+            - Method=POST`
 
 server:
   port: 8081

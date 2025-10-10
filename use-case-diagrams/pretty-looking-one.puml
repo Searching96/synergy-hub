@@ -1,0 +1,180 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+' --- Actors ---
+actor "Organization Admin" as OA
+actor "Project Manager" as PM
+actor "Team Member" as TM
+'actor "Guest" as G
+'actor "Resource Manager" as RM
+'actor "External Calendar Provider" as ECal
+actor "Email/SMS Gateway" as Notif
+actor "SSO Provider" as SSO
+
+rectangle "Synergy Hub" {
+
+  ' ===================== Identity & Access =====================
+  package "Identity & Access" {
+    (Authenticate) as UC_Auth
+    (Log in) as UC_Login
+    (Register) as UC_Register
+    (Reset password) as UC_Reset
+    (Enable/Verify 2FA) as UC_2FA
+    (Single Sign-On) as UC_SSO
+    (Invite users) as UC_Invite
+    (Manage roles & permissions) as UC_RBAC
+    (Manage organization settings) as UC_OrgSettings
+  }
+
+  ' ===================== Projects & Scrum =====================
+  package "Projects & Scrum" {
+    (Create project) as UC_CreateProject
+    (Manage project settings/members) as UC_ProjectMembers
+    (Manage backlog) as UC_Backlog
+    (Manage Kanban board) as UC_Board
+    (Plan sprint) as UC_SprintPlan
+    (Start/Close sprint) as UC_SprintRun
+    (View project & tasks) as UC_View
+    (Manage tasks) as UC_Tasks
+    (Assign task) as UC_Assign
+    (Update task status) as UC_Status
+    (Comment on task) as UC_Comment
+    (Attach files) as UC_Attach
+    (Set dependencies/subtasks) as UC_Dep
+    (Participate in task) as UC_Participate
+  }
+
+  ' ===================== Resources & Scheduling =====================
+  'package "Resources & Scheduling" {
+  '  (Manage assets catalog) as UC_AssetCatalog
+  '  (Check availability) as UC_CheckAvail
+  '  (Book resource) as UC_Book
+  '  (Resolve booking conflict) as UC_Conflict
+  '  (Create calendar event) as UC_Event
+  '  (Invite & RSVP) as UC_RSVP
+  '  (Recurring events) as UC_Recurring
+  '  (Link events to projects/tasks) as UC_Link
+  '  (Sync external calendar) as UC_SyncCal
+  '}
+
+  ' ===================== Collaboration & Notifications =====================
+  package "Collaboration & Notifications" {
+    (Chat in Project/Task) as UC_Chat
+    '(Direct messages) as UC_DM
+    '(Mention & reactions) as UC_Mention
+    (Search conversations) as UC_SearchChat
+    (Share files in chat) as UC_ShareFile
+    (Receive notifications) as UC_Notify
+    '(Configure notification preferences) as UC_NotifyPref
+    (Send email/push) as UC_SendNotif
+  }
+
+  ' ===================== Automation & Reporting =====================
+  package "Automation & Reporting" {
+    (Define automation rules) as UC_Rules
+    (Configure webhooks) as UC_Webhooks
+    '(Schedule jobs/digests) as UC_Schedule
+    (View dashboards) as UC_Dashboard
+    (View burndown/velocity) as UC_Burndown
+    (Export/generate reports) as UC_Reports
+  }
+
+  ' --- Use-case relationships (include/extend) ---
+
+
+  UC_Tasks <.. UC_Assign   : <<extend>>
+  UC_Tasks <.. UC_Status   : <<extend>>
+  UC_Tasks <.. UC_Comment  : <<extend>>
+  UC_Tasks <.. UC_Attach   : <<extend>>
+  UC_Tasks <.. UC_Dep      : <<extend>>
+  
+  UC_Participate <.. UC_Status  : <<extend>>
+  UC_Participate <.. UC_Attach  : <<extend>>
+  UC_Participate <.. UC_Comment : <<extend
+
+  UC_Login ..> UC_Auth      : <<include>>
+  UC_Login <.. UC_Register  : <<extend>>
+  UC_Login <.. UC_Reset     : <<extend>>
+  UC_Login <.. UC_2FA       : <<extend>>
+  UC_Login <.. UC_SSO       : <<extend>>
+
+  'UC_Book  ..> UC_CheckAvail : <<include>>
+  'UC_Book  ..> UC_Conflict   : <<extend>>
+
+  'UC_Event ..> UC_RSVP     : <<include>>
+  'UC_Event ..> UC_Recurring : <<include>>
+  'UC_Event ..> UC_Link     : <<include>>
+
+  UC_Dashboard ..> UC_Burndown : <<include>>
+  'UC_Reports   ..> UC_Schedule : <<extend>>
+
+  UC_Notify ..> UC_SendNotif : <<include>>
+  'UC_Schedule ..> UC_SendNotif : <<include>>
+  UC_Rules ..> UC_Webhooks   : <<include>>
+
+  UC_SearchChat ..> UC_Chat : <<extend>>
+  UC_ShareFile ..> UC_Chat : <<extend>>
+  'UC_Mention ..> UC_Chat : <<extend>>
+  
+  'UC_ShareFile ..> UC_DM : <<extend>>
+  'UC_SearchChat ..> UC_DM : <<extend>>
+}
+
+' --- Actor to use-cases ---
+OA -- UC_Login
+PM -- UC_Login
+TM -- UC_Login
+'G  -- UC_Login
+'RM -- UC_Login
+
+OA -- UC_OrgSettings
+OA -- UC_Invite
+OA -- UC_RBAC
+OA -- UC_CreateProject
+'OA -- UC_AssetCatalog
+
+PM -- UC_CreateProject
+PM -- UC_ProjectMembers
+PM -- UC_Backlog
+PM -- UC_Board
+PM -- UC_SprintPlan
+PM -- UC_SprintRun
+PM -- UC_Tasks
+'PM -- UC_Event
+'PM -- UC_Book
+PM -- UC_Rules
+PM -- UC_Webhooks
+PM -- UC_Dashboard
+PM -- UC_Reports
+
+TM -- UC_View
+TM -- UC_Board
+'TM -- UC_Tasks
+'TM -- UC_Status
+'TM -- UC_Comment
+'TM -- UC_Attach
+'TM -- UC_DM
+TM -- UC_Chat
+TM -- UC_Notify
+'TM -- UC_Book
+'TM -- UC_Event
+'TM -- UC_RSVP
+TM -- UC_Participate
+
+'G -- UC_View
+'G -- UC_RSVP
+
+'RM -- UC_AssetCatalog
+'RM -- UC_CheckAvail
+'RM -- UC_Book
+
+' --- Outbound integrations (system calls external services) ---
+UC_SSO -- SSO
+'UC_SyncCal -- ECal
+UC_SendNotif -- Notif
+'UC_SyncCal ..> UC_Event : <<extend>>
+'UC_SyncCal ..> UC_Recurring : <<extend>>
+
+@enduml
