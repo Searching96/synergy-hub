@@ -1,0 +1,33 @@
+# Authentication Module Configuration
+app:
+  jwt:
+    secret: ${JWT_SECRET:mySecretKeyThatIsAtLeast256BitsLongForHS256AlgorithmPleaseChangeThis}
+    expiration: ${JWT_EXPIRATION:86400000}  # 24 hours in milliseconds
+  
+  frontend:
+    url: ${FRONTEND_URL:http://localhost:3000}
+
+  security:
+    max-login-attempts: 5
+    lockout-duration-minutes: 30
+    password-reset-token-expiry-minutes: 15
+    email-verification-token-expiry-hours: 24
+
+spring:
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:your-email@gmail.com}
+    password: ${MAIL_PASSWORD:your-app-password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+logging:
+  level:
+    com.synergyhub.auth: DEBUG
+    org.springframework.security: DEBUG
