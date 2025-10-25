@@ -1,0 +1,48 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+    show-sql: false
+  h2:
+    console:
+      enabled: false
+
+  mail:
+    host: localhost
+    port: 3025
+    username: test@example.com
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+# DISABLE SCHEDULING IN TESTS
+scheduling:
+  enabled: false
+
+app:
+  email-verification-enabled: true
+  default-organization-id: 1
+
+security:
+  max-login-attempts: 5
+  account-lock-duration-minutes: 30
+  password-reset-token-expiry-minutes: 15
+  email-verification-token-expiry-hours: 24
+
+jwt:
+  secret: testSecretKeyForTestingPurposesOnly123456789
+  expiration: 86400000
+  refresh-expiration: 604800000

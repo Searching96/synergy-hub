@@ -1,0 +1,54 @@
+package com.synergyhub.domain.enums;
+
+public enum AuditEventType {
+    // Authentication events
+    LOGIN_SUCCESS,
+    LOGIN_FAILED,
+    LOGOUT,
+    PASSWORD_RESET_REQUESTED,
+    PASSWORD_RESET_COMPLETED,
+    PASSWORD_CHANGED,
+    TWO_FACTOR_ENABLED,
+    TWO_FACTOR_DISABLED,
+    TWO_FACTOR_VERIFIED,
+    TWO_FACTOR_FAILED,
+    ACCOUNT_LOCKED,
+    ACCOUNT_UNLOCKED,
+    EMAIL_VERIFIED,
+    SSO_LOGIN_SUCCESS,
+    SSO_LOGIN_FAILED,
+    
+    // User management events
+    USER_CREATED,
+    USER_UPDATED,
+    USER_DELETED,
+    USER_ROLE_CHANGED,
+    
+    // Session events
+    SESSION_CREATED,
+    SESSION_REVOKED,
+    ALL_SESSIONS_REVOKED,
+    
+    // Organization events
+    ORGANIZATION_CREATED,
+    ORGANIZATION_UPDATED,
+    
+    // Project events
+    PROJECT_CREATED,
+    PROJECT_UPDATED,
+    PROJECT_DELETED,
+    PROJECT_MEMBER_ADDED,
+    PROJECT_MEMBER_REMOVED,
+    
+    // Task events
+    TASK_CREATED,
+    TASK_UPDATED,
+    TASK_DELETED,
+    TASK_STATUS_CHANGED,
+    TASK_ASSIGNED,
+    
+    // Security events
+    UNAUTHORIZED_ACCESS_ATTEMPT,
+    PERMISSION_DENIED,
+    INVALID_TOKEN
+}
