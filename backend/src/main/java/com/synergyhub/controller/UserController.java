@@ -5,7 +5,6 @@ import com.synergyhub.dto.response.ApiResponse;
 import com.synergyhub.dto.response.UserResponse;
 import com.synergyhub.repository.UserRepository;
 import com.synergyhub.security.UserPrincipal;
-import com.synergyhub.service.auth.AuthenticationService;
 import com.synergyhub.service.security.SessionManagementService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;

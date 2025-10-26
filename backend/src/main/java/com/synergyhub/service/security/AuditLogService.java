@@ -1,6 +1,7 @@
 package com.synergyhub.service.security;
 
 import com.synergyhub.domain.entity.AuditLog;
+import com.synergyhub.domain.entity.Project;
 import com.synergyhub.domain.entity.User;
 import com.synergyhub.domain.enums.AuditEventType;
 import com.synergyhub.repository.AuditLogRepository;
@@ -15,6 +16,41 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
+
+    @Transactional
+    public void createAuditLog(User user, String eventType, String details, String ipAddress) {
+        createAuditLog(user, eventType, details, ipAddress, null);
+    }
+
+    public void createAuditLog(User user, AuditEventType eventType, String details,
+                               String ipAddress, String userAgent) {
+        AuditLog auditLog = AuditLog.builder()
+                .user(user)
+                .eventType(eventType.name())
+                .eventDetails(details)
+                .ipAddress(ipAddress)
+                .userAgent(userAgent)
+                .build();
+
+        auditLogRepository.save(auditLog);
+        log.debug("Audit log created: {} - {}", eventType, details);
+    }
+
+    // Overload to accept String eventType
+    @Transactional
+    public void createAuditLog(User user, String eventType, String details,
+                               String ipAddress, String userAgent) {
+        AuditLog auditLog = AuditLog.builder()
+                .user(user)
+                .eventType(eventType)
+                .eventDetails(details)
+                .ipAddress(ipAddress)
+                .userAgent(userAgent)
+                .build();
+
+        auditLogRepository.save(auditLog);
+        log.debug("Audit log created: {} - {}", eventType, details);
+    }
 
     @Transactional
     public void logLoginSuccess(User user, String ipAddress, String userAgent) {
@@ -101,17 +137,51 @@ public class AuditLogService {
                 "Session revoked: " + reason, ipAddress, null);
     }
 
-    private void createAuditLog(User user, AuditEventType eventType, String details,
-                                String ipAddress, String userAgent) {
-        AuditLog auditLog = AuditLog.builder()
-                .user(user)
-                .eventType(eventType.name())
-                .eventDetails(details)
-                .ipAddress(ipAddress)
-                .userAgent(userAgent)
-                .build();
+    @Transactional
+    public void logProjectCreated(Project project, User actor, String ipAddress) {
+        createAuditLog(actor, AuditEventType.PROJECT_CREATED,
+                String.format("Project '%s' (ID: %d) created in organization %s",
+                        project.getName(), project.getId(), project.getOrganization().getName()),
+                ipAddress, null);
+    }
 
-        auditLogRepository.save(auditLog);
-        log.debug("Audit log created: {} - {}", eventType, details);
+    @Transactional
+    public void logProjectUpdated(Project project, User actor, String ipAddress) {
+        createAuditLog(actor, AuditEventType.PROJECT_UPDATED,
+                String.format("Project '%s' (ID: %d) updated",
+                        project.getName(), project.getId()),
+                ipAddress, null);
+    }
+
+    @Transactional
+    public void logProjectDeleted(Project project, User actor, String ipAddress) {
+        createAuditLog(actor, AuditEventType.PROJECT_DELETED,
+                String.format("Project '%s' (ID: %d) archived/deleted",
+                        project.getName(), project.getId()),
+                ipAddress, null);
+    }
+
+    @Transactional
+    public void logProjectMemberAdded(Project project, Integer userId, User actor, String ipAddress) {
+        createAuditLog(actor, AuditEventType.PROJECT_MEMBER_ADDED,
+                String.format("User %d added to project '%s' (ID: %d)",
+                        userId, project.getName(), project.getId()),
+                ipAddress, null);
+    }
+
+    @Transactional
+    public void logProjectMemberRemoved(Project project, Integer userId, User actor, String ipAddress) {
+        createAuditLog(actor, AuditEventType.PROJECT_MEMBER_REMOVED,
+                String.format("User %d removed from project '%s' (ID: %d)",
+                        userId, project.getName(), project.getId()),
+                ipAddress, null);
+    }
+
+    @Transactional
+    public void logProjectMemberRoleUpdated(Project project, Integer userId, String newRole, User actor, String ipAddress) {
+        createAuditLog(actor, AuditEventType.PROJECT_UPDATED,
+                String.format("User %d role updated to '%s' in project '%s' (ID: %d)",
+                        userId, newRole, project.getName(), project.getId()),
+                ipAddress, null);
     }
 }

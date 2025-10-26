@@ -1,8 +1,6 @@
 package com.synergyhub.service.auth;
 
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.CollectionType;
 import com.synergyhub.domain.entity.Organization;
 import com.synergyhub.domain.entity.TwoFactorSecret;
 import com.synergyhub.domain.entity.User;
@@ -10,24 +8,21 @@ import com.synergyhub.dto.response.TwoFactorSetupResponse;
 import com.synergyhub.exception.BadRequestException;
 import com.synergyhub.repository.TwoFactorSecretRepository;
 import com.synergyhub.repository.UserRepository;
+import com.synergyhub.service.security.AuditLogService;
 import com.synergyhub.util.TotpUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.Arrays;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,10 +40,14 @@ class TwoFactorAuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private AuditLogService auditLogService;
+
     private TwoFactorAuthService twoFactorAuthService;
 
     private ObjectMapper objectMapper;
     private User testUser;
+    private static final String TEST_IP = "192.168.1.1";
 
     @BeforeEach
     void setUp() {
@@ -61,7 +60,8 @@ class TwoFactorAuthServiceTest {
                 userRepository,
                 totpUtil,
                 objectMapper,
-                passwordEncoder
+                passwordEncoder,
+                auditLogService
         );
 
         Organization org = Organization.builder()
@@ -93,7 +93,7 @@ class TwoFactorAuthServiceTest {
         ArgumentCaptor<TwoFactorSecret> captor = ArgumentCaptor.forClass(TwoFactorSecret.class);
 
         // When
-        TwoFactorSetupResponse response = twoFactorAuthService.setupTwoFactor(testUser);
+        TwoFactorSetupResponse response = twoFactorAuthService.setupTwoFactor(testUser, TEST_IP);  
 
         // Then
         assertThat(response).isNotNull();
@@ -113,6 +113,13 @@ class TwoFactorAuthServiceTest {
         assertThat(saved.getUser()).isEqualTo(testUser);
         assertThat(saved.getSecret()).isEqualTo(secret);
         assertThat(saved.getBackupCodes()).isNotNull();
+
+        verify(auditLogService).createAuditLog(
+                eq(testUser),
+                eq("TWO_FACTOR_SETUP_INITIATED"),
+                anyString(),
+                eq(TEST_IP)
+        );
     }
 
     @Test
@@ -121,11 +128,12 @@ class TwoFactorAuthServiceTest {
         testUser.setTwoFactorEnabled(true);
 
         // When & Then
-        assertThatThrownBy(() -> twoFactorAuthService.setupTwoFactor(testUser))
+        assertThatThrownBy(() -> twoFactorAuthService.setupTwoFactor(testUser, TEST_IP))  
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("already enabled");
 
         verify(twoFactorSecretRepository, never()).save(any());
+        verify(auditLogService, never()).createAuditLog(any(), anyString(), anyString(), anyString());
     }
 
     @Test
@@ -144,12 +152,14 @@ class TwoFactorAuthServiceTest {
         when(totpUtil.verifyCode(secret, code)).thenReturn(true);
 
         // When
-        boolean result = twoFactorAuthService.verifyAndEnableTwoFactor(testUser, code);
+        boolean result = twoFactorAuthService.verifyAndEnableTwoFactor(testUser, code, TEST_IP);  
 
         // Then
         assertThat(result).isTrue();
         assertThat(testUser.getTwoFactorEnabled()).isTrue();
         verify(userRepository).save(testUser);
+
+        verify(auditLogService).logTwoFactorSuccess(testUser, TEST_IP);
     }
 
     @Test
@@ -167,12 +177,14 @@ class TwoFactorAuthServiceTest {
         when(totpUtil.verifyCode(secret, code)).thenReturn(false);
 
         // When
-        boolean result = twoFactorAuthService.verifyAndEnableTwoFactor(testUser, code);
+        boolean result = twoFactorAuthService.verifyAndEnableTwoFactor(testUser, code, TEST_IP);  
 
         // Then
         assertThat(result).isFalse();
         assertThat(testUser.getTwoFactorEnabled()).isFalse();
         verify(userRepository, never()).save(testUser);
+
+        verify(auditLogService).logTwoFactorFailed(testUser, TEST_IP);
     }
 
     @Test
@@ -181,7 +193,7 @@ class TwoFactorAuthServiceTest {
         when(twoFactorSecretRepository.findByUser(testUser)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> twoFactorAuthService.verifyAndEnableTwoFactor(testUser, "123456"))
+        assertThatThrownBy(() -> twoFactorAuthService.verifyAndEnableTwoFactor(testUser, "123456", TEST_IP))  
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Two-factor setup not found");
     }
@@ -203,10 +215,12 @@ class TwoFactorAuthServiceTest {
         when(totpUtil.verifyCode(secret, code)).thenReturn(true);
 
         // When
-        boolean result = twoFactorAuthService.verifyCode(testUser, code);
+        boolean result = twoFactorAuthService.verifyCode(testUser, code, TEST_IP);  
 
         // Then
         assertThat(result).isTrue();
+
+        verify(auditLogService).logTwoFactorSuccess(testUser, TEST_IP);
     }
 
     @Test
@@ -229,7 +243,7 @@ class TwoFactorAuthServiceTest {
         ArgumentCaptor<TwoFactorSecret> captor = ArgumentCaptor.forClass(TwoFactorSecret.class);
 
         // When
-        boolean result = twoFactorAuthService.verifyCode(testUser, backupCode);
+        boolean result = twoFactorAuthService.verifyCode(testUser, backupCode, TEST_IP);  
 
         // Then
         assertThat(result).isTrue();
@@ -240,6 +254,14 @@ class TwoFactorAuthServiceTest {
         // Verify backup code was removed - check the JSON doesn't contain it
         assertThat(saved.getBackupCodes()).doesNotContain("12345678");
         assertThat(saved.getBackupCodes()).contains("87654321");
+
+        verify(auditLogService).createAuditLog(
+                eq(testUser),
+                eq("TWO_FACTOR_BACKUP_CODE_USED"),
+                contains("1 codes remaining"),
+                eq(TEST_IP)
+        );
+        verify(auditLogService).logTwoFactorSuccess(testUser, TEST_IP);
     }
 
     @Test
@@ -259,10 +281,12 @@ class TwoFactorAuthServiceTest {
         when(totpUtil.verifyCode(secret, code)).thenReturn(false);
 
         // When
-        boolean result = twoFactorAuthService.verifyCode(testUser, code);
+        boolean result = twoFactorAuthService.verifyCode(testUser, code, TEST_IP);  
 
         // Then
         assertThat(result).isFalse();
+
+        verify(auditLogService).logTwoFactorFailed(testUser, TEST_IP);
     }
 
     @Test
@@ -274,12 +298,19 @@ class TwoFactorAuthServiceTest {
         when(passwordEncoder.matches(password, testUser.getPasswordHash())).thenReturn(true);
 
         // When
-        twoFactorAuthService.disableTwoFactor(testUser, password);
+        twoFactorAuthService.disableTwoFactor(testUser, password, TEST_IP);  
 
         // Then
         assertThat(testUser.getTwoFactorEnabled()).isFalse();
         verify(userRepository).save(testUser);
         verify(twoFactorSecretRepository).deleteByUser(testUser);
+
+        verify(auditLogService).createAuditLog(
+                eq(testUser),
+                eq("TWO_FACTOR_DISABLED"),
+                contains("disabled by user"),
+                eq(TEST_IP)
+        );
     }
 
     @Test
@@ -291,13 +322,20 @@ class TwoFactorAuthServiceTest {
         when(passwordEncoder.matches(wrongPassword, testUser.getPasswordHash())).thenReturn(false);
 
         // When & Then
-        assertThatThrownBy(() -> twoFactorAuthService.disableTwoFactor(testUser, wrongPassword))
+        assertThatThrownBy(() -> twoFactorAuthService.disableTwoFactor(testUser, wrongPassword, TEST_IP))  
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Invalid password");
 
         assertThat(testUser.getTwoFactorEnabled()).isTrue();
         verify(userRepository, never()).save(any());
         verify(twoFactorSecretRepository, never()).deleteByUser(any());
+
+        verify(auditLogService).createAuditLog(
+                eq(testUser),
+                eq("DISABLE_2FA_FAILED"),
+                contains("Invalid password"),
+                eq(TEST_IP)
+        );
     }
 
     @Test
@@ -306,7 +344,7 @@ class TwoFactorAuthServiceTest {
         when(twoFactorSecretRepository.findByUser(testUser)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> twoFactorAuthService.verifyCode(testUser, "123456"))
+        assertThatThrownBy(() -> twoFactorAuthService.verifyCode(testUser, "123456", TEST_IP))  
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("not configured");
     }
@@ -318,7 +356,7 @@ class TwoFactorAuthServiceTest {
         when(totpUtil.generateQrCodeUrl(anyString(), anyString())).thenReturn("QR_URL");
 
         // When
-        TwoFactorSetupResponse response1 = twoFactorAuthService.setupTwoFactor(testUser);
+        TwoFactorSetupResponse response1 = twoFactorAuthService.setupTwoFactor(testUser, TEST_IP);  
 
         User anotherUser = User.builder()
                 .id(2)
@@ -328,9 +366,79 @@ class TwoFactorAuthServiceTest {
                 .twoFactorEnabled(false)
                 .build();
 
-        TwoFactorSetupResponse response2 = twoFactorAuthService.setupTwoFactor(anotherUser);
+        TwoFactorSetupResponse response2 = twoFactorAuthService.setupTwoFactor(anotherUser, TEST_IP);  
 
         // Then - backup codes should be different
         assertThat(response1.getBackupCodes()).isNotEqualTo(response2.getBackupCodes());
+
+        verify(auditLogService, times(2)).createAuditLog(
+                any(User.class),
+                eq("TWO_FACTOR_SETUP_INITIATED"),
+                anyString(),
+                eq(TEST_IP)
+        );
+    }
+
+    @Test
+    void regenerateBackupCodes_WithValidCode_ShouldGenerateNewCodes() {
+        // Given
+        testUser.setTwoFactorEnabled(true);
+        String secret = "TESTSECRET123456";
+        String verificationCode = "123456";
+
+        TwoFactorSecret twoFactorSecret = TwoFactorSecret.builder()
+                .user(testUser)
+                .secret(secret)
+                .backupCodes("[\"12345678\",\"87654321\"]")
+                .build();
+
+        when(twoFactorSecretRepository.findByUser(testUser)).thenReturn(Optional.of(twoFactorSecret));
+        when(totpUtil.verifyCode(secret, verificationCode)).thenReturn(true);
+
+        ArgumentCaptor<TwoFactorSecret> captor = ArgumentCaptor.forClass(TwoFactorSecret.class);
+
+        // When
+        List<String> newBackupCodes = twoFactorAuthService.regenerateBackupCodes(testUser, verificationCode, TEST_IP);
+
+        // Then
+        assertThat(newBackupCodes).isNotNull().hasSize(10);
+        newBackupCodes.forEach(code -> {
+            assertThat(code).hasSize(8);
+            assertThat(code).matches("\\d{8}");
+        });
+
+        verify(twoFactorSecretRepository).save(captor.capture());
+
+        verify(auditLogService).createAuditLog(
+                eq(testUser),
+                eq("TWO_FACTOR_BACKUP_CODES_REGENERATED"),
+                anyString(),
+                eq(TEST_IP)
+        );
+    }
+
+    @Test
+    void regenerateBackupCodes_WithInvalidCode_ShouldThrowException() {
+        // Given
+        testUser.setTwoFactorEnabled(true);
+        String secret = "TESTSECRET123456";
+        String invalidCode = "000000";
+
+        TwoFactorSecret twoFactorSecret = TwoFactorSecret.builder()
+                .user(testUser)
+                .secret(secret)
+                .backupCodes("[\"12345678\",\"87654321\"]")
+                .build();
+
+        when(twoFactorSecretRepository.findByUser(testUser)).thenReturn(Optional.of(twoFactorSecret));
+        when(totpUtil.verifyCode(secret, invalidCode)).thenReturn(false);
+
+        // When & Then
+        assertThatThrownBy(() -> twoFactorAuthService.regenerateBackupCodes(testUser, invalidCode, TEST_IP))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Invalid verification code");
+
+        verify(twoFactorSecretRepository, never()).save(any());
+        verify(auditLogService, never()).createAuditLog(any(), anyString(), anyString(), anyString());
     }
 }

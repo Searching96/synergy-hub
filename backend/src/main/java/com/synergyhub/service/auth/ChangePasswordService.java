@@ -3,10 +3,8 @@ package com.synergyhub.service.auth;
 import com.synergyhub.domain.entity.User;
 import com.synergyhub.dto.request.ChangePasswordRequest;
 import com.synergyhub.exception.BadRequestException;
-import com.synergyhub.exception.ResourceNotFoundException;
 import com.synergyhub.repository.UserRepository;
 import com.synergyhub.repository.UserSessionRepository;
-import com.synergyhub.security.UserPrincipal;
 import com.synergyhub.service.security.AuditLogService;
 import com.synergyhub.util.PasswordValidator;
 import lombok.RequiredArgsConstructor;
@@ -50,7 +48,7 @@ public class ChangePasswordService {
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        // Revoke all active sessions (user must login again with new password)
+        // Revoke all active sessions (user must log in again with new password)
         userSessionRepository.revokeAllUserSessions(user);
 
         // Audit log

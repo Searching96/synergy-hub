@@ -61,11 +61,27 @@ public class RegistrationService {
 
         // Check if email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
+            // ✅ Audit log for duplicate email attempt
+            auditLogService.createAuditLog(
+                    null,
+                    "REGISTRATION_FAILED",
+                    String.format("Registration attempt with duplicate email: %s", request.getEmail()),
+                    ipAddress,
+                    null
+            );
             throw new EmailAlreadyExistsException(request.getEmail());
         }
 
         // Validate password
         if (!passwordValidator.isValid(request.getPassword())) {
+            // ✅ Audit log for weak password attempt
+            auditLogService.createAuditLog(
+                    null,
+                    "REGISTRATION_FAILED",
+                    String.format("Registration attempt with weak password for email: %s", request.getEmail()),
+                    ipAddress,
+                    null
+            );
             throw new BadRequestException("Password does not meet requirements: " +
                     passwordValidator.getRequirements());
         }
@@ -75,7 +91,18 @@ public class RegistrationService {
                 request.getOrganizationId() : defaultOrganizationId;
 
         Organization organization = organizationRepository.findById(orgId)
-                .orElseThrow(() -> new ResourceNotFoundException("Organization", "id", orgId));
+                .orElseThrow(() -> {
+                    // ✅ Audit log for invalid organization
+                    auditLogService.createAuditLog(
+                            null,
+                            "REGISTRATION_FAILED",
+                            String.format("Registration attempt with invalid organization ID: %d for email: %s",
+                                    orgId, request.getEmail()),
+                            ipAddress,
+                            null
+                    );
+                    return new ResourceNotFoundException("Organization", "id", orgId);
+                });
 
         // Get default role
         Role defaultRole = roleRepository.findByName(DEFAULT_ROLE)
@@ -101,9 +128,17 @@ public class RegistrationService {
 
         // Handle email verification
         if (emailVerificationEnabled) {
-            sendVerificationEmail(savedUser);
+            sendVerificationEmail(savedUser, ipAddress);
+            // ✅ Audit log for verification email sent
+            auditLogService.createAuditLog(
+                    savedUser,
+                    "EMAIL_VERIFICATION_SENT",
+                    "Email verification sent",
+                    ipAddress,
+                    null
+            );
         } else {
-            emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getName());
+            emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getName(), savedUser, ipAddress);
         }
 
         // Audit log
@@ -115,13 +150,39 @@ public class RegistrationService {
     @Transactional
     public void verifyEmail(String token, String ipAddress) {
         EmailVerification verification = emailVerificationRepository.findByToken(token)
-                .orElseThrow(() -> new BadRequestException("Invalid or expired verification token"));
+                .orElseThrow(() -> {
+                    // ✅ Audit log for invalid token
+                    auditLogService.createAuditLog(
+                            null,
+                            "EMAIL_VERIFICATION_FAILED",
+                            "Email verification attempt with invalid token",
+                            ipAddress,
+                            null
+                    );
+                    return new BadRequestException("Invalid or expired verification token");
+                });
 
         if (verification.getVerified()) {
+            // ✅ Audit log for already verified email
+            auditLogService.createAuditLog(
+                    verification.getUser(),
+                    "EMAIL_VERIFICATION_FAILED",
+                    "Email verification attempt for already verified email",
+                    ipAddress,
+                    null
+            );
             throw new BadRequestException("Email has already been verified");
         }
 
         if (verification.isExpired()) {
+            // ✅ Audit log for expired token
+            auditLogService.createAuditLog(
+                    verification.getUser(),
+                    "EMAIL_VERIFICATION_FAILED",
+                    "Email verification attempt with expired token",
+                    ipAddress,
+                    null
+            );
             throw new BadRequestException("Verification token has expired. Please request a new one.");
         }
 
@@ -135,18 +196,36 @@ public class RegistrationService {
         log.info("Email verified successfully for user: {}", user.getEmail());
 
         // Send welcome email
-        emailService.sendWelcomeEmail(user.getEmail(), user.getName());
+        emailService.sendWelcomeEmail(user.getEmail(), user.getName(), user, ipAddress);
 
         // Audit log
         auditLogService.logEmailVerified(user, ipAddress);
     }
 
     @Transactional
-    public void resendVerificationEmail(String email) {
+    public void resendVerificationEmail(String email, String ipAddress) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+                .orElseThrow(() -> {
+                    // ✅ Audit log for non-existent user
+                    auditLogService.createAuditLog(
+                            null,
+                            "EMAIL_VERIFICATION_RESEND_FAILED",
+                            String.format("Verification email resend attempt for non-existent email: %s", email),
+                            ipAddress,
+                            null
+                    );
+                    return new ResourceNotFoundException("User", "email", email);
+                });
 
         if (user.getEmailVerified()) {
+            // ✅ Audit log for already verified email
+            auditLogService.createAuditLog(
+                    user,
+                    "EMAIL_VERIFICATION_RESEND_FAILED",
+                    "Verification email resend attempt for already verified email",
+                    ipAddress,
+                    null
+            );
             throw new BadRequestException("Email is already verified");
         }
 
@@ -156,12 +235,21 @@ public class RegistrationService {
         oldVerification.ifPresent(emailVerificationRepository::delete);
 
         // Send new verification email
-        sendVerificationEmail(user);
+        sendVerificationEmail(user, ipAddress);
+
+        // ✅ Audit log for resend
+        auditLogService.createAuditLog(
+                user,
+                "EMAIL_VERIFICATION_RESENT",
+                "Verification email resent",
+                ipAddress,
+                null
+        );
 
         log.info("Verification email resent to: {}", email);
     }
 
-    private void sendVerificationEmail(User user) {
+    private void sendVerificationEmail(User user, String ipAddress) {
         String token = generateVerificationToken();
 
         EmailVerification verification = EmailVerification.builder()
@@ -173,7 +261,7 @@ public class RegistrationService {
 
         emailVerificationRepository.save(verification);
 
-        emailService.sendEmailVerification(user.getEmail(), token);
+        emailService.sendEmailVerification(user.getEmail(), token, user, ipAddress);
         log.debug("Verification email sent to: {}", user.getEmail());
     }
 

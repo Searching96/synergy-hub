@@ -43,51 +43,86 @@ public class AuthenticationService {
 
     @Transactional
     public LoginResponse login(LoginRequest request, String ipAddress, String userAgent) {
+        // ✅ Find user - throw BadCredentialsException if not found (don't reveal user existence)
         User user = userRepository.findByEmailWithRolesAndPermissions(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", request.getEmail()));
+                .orElseThrow(() -> {
+                    auditLogService.logLoginFailed(request.getEmail(), ipAddress, userAgent, "User not found");
+                    return new BadCredentialsException("Invalid credentials");
+                });
+
+        // ✅ Check if email is verified
+        if (!user.getEmailVerified()) {
+            auditLogService.logLoginFailed(request.getEmail(), ipAddress, userAgent, "Email not verified");
+            throw new BadCredentialsException("Email not verified. Please check your email for verification link.");
+        }
 
         // Check if account is locked
         if (accountLockService.isAccountLocked(user)) {
-            auditLogService.logLoginFailed(request.getEmail(), ipAddress, userAgent, "Account is locked");
-            throw new AccountLockedException(
-                    "Account is locked due to multiple failed login attempts. Please try again later.",
-                    user.getLockUntil()
-            );
+            long remainingMinutes = accountLockService.getRemainingLockTimeMinutes(user);
+            String message = String.format("Account is locked. Please try again in %d minutes.", remainingMinutes);
+            auditLogService.logLoginFailed(request.getEmail(), ipAddress, userAgent, "Account locked");
+            throw new AccountLockedException(message, LocalDateTime.now().plusMinutes(remainingMinutes));
         }
 
-        // Authenticate user
+        // Authenticate
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
 
-            // Handle 2FA if enabled
+            // Handle 2FA
             if (user.getTwoFactorEnabled()) {
-                return handle2FALogin(user, request, ipAddress, userAgent);
+                if (request.getTwoFactorCode() != null && !request.getTwoFactorCode().isEmpty()) {
+                    // Verify 2FA code
+                    boolean isValid = twoFactorAuthService.verifyCode(user, request.getTwoFactorCode(), ipAddress);
+                    if (!isValid) {
+                        auditLogService.logTwoFactorFailed(user, ipAddress);
+                        throw new TwoFactorAuthenticationException("Invalid two-factor authentication code");
+                    }
+                    auditLogService.logTwoFactorSuccess(user, ipAddress);
+                } else {
+                    // Return temporary token for 2FA
+                    String temporaryToken = jwtTokenProvider.generateTemporaryToken(user.getId(), user.getEmail());
+                    auditLogService.logTwoFactorRequired(user, ipAddress);
+
+                    return LoginResponse.builder()
+                            .twoFactorRequired(true)
+                            .twoFactorToken(temporaryToken)
+                            .build();
+                }
             }
 
-            // Reset failed attempts on successful login
-            accountLockService.resetFailedAttempts(user);
+            // Successful login
+            loginAttemptService.recordLoginAttempt(request.getEmail(), ipAddress, true);
+            accountLockService.resetFailedAttempts(user, ipAddress);
 
             // Update last login
             user.setLastLogin(LocalDateTime.now());
             userRepository.save(user);
 
             // Generate JWT token
-            String accessToken = jwtTokenProvider.generateTokenFromUserId(user.getId(), user.getEmail());
-            String tokenId = jwtTokenProvider.getTokenIdFromToken(accessToken);
+            String token = jwtTokenProvider.generateTokenFromUserId(user.getId(), user.getEmail());
+            String tokenId = jwtTokenProvider.getTokenIdFromToken(token);
 
             // Create session
-            createUserSession(user, tokenId, ipAddress, userAgent);
+            UserSession session = UserSession.builder()
+                    .user(user)
+                    .tokenId(tokenId)
+                    .userAgent(userAgent)
+                    .ipAddress(ipAddress)
+                    .expiresAt(LocalDateTime.now().plusSeconds(jwtTokenProvider.getExpirationMs() / 1000))
+                    .revoked(false)
+                    .build();
+            userSessionRepository.save(session);
 
-            // Record successful login
-            loginAttemptService.recordLoginAttempt(request.getEmail(), ipAddress, true);
+            // Audit log
             auditLogService.logLoginSuccess(user, ipAddress, userAgent);
 
+            // Map user response
             UserResponse userResponse = userMapper.toUserResponse(user);
 
             return LoginResponse.builder()
-                    .accessToken(accessToken)
+                    .accessToken(token)
                     .tokenType("Bearer")
                     .expiresIn(jwtTokenProvider.getExpirationMs() / 1000)
                     .user(userResponse)
@@ -95,9 +130,9 @@ public class AuthenticationService {
                     .build();
 
         } catch (BadCredentialsException e) {
-            // Handle failed login
-            accountLockService.handleFailedLogin(user);
+            // Failed authentication
             loginAttemptService.recordLoginAttempt(request.getEmail(), ipAddress, false);
+            accountLockService.handleFailedLogin(user, ipAddress);
             auditLogService.logLoginFailed(request.getEmail(), ipAddress, userAgent, "Invalid credentials");
             throw e;
         }
@@ -116,7 +151,7 @@ public class AuthenticationService {
         }
 
         // Verify 2FA code
-        boolean isValid = twoFactorAuthService.verifyCode(user, request.getTwoFactorCode());
+        boolean isValid = twoFactorAuthService.verifyCode(user, request.getTwoFactorCode(), ipAddress);
 
         if (!isValid) {
             auditLogService.logTwoFactorFailed(user, ipAddress);
@@ -124,7 +159,7 @@ public class AuthenticationService {
         }
 
         // 2FA successful, proceed with login
-        accountLockService.resetFailedAttempts(user);
+        accountLockService.resetFailedAttempts(user, ipAddress);
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
@@ -153,7 +188,7 @@ public class AuthenticationService {
                 .user(user)
                 .tokenId(tokenId)
                 .ipAddress(ipAddress)
-                .deviceInfo(deviceInfo)
+                .userAgent(deviceInfo)
                 .expiresAt(LocalDateTime.now().plusSeconds(jwtTokenProvider.getExpirationMs() / 1000))
                 .revoked(false)
                 .build();

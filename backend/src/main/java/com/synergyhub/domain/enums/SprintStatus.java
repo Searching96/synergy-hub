@@ -1,7 +1,8 @@
 package com.synergyhub.domain.enums;
 
 public enum SprintStatus {
-    PLANNED,
+    PLANNING,
     ACTIVE,
-    COMPLETED
+    COMPLETED,
+    CANCELLED
 }

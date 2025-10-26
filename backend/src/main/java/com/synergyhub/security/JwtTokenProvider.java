@@ -1,6 +1,5 @@
 package com.synergyhub.security;
 
-import com.synergyhub.domain.entity.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;

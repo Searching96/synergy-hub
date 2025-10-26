@@ -8,6 +8,7 @@ import com.synergyhub.dto.response.TwoFactorSetupResponse;
 import com.synergyhub.exception.BadRequestException;
 import com.synergyhub.repository.TwoFactorSecretRepository;
 import com.synergyhub.repository.UserRepository;
+import com.synergyhub.service.security.AuditLogService;
 import com.synergyhub.util.TotpUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,12 +30,13 @@ public class TwoFactorAuthService {
     private final TotpUtil totpUtil;
     private final ObjectMapper objectMapper;
     private final PasswordEncoder passwordEncoder;
+    private final AuditLogService auditLogService;  // ✅ Added
 
     private static final int BACKUP_CODES_COUNT = 10;
     private static final int BACKUP_CODE_LENGTH = 8;
 
     @Transactional
-    public TwoFactorSetupResponse setupTwoFactor(User user) {
+    public TwoFactorSetupResponse setupTwoFactor(User user, String ipAddress) {
         if (user.getTwoFactorEnabled()) {
             throw new BadRequestException("Two-factor authentication is already enabled");
         }
@@ -59,7 +61,14 @@ public class TwoFactorAuthService {
 
         twoFactorSecretRepository.save(twoFactorSecret);
 
-        log.info("Two-factor authentication setup initiated for user: {}", user.getEmail());
+        // ✅ Audit log instead of regular log
+        auditLogService.createAuditLog(
+                user,
+                "TWO_FACTOR_SETUP_INITIATED",
+                "Two-factor authentication setup initiated",
+                ipAddress
+        );
+        log.debug("Two-factor authentication setup initiated for user: {}", user.getEmail());
 
         return TwoFactorSetupResponse.builder()
                 .secret(secret)
@@ -70,7 +79,7 @@ public class TwoFactorAuthService {
     }
 
     @Transactional
-    public boolean verifyAndEnableTwoFactor(User user, String code) {
+    public boolean verifyAndEnableTwoFactor(User user, String code, String ipAddress) {
         TwoFactorSecret secret = twoFactorSecretRepository.findByUser(user)
                 .orElseThrow(() -> new BadRequestException("Two-factor setup not found. Please setup 2FA first."));
 
@@ -79,15 +88,21 @@ public class TwoFactorAuthService {
         if (isValid) {
             user.setTwoFactorEnabled(true);
             userRepository.save(user);
+
+            // ✅ Audit log for success
+            auditLogService.logTwoFactorSuccess(user, ipAddress);
             log.info("Two-factor authentication enabled for user: {}", user.getEmail());
             return true;
         }
+
+        // ✅ Audit log for failure
+        auditLogService.logTwoFactorFailed(user, ipAddress);
         log.warn("Failed to enable 2FA for user: {} - Invalid code", user.getEmail());
         return false;
     }
 
     @Transactional
-    public boolean verifyCode(User user, String code) {
+    public boolean verifyCode(User user, String code, String ipAddress) {
         TwoFactorSecret secret = twoFactorSecretRepository.findByUser(user)
                 .orElseThrow(() -> new BadRequestException("Two-factor authentication not configured"));
 
@@ -96,35 +111,68 @@ public class TwoFactorAuthService {
 
         if (!isValid) {
             // Try backup codes
-            isValid = verifyAndConsumeBackupCode(secret, code);
+            isValid = verifyAndConsumeBackupCode(secret, code, ipAddress);
+        }
+
+        // ✅ Audit log based on result
+        if (isValid) {
+            auditLogService.logTwoFactorSuccess(user, ipAddress);
+        } else {
+            auditLogService.logTwoFactorFailed(user, ipAddress);
         }
 
         return isValid;
     }
 
     @Transactional
-    public void disableTwoFactor(User user, String password) {
+    public void disableTwoFactor(User user, String password, String ipAddress) {
         // Verify password before disabling 2FA
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-            throw new BadRequestException("Invalid password");
+            auditLogService.createAuditLog(
+                    user,
+                    "DISABLE_2FA_FAILED",
+                    "Failed to disable 2FA: Invalid password",
+                    ipAddress
+            );
+            throw new BadRequestException("Invalid password");  // ✅ Throws BadRequestException
+        }
+
+        if (!user.getTwoFactorEnabled()) {
+            throw new BadRequestException("Two-factor authentication is not enabled");
         }
 
         user.setTwoFactorEnabled(false);
         userRepository.save(user);
         twoFactorSecretRepository.deleteByUser(user);
+
+        // ✅ Audit log
+        auditLogService.createAuditLog(
+                user,
+                "TWO_FACTOR_DISABLED",
+                "Two-factor authentication disabled by user",
+                ipAddress
+        );
         log.info("Two-factor authentication disabled for user: {}", user.getEmail());
     }
 
     @Transactional
-    public void disableTwoFactor(User user) {
+    public void disableTwoFactor(User user, String ipAddress) {
         user.setTwoFactorEnabled(false);
         userRepository.save(user);
         twoFactorSecretRepository.deleteByUser(user);
+
+        // ✅ Audit log
+        auditLogService.createAuditLog(
+                user,
+                "TWO_FACTOR_DISABLED",
+                "Two-factor authentication disabled by admin",
+                ipAddress
+        );
         log.info("Two-factor authentication disabled for user: {}", user.getEmail());
     }
 
     @Transactional
-    public List<String> regenerateBackupCodes(User user, String verificationCode) {
+    public List<String> regenerateBackupCodes(User user, String verificationCode, String ipAddress) {
         if (!user.getTwoFactorEnabled()) {
             throw new BadRequestException("Two-factor authentication is not enabled");
         }
@@ -142,14 +190,19 @@ public class TwoFactorAuthService {
         secret.setBackupCodes(convertBackupCodesToJson(newBackupCodes));
         twoFactorSecretRepository.save(secret);
 
+        // ✅ Audit log
+        auditLogService.createAuditLog(
+                user,
+                "TWO_FACTOR_BACKUP_CODES_REGENERATED",
+                "Two-factor backup codes regenerated",
+                ipAddress
+        );
         log.info("Backup codes regenerated for user: {}", user.getEmail());
 
         return newBackupCodes;
     }
 
-    // Changed from private to package-private (or protected) and removed @Transactional
-    // The transaction will be managed by the calling method
-    boolean verifyAndConsumeBackupCode(TwoFactorSecret secret, String code) {
+    boolean verifyAndConsumeBackupCode(TwoFactorSecret secret, String code, String ipAddress) {
         try {
             List<String> backupCodes = objectMapper.readValue(
                     secret.getBackupCodes(),
@@ -163,7 +216,16 @@ public class TwoFactorAuthService {
                 backupCodes.remove(code);
                 secret.setBackupCodes(objectMapper.writeValueAsString(backupCodes));
                 twoFactorSecretRepository.save(secret);
-                log.info("Backup code used for user: {}", secret.getUser().getEmail());
+
+                // ✅ Audit log
+                auditLogService.createAuditLog(
+                        secret.getUser(),
+                        "TWO_FACTOR_BACKUP_CODE_USED",
+                        String.format("Two-factor backup code used. %d codes remaining", backupCodes.size()),
+                        ipAddress
+                );
+                log.info("Backup code used for user: {} ({} codes remaining)",
+                        secret.getUser().getEmail(), backupCodes.size());
             }
 
             return isValid;

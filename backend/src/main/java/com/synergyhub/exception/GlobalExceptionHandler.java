@@ -65,6 +65,96 @@ public class GlobalExceptionHandler {
         
         return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
     }
+
+    @ExceptionHandler(SprintNotFoundException.class)
+    public ResponseEntity<ApiResponse<Object>> handleSprintNotFoundException(
+            SprintNotFoundException ex, WebRequest request) {
+        log.error("Sprint not found: {}", ex.getMessage());
+
+        ApiResponse<Object> response = ApiResponse.builder()
+                .success(false)
+                .message("Sprint not found")
+                .error(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(TaskNotFoundException.class)
+    public ResponseEntity<ApiResponse<Object>> handleTaskNotFoundException(
+            TaskNotFoundException ex, WebRequest request) {
+        log.error("Task not found: {}", ex.getMessage());
+
+        ApiResponse<Object> response = ApiResponse.builder()
+                .success(false)
+                .message("Task not found")
+                .error(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(InvalidSprintStateException.class)
+    public ResponseEntity<ApiResponse<Object>> handleInvalidSprintStateException(
+            InvalidSprintStateException ex, WebRequest request) {
+        log.error("Invalid sprint state: {}", ex.getMessage());
+
+        ApiResponse<Object> response = ApiResponse.builder()
+                .success(false)
+                .message("Invalid sprint state")
+                .error(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(InvalidTaskStateException.class)
+    public ResponseEntity<ApiResponse<Object>> handleInvalidTaskStateException(
+            InvalidTaskStateException ex, WebRequest request) {
+        log.error("Invalid task state: {}", ex.getMessage());
+
+        ApiResponse<Object> response = ApiResponse.builder()
+                .success(false)
+                .message("Invalid task state")
+                .error(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(SprintAlreadyActiveException.class)
+    public ResponseEntity<ApiResponse<Object>> handleSprintAlreadyActiveException(
+            SprintAlreadyActiveException ex, WebRequest request) {
+        log.error("Sprint already active: {}", ex.getMessage());
+
+        ApiResponse<Object> response = ApiResponse.builder()
+                .success(false)
+                .message("Sprint already active")
+                .error(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(TaskAssignmentException.class)
+    public ResponseEntity<ApiResponse<Object>> handleTaskAssignmentException(
+            TaskAssignmentException ex, WebRequest request) {
+        log.error("Task assignment error: {}", ex.getMessage());
+
+        ApiResponse<Object> response = ApiResponse.builder()
+                .success(false)
+                .message("Task assignment error")
+                .error(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
     
     @ExceptionHandler(AccountLockedException.class)
     public ResponseEntity<ApiResponse<Object>> handleAccountLockedException(
@@ -217,5 +307,41 @@ public class GlobalExceptionHandler {
                 .build();
         
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(ProjectNotFoundException.class)
+    public ResponseEntity<ApiResponse<Object>> handleProjectNotFound(
+            ProjectNotFoundException ex) {
+        log.error("Project not found: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error("Project not found", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ProjectNameAlreadyExistsException.class)
+    public ResponseEntity<ApiResponse<Object>> handleProjectNameAlreadyExists(
+            ProjectNameAlreadyExistsException ex) {
+        log.error("Project name already exists: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error("Project name already exists", ex.getMessage()));
+    }
+
+    @ExceptionHandler(UnauthorizedProjectAccessException.class)
+    public ResponseEntity<ApiResponse<Object>> handleUnauthorizedProjectAccess(
+            UnauthorizedProjectAccessException ex) {
+        log.error("Unauthorized project access: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error("Unauthorized access", ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidProjectMemberException.class)
+    public ResponseEntity<ApiResponse<Object>> handleInvalidProjectMember(
+            InvalidProjectMemberException ex) {
+        log.error("Invalid project member operation: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("Invalid project member operation", ex.getMessage()));
     }
 }

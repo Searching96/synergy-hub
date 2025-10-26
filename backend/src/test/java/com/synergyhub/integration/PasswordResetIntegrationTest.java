@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 
@@ -60,14 +61,13 @@ class PasswordResetIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     private User testUser;
-    private Organization testOrganization;
 
     @BeforeEach
     void setUp() {
         // Mock email service to do nothing
-        doNothing().when(emailService).sendPasswordResetEmail(anyString(), anyString());
-        doNothing().when(emailService).sendEmailVerification(anyString(), anyString());
-        doNothing().when(emailService).sendWelcomeEmail(anyString(), anyString());
+        doNothing().when(emailService).sendPasswordResetEmail(anyString(), anyString(), any(User.class), anyString());
+        doNothing().when(emailService).sendEmailVerification(anyString(), anyString(), any(User.class), anyString());
+        doNothing().when(emailService).sendWelcomeEmail(anyString(), anyString(), any(User.class), anyString());
 
         // Clean up
         userSessionRepository.deleteAll();
@@ -77,7 +77,7 @@ class PasswordResetIntegrationTest {
         organizationRepository.deleteAll();
 
         // Setup test data
-        testOrganization = Organization.builder()
+        Organization testOrganization = Organization.builder()
                 .name("Test Organization")
                 .address("123 Test Street")
                 .build();

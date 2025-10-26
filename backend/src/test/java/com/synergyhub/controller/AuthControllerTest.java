@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -81,13 +82,12 @@ class AuthControllerTest {
         organizationRepository.deleteAll();
 
         // Mock email service
-        doNothing().when(emailService).sendPasswordResetEmail(anyString(), anyString());
-        doNothing().when(emailService).sendEmailVerification(anyString(), anyString());
-        doNothing().when(emailService).sendWelcomeEmail(anyString(), anyString());
+        doNothing().when(emailService).sendPasswordResetEmail(anyString(), anyString(), any(User.class), anyString());
+        doNothing().when(emailService).sendEmailVerification(anyString(), anyString(), any(User.class), anyString());
+        doNothing().when(emailService).sendWelcomeEmail(anyString(), anyString(), any(User.class), anyString());
 
         // Setup test organization
         testOrganization = new Organization();
-        testOrganization.setId(1);  // SET ID TO 1
         testOrganization.setName("Test Organization");
         testOrganization.setAddress("123 Test Street");
         testOrganization = organizationRepository.save(testOrganization);
@@ -147,7 +147,7 @@ class AuthControllerTest {
         // Given
         LoginRequest request = LoginRequest.builder()
                 .email("test@example.com")
-                .password("wrongpassword")
+                .password("wrong_password")
                 .build();
 
         // When & Then
@@ -203,10 +203,12 @@ class AuthControllerTest {
     @Test
     void register_WithValidData_ShouldReturnUserResponse() throws Exception {
         // Given
+
         RegisterRequest request = RegisterRequest.builder()
                 .name("John Doe")
                 .email("john.doe@example.com")
                 .password("SecurePass123")
+                .organizationId(testOrganization.getId())
                 .build();
 
         // When & Then

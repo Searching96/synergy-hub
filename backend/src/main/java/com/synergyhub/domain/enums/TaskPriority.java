@@ -1,7 +1,8 @@
 package com.synergyhub.domain.enums;
 
-public enum Priority {
+public enum TaskPriority {
     LOW,
     MEDIUM,
-    HIGH
+    HIGH,
+    CRITICAL
 }

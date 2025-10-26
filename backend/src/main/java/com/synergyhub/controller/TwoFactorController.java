@@ -10,10 +10,12 @@ import com.synergyhub.exception.ResourceNotFoundException;
 import com.synergyhub.repository.UserRepository;
 import com.synergyhub.security.UserPrincipal;
 import com.synergyhub.service.auth.TwoFactorAuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,12 +30,20 @@ public class TwoFactorController {
     private final TwoFactorAuthService twoFactorAuthService;
     private final UserRepository userRepository;
 
+    /**
+     * Setup two-factor authentication
+     * POST /api/auth/2fa/setup
+     */
     @PostMapping("/setup")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<TwoFactorSetupResponse>> setup2FA(
-            @AuthenticationPrincipal UserPrincipal currentUser) {
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            HttpServletRequest request) {
 
         User user = getUserFromPrincipal(currentUser);
-        TwoFactorSetupResponse response = twoFactorAuthService.setupTwoFactor(user);
+        String ipAddress = getClientIP(request);
+
+        TwoFactorSetupResponse response = twoFactorAuthService.setupTwoFactor(user, ipAddress);
 
         return ResponseEntity.ok(ApiResponse.success(
                 "Two-factor authentication setup initiated. Scan the QR code and verify.",
@@ -41,13 +51,21 @@ public class TwoFactorController {
         ));
     }
 
+    /**
+     * Verify and enable two-factor authentication
+     * POST /api/auth/2fa/verify
+     */
     @PostMapping("/verify")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> verify2FA(
             @Valid @RequestBody TwoFactorVerifyRequest request,
-            @AuthenticationPrincipal UserPrincipal currentUser) {
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            HttpServletRequest httpRequest) {
 
         User user = getUserFromPrincipal(currentUser);
-        boolean isValid = twoFactorAuthService.verifyAndEnableTwoFactor(user, request.getCode());
+        String ipAddress = getClientIP(httpRequest);
+
+        boolean isValid = twoFactorAuthService.verifyAndEnableTwoFactor(user, request.getCode(), ipAddress);
 
         if (!isValid) {
             return ResponseEntity.badRequest()
@@ -60,13 +78,21 @@ public class TwoFactorController {
         ));
     }
 
+    /**
+     * Disable two-factor authentication
+     * POST /api/auth/2fa/disable
+     */
     @PostMapping("/disable")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> disable2FA(
             @Valid @RequestBody TwoFactorDisableRequest request,
-            @AuthenticationPrincipal UserPrincipal currentUser) {
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            HttpServletRequest httpRequest) {
 
         User user = getUserFromPrincipal(currentUser);
-        twoFactorAuthService.disableTwoFactor(user, request.getPassword());
+        String ipAddress = getClientIP(httpRequest);
+
+        twoFactorAuthService.disableTwoFactor(user, request.getPassword(), ipAddress);
 
         return ResponseEntity.ok(ApiResponse.success(
                 "Two-factor authentication disabled",
@@ -74,13 +100,25 @@ public class TwoFactorController {
         ));
     }
 
+    /**
+     * Regenerate backup codes
+     * POST /api/auth/2fa/regenerate-backup-codes
+     */
     @PostMapping("/regenerate-backup-codes")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<String>>> regenerateBackupCodes(
             @Valid @RequestBody TwoFactorVerifyRequest request,
-            @AuthenticationPrincipal UserPrincipal currentUser) {
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            HttpServletRequest httpRequest) {
 
         User user = getUserFromPrincipal(currentUser);
-        List<String> newBackupCodes = twoFactorAuthService.regenerateBackupCodes(user, request.getCode());
+        String ipAddress = getClientIP(httpRequest);
+
+        List<String> newBackupCodes = twoFactorAuthService.regenerateBackupCodes(
+                user,
+                request.getCode(),
+                ipAddress
+        );
 
         return ResponseEntity.ok(ApiResponse.success(
                 "New backup codes generated. Please save them in a secure location.",
@@ -88,7 +126,12 @@ public class TwoFactorController {
         ));
     }
 
+    /**
+     * Get two-factor authentication status
+     * GET /api/auth/2fa/status
+     */
     @GetMapping("/status")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<TwoFactorStatusResponse>> get2FAStatus(
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
@@ -101,8 +144,26 @@ public class TwoFactorController {
         return ResponseEntity.ok(ApiResponse.success(status));
     }
 
+    // ========================================
+    // Helper Methods
+    // ========================================
+
+    /**
+     * Get User entity from UserPrincipal
+     */
     private User getUserFromPrincipal(UserPrincipal principal) {
-        return userRepository.findById(principal.getId())
+        return userRepository.findByEmailWithRolesAndPermissions(principal.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", principal.getId()));
+    }
+
+    /**
+     * Extract client IP address from request
+     */
+    private String getClientIP(HttpServletRequest request) {
+        String xfHeader = request.getHeader("X-Forwarded-For");
+        if (xfHeader == null || xfHeader.isEmpty()) {
+            return request.getRemoteAddr();
+        }
+        return xfHeader.split(",")[0].trim();
     }
 }

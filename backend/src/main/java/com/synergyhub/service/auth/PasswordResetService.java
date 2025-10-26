@@ -70,7 +70,7 @@ public class PasswordResetService {
         passwordResetTokenRepository.save(resetToken);
 
         // Send reset email
-        emailService.sendPasswordResetEmail(user.getEmail(), token);
+        emailService.sendPasswordResetEmail(user.getEmail(), token, user, ipAddress);
 
         // Audit log
         auditLogService.logPasswordResetRequested(user, ipAddress);
@@ -110,7 +110,7 @@ public class PasswordResetService {
         resetToken.setUsed(true);
         passwordResetTokenRepository.save(resetToken);
 
-        // Revoke all active sessions (security measure - user must login again)
+        // Revoke all active sessions (security measure - user must log in again)
         userSessionRepository.revokeAllUserSessions(user);
 
         // Audit log
@@ -123,11 +123,8 @@ public class PasswordResetService {
     public boolean validateResetToken(String token) {
         Optional<PasswordResetToken> resetToken = passwordResetTokenRepository.findByToken(token);
 
-        if (resetToken.isEmpty()) {
-            return false;
-        }
+        return resetToken.map(PasswordResetToken::isValid).orElse(false);
 
-        return resetToken.get().isValid();
     }
 
     @Transactional

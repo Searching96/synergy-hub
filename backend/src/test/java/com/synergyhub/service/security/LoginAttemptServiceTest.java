@@ -2,7 +2,6 @@ package com.synergyhub.service.security;
 
 import com.synergyhub.domain.entity.LoginAttempt;
 import com.synergyhub.repository.LoginAttemptRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -15,8 +14,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,6 +21,9 @@ class LoginAttemptServiceTest {
 
     @Mock
     private LoginAttemptRepository loginAttemptRepository;
+
+    @Mock
+    private AuditLogService auditLogService;
 
     @InjectMocks
     private LoginAttemptService loginAttemptService;

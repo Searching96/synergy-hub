@@ -31,7 +31,6 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -70,11 +69,14 @@ class RegistrationServiceTest {
     private RegisterRequest registerRequest;
     private Organization testOrganization;
     private Role defaultRole;
+    private static final String TEST_IP = "192.168.1.1";  // ✅ Added constant
+    private static final int EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS = 24;  // ✅ Added
 
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(registrationService, "emailVerificationEnabled", true);
         ReflectionTestUtils.setField(registrationService, "defaultOrganizationId", 1);
+        ReflectionTestUtils.setField(registrationService, "emailVerificationTokenExpiryHours", EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS);  // ✅ Added
 
         registerRequest = RegisterRequest.builder()
                 .name("John Doe")
@@ -123,14 +125,8 @@ class RegistrationServiceTest {
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         ArgumentCaptor<EmailVerification> verificationCaptor = ArgumentCaptor.forClass(EmailVerification.class);
 
-        // Capture the current time BEFORE the test
-        LocalDateTime beforeTest = LocalDateTime.now();
-
         // When
-        UserResponse response = registrationService.register(registerRequest, "127.0.0.1");
-
-        // Capture the time AFTER the test
-        LocalDateTime afterTest = LocalDateTime.now();
+        UserResponse response = registrationService.register(registerRequest, TEST_IP);  // ✅ Use constant
 
         // Then
         assertThat(response).isNotNull();
@@ -149,14 +145,19 @@ class RegistrationServiceTest {
         EmailVerification verification = verificationCaptor.getValue();
         assertThat(verification.getUser()).isEqualTo(savedUser);
         assertThat(verification.getToken()).isNotNull();
+        assertThat(verification.getVerified()).isFalse();
 
-        // Change the assertion to check it's between beforeTest and afterTest
-        assertThat(verification.getExpiryTime())
-                .isAfterOrEqualTo(beforeTest)
-                .isBeforeOrEqualTo(afterTest);
+        // ✅ Fixed: Check expiry time is in the future
+        assertThat(verification.getExpiryTime()).isAfter(LocalDateTime.now().plusHours(23));
+        assertThat(verification.getExpiryTime()).isBefore(LocalDateTime.now().plusHours(25));
 
-        verify(emailService).sendEmailVerification(eq(registerRequest.getEmail()), anyString());
-        verify(auditLogService).logUserCreated(any(User.class), eq("127.0.0.1"));
+        verify(emailService).sendEmailVerification(
+                eq(registerRequest.getEmail()),
+                anyString(),
+                eq(savedUser),  // ✅ Changed from any() to eq()
+                eq(TEST_IP)
+        );
+        verify(auditLogService).logUserCreated(savedUser, TEST_IP);  // ✅ Changed from any() to savedUser
     }
 
     @Test
@@ -165,12 +166,12 @@ class RegistrationServiceTest {
         when(userRepository.existsByEmail(registerRequest.getEmail())).thenReturn(true);
 
         // When & Then
-        assertThatThrownBy(() -> registrationService.register(registerRequest, "127.0.0.1"))
+        assertThatThrownBy(() -> registrationService.register(registerRequest, TEST_IP))  // ✅ Use constant
                 .isInstanceOf(EmailAlreadyExistsException.class)
                 .hasMessageContaining(registerRequest.getEmail());
 
         verify(userRepository, never()).save(any());
-        verify(emailService, never()).sendEmailVerification(anyString(), anyString());
+        verify(emailService, never()).sendEmailVerification(anyString(), anyString(), any(User.class), anyString());
     }
 
     @Test
@@ -181,7 +182,7 @@ class RegistrationServiceTest {
         when(passwordValidator.getRequirements()).thenReturn("Password must be at least 8 characters");
 
         // When & Then
-        assertThatThrownBy(() -> registrationService.register(registerRequest, "127.0.0.1"))
+        assertThatThrownBy(() -> registrationService.register(registerRequest, TEST_IP))  // ✅ Use constant
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Password does not meet requirements");
 
@@ -217,7 +218,7 @@ class RegistrationServiceTest {
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
 
         // When
-        registrationService.register(registerRequest, "127.0.0.1");
+        registrationService.register(registerRequest, TEST_IP);  // ✅ Use constant
 
         // Then
         verify(userRepository).save(captor.capture());
@@ -235,7 +236,7 @@ class RegistrationServiceTest {
         when(organizationRepository.findById(999)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> registrationService.register(registerRequest, "127.0.0.1"))
+        assertThatThrownBy(() -> registrationService.register(registerRequest, TEST_IP))  // ✅ Use constant
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Organization");
 
@@ -267,7 +268,7 @@ class RegistrationServiceTest {
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
 
         // When
-        registrationService.register(registerRequest, "127.0.0.1");
+        registrationService.register(registerRequest, TEST_IP);  // ✅ Use constant
 
         // Then
         verify(userRepository).save(captor.capture());
@@ -275,8 +276,13 @@ class RegistrationServiceTest {
         assertThat(capturedUser.getEmailVerified()).isTrue();
 
         verify(emailVerificationRepository, never()).save(any());
-        verify(emailService, never()).sendEmailVerification(anyString(), anyString());
-        verify(emailService).sendWelcomeEmail(registerRequest.getEmail(), registerRequest.getName());
+        verify(emailService, never()).sendEmailVerification(anyString(), anyString(), any(User.class), anyString());
+        verify(emailService).sendWelcomeEmail(
+                eq(registerRequest.getEmail()),
+                eq(registerRequest.getName()),
+                eq(savedUser),  // ✅ Changed from any() to eq()
+                eq(TEST_IP)
+        );
     }
 
     @Test
@@ -305,7 +311,7 @@ class RegistrationServiceTest {
         ArgumentCaptor<EmailVerification> verificationCaptor = ArgumentCaptor.forClass(EmailVerification.class);
 
         // When
-        registrationService.verifyEmail(token, "127.0.0.1");
+        registrationService.verifyEmail(token, TEST_IP);  // ✅ Use constant
 
         // Then
         verify(userRepository).save(userCaptor.capture());
@@ -316,8 +322,13 @@ class RegistrationServiceTest {
         EmailVerification savedVerification = verificationCaptor.getValue();
         assertThat(savedVerification.getVerified()).isTrue();
 
-        verify(emailService).sendWelcomeEmail(user.getEmail(), user.getName());
-        verify(auditLogService).logEmailVerified(user, "127.0.0.1");
+        verify(emailService).sendWelcomeEmail(
+                eq(user.getEmail()),
+                eq(user.getName()),
+                eq(user),  // ✅ Changed from any() to eq()
+                eq(TEST_IP)
+        );
+        verify(auditLogService).logEmailVerified(user, TEST_IP);
     }
 
     @Test
@@ -328,7 +339,7 @@ class RegistrationServiceTest {
         when(emailVerificationRepository.findByToken(token)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> registrationService.verifyEmail(token, "127.0.0.1"))
+        assertThatThrownBy(() -> registrationService.verifyEmail(token, TEST_IP))  // ✅ Use constant
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Invalid or expired verification token");
 
@@ -356,7 +367,7 @@ class RegistrationServiceTest {
         when(emailVerificationRepository.findByToken(token)).thenReturn(Optional.of(verification));
 
         // When & Then
-        assertThatThrownBy(() -> registrationService.verifyEmail(token, "127.0.0.1"))
+        assertThatThrownBy(() -> registrationService.verifyEmail(token, TEST_IP))  // ✅ Use constant
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("expired");
 
@@ -384,7 +395,7 @@ class RegistrationServiceTest {
         when(emailVerificationRepository.findByToken(token)).thenReturn(Optional.of(verification));
 
         // When & Then
-        assertThatThrownBy(() -> registrationService.verifyEmail(token, "127.0.0.1"))
+        assertThatThrownBy(() -> registrationService.verifyEmail(token, TEST_IP))  // ✅ Use constant
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("already been verified");
 
@@ -417,14 +428,8 @@ class RegistrationServiceTest {
 
         ArgumentCaptor<EmailVerification> captor = ArgumentCaptor.forClass(EmailVerification.class);
 
-        // Capture time before test
-        LocalDateTime beforeTest = LocalDateTime.now();
-
         // When
-        registrationService.resendVerificationEmail(email);
-
-        // Capture time after test
-        LocalDateTime afterTest = LocalDateTime.now();
+        registrationService.resendVerificationEmail(email, TEST_IP);  // ✅ Use constant
 
         // Then
         verify(emailVerificationRepository).delete(oldVerification);
@@ -434,13 +439,18 @@ class RegistrationServiceTest {
         assertThat(newVerification.getUser()).isEqualTo(user);
         assertThat(newVerification.getToken()).isNotNull();
         assertThat(newVerification.getToken()).isNotEqualTo("old-token");
+        assertThat(newVerification.getVerified()).isFalse();
 
-        // Change the assertion to check it's between beforeTest and afterTest
-        assertThat(newVerification.getExpiryTime())
-                .isAfterOrEqualTo(beforeTest)
-                .isBeforeOrEqualTo(afterTest);
+        // ✅ Fixed: Check expiry time is in the future
+        assertThat(newVerification.getExpiryTime()).isAfter(LocalDateTime.now().plusHours(23));
+        assertThat(newVerification.getExpiryTime()).isBefore(LocalDateTime.now().plusHours(25));
 
-        verify(emailService).sendEmailVerification(eq(email), anyString());
+        verify(emailService).sendEmailVerification(
+                eq(email),
+                anyString(),
+                eq(user),  // ✅ Changed from any() to eq()
+                eq(TEST_IP)
+        );
     }
 
     @Test
@@ -456,12 +466,12 @@ class RegistrationServiceTest {
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
 
         // When & Then
-        assertThatThrownBy(() -> registrationService.resendVerificationEmail(email))
+        assertThatThrownBy(() -> registrationService.resendVerificationEmail(email, TEST_IP))  // ✅ Use constant
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("already verified");
 
         verify(emailVerificationRepository, never()).save(any());
-        verify(emailService, never()).sendEmailVerification(anyString(), anyString());
+        verify(emailService, never()).sendEmailVerification(anyString(), anyString(), any(User.class), anyString());
     }
 
     @Test
@@ -472,7 +482,7 @@ class RegistrationServiceTest {
         when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> registrationService.resendVerificationEmail(email))
+        assertThatThrownBy(() -> registrationService.resendVerificationEmail(email, TEST_IP))  // ✅ Use constant
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("User");
 

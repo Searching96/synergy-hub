@@ -1,17 +1,21 @@
 package com.synergyhub.domain.enums;
 
+import lombok.Getter;
+
+@Getter
 public enum TaskStatus {
     TO_DO("To Do"),
     IN_PROGRESS("In Progress"),
-    DONE("Done");
+    IN_REVIEW("In Review"),
+    DONE("Done"),
+    BLOCKED("Blocked"),
+    CANCELLED("Cancelled"),
+    BACKLOG("Backlog");
     
     private final String displayName;
     
     TaskStatus(String displayName) {
         this.displayName = displayName;
     }
-    
-    public String getDisplayName() {
-        return displayName;
-    }
+
 }

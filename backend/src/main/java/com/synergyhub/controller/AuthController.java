@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +31,10 @@ public class AuthController {
     private final ChangePasswordService changePasswordService;
     private final UserRepository userRepository;
 
+    /**
+     * User login
+     * POST /api/auth/login
+     */
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(
             @Valid @RequestBody LoginRequest request,
@@ -43,6 +48,10 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Login successful", response));
     }
 
+    /**
+     * User registration
+     * POST /api/auth/register
+     */
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<UserResponse>> register(
             @Valid @RequestBody RegisterRequest request,
@@ -58,6 +67,10 @@ public class AuthController {
                 ));
     }
 
+    /**
+     * Verify email with token
+     * POST /api/auth/verify-email
+     */
     @PostMapping("/verify-email")
     public ResponseEntity<ApiResponse<Void>> verifyEmail(
             @RequestParam String token,
@@ -69,15 +82,25 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Email verified successfully", null));
     }
 
+    /**
+     * Resend verification email
+     * POST /api/auth/resend-verification
+     */
     @PostMapping("/resend-verification")
     public ResponseEntity<ApiResponse<Void>> resendVerificationEmail(
-            @RequestParam String email) {
+            @RequestParam String email,
+            HttpServletRequest httpRequest) {  // ✅ Added HttpServletRequest
 
-        registrationService.resendVerificationEmail(email);
+        String ipAddress = getClientIP(httpRequest);  // ✅ Extract IP address
+        registrationService.resendVerificationEmail(email, ipAddress);  // ✅ Pass IP address
 
         return ResponseEntity.ok(ApiResponse.success("Verification email sent", null));
     }
 
+    /**
+     * Request password reset
+     * POST /api/auth/forgot-password
+     */
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<Void>> requestPasswordReset(
             @Valid @RequestBody PasswordResetRequest request,
@@ -93,6 +116,10 @@ public class AuthController {
         ));
     }
 
+    /**
+     * Validate password reset token
+     * GET /api/auth/validate-reset-token
+     */
     @GetMapping("/validate-reset-token")
     public ResponseEntity<ApiResponse<Boolean>> validateResetToken(
             @RequestParam String token) {
@@ -102,6 +129,10 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(isValid));
     }
 
+    /**
+     * Reset password with token
+     * POST /api/auth/reset-password
+     */
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<Void>> resetPassword(
             @Valid @RequestBody PasswordResetConfirmRequest request,
@@ -116,7 +147,12 @@ public class AuthController {
         ));
     }
 
+    /**
+     * Change password for authenticated user
+     * POST /api/auth/change-password
+     */
     @PostMapping("/change-password")
+    @PreAuthorize("isAuthenticated()")  // ✅ Added security annotation
     public ResponseEntity<ApiResponse<Void>> changePassword(
             @Valid @RequestBody ChangePasswordRequest request,
             @AuthenticationPrincipal UserPrincipal currentUser,
@@ -125,8 +161,8 @@ public class AuthController {
         String ipAddress = getClientIP(httpRequest);
 
         // Fetch the User entity
-        User user = userRepository.findById(currentUser.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", currentUser.getId()));
+        User user = userRepository.findByEmailWithRolesAndPermissions(currentUser.getEmail())  // ✅ Changed to use email
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", currentUser.getEmail()));
 
         changePasswordService.changePassword(user, request, ipAddress);
 
@@ -136,11 +172,18 @@ public class AuthController {
         ));
     }
 
+    // ========================================
+    // Helper Methods
+    // ========================================
+
+    /**
+     * Extract client IP address from request
+     */
     private String getClientIP(HttpServletRequest request) {
         String xfHeader = request.getHeader("X-Forwarded-For");
-        if (xfHeader == null) {
+        if (xfHeader == null || xfHeader.isEmpty()) {  // ✅ Added empty check
             return request.getRemoteAddr();
         }
-        return xfHeader.split(",")[0];
+        return xfHeader.split(",")[0].trim();  // ✅ Added trim()
     }
 }

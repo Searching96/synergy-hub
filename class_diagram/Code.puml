@@ -1,0 +1,579 @@
+@startuml Strict_Entity_Class_Diagram
+left to right direction
+
+' Control spacing
+skinparam ranksep 50
+skinparam nodesep 50
+skinparam packageStyle rectangle
+skinparam classBackgroundColor WhiteSmoke
+skinparam classBorderColor DarkSlateGray
+
+title SynergyHub - Strict Entity Class Diagram (Entities with Business Methods)
+
+' ==========================================
+' CORE ENTITIES
+' ==========================================
+
+class Organization {
+  - org_id: INT
+  - name: VARCHAR(100)
+  - address: VARCHAR(255)
+  - created_at: DATETIME
+  __
+  ' Create Operations
+  + create(): Organization
+  + addProject(Project): void
+  + addUser(User): void
+  + addResource(Resource): void
+  __
+  ' Query Operations
+  + findById(Integer): Optional<Organization>
+  + findByName(String): Optional<Organization>
+  + existsByName(String): boolean
+  + getProjects(): List<Project>
+  + getUsers(): List<User>
+  + getResources(): List<Resource>
+  + getActiveProjects(): List<Project>
+  + countProjects(): long
+  + countUsers(): long
+  __
+  ' Update Operations
+  + update(OrganizationDTO): void
+  + setName(String): void
+  + setAddress(String): void
+  __
+  ' Delete Operations
+  + delete(): void
+  + removeProject(Integer): void
+  + removeUser(Integer): void
+}
+
+class User {
+  - user_id: INT
+  - organization_id: INT
+  - name: VARCHAR(100)
+  - email: VARCHAR(100)
+  - password_hash: VARCHAR(255)
+  - two_factor_enabled: BOOLEAN
+  - account_locked: BOOLEAN
+  - lock_until: DATETIME
+  - email_verified: BOOLEAN
+  - last_login: DATETIME
+  - failed_login_attempts: INT
+  - created_at: DATETIME
+  __
+  ' Create Operations
+  + register(RegisterDTO): User
+  + create(): User
+  + createSession(String, String): UserSession
+  + createPasswordResetToken(): PasswordResetToken
+  + createEmailVerification(): EmailVerification
+  __
+  ' Query Operations
+  + findById(Integer): Optional<User>
+  + findByEmail(String): Optional<User>
+  + existsByEmail(String): boolean
+  + findByOrganization(Integer): List<User>
+  + findWithRolesAndPermissions(String): Optional<User>
+  + findExpiredLockedAccounts(): List<User>
+  + getProjects(): List<Project>
+  + getAssignedTasks(): List<Task>
+  + getReportedTasks(): List<Task>
+  + getActiveSessions(): List<UserSession>
+  + getAuditLogs(): List<AuditLog>
+  + getRoles(): Set<Role>
+  + getPermissions(): Set<Permission>
+  __
+  ' Update Operations
+  + updateProfile(UpdateProfileDTO): void
+  + changePassword(String, String): void
+  + setPassword(String): void
+  + verifyEmail(): void
+  + incrementFailedAttempts(): void
+  + resetFailedAttempts(): void
+  + updateLastLogin(): void
+  __
+  ' Authentication Operations
+  + authenticate(String): boolean
+  + validatePassword(String): boolean
+  + lock(Integer): void
+  + unlock(): void
+  + isAccountLocked(): boolean
+  + isEmailVerified(): boolean
+  __
+  ' 2FA Operations
+  + setup2FA(): TwoFactorSetupResponse
+  + verify2FA(String): boolean
+  + disable2FA(String): void
+  + regenerateBackupCodes(): List<String>
+  + verifyBackupCode(String): boolean
+  __
+  ' Session Management
+  + revokeSession(String): void
+  + revokeAllSessions(): void
+  + cleanupExpiredSessions(): void
+  __
+  ' Delete Operations
+  + delete(): void
+  + deletePasswordResetTokens(): void
+  + deleteEmailVerification(): void
+  + deleteTwoFactorSecret(): void
+}
+
+class Role {
+  - role_id: INT
+  - name: VARCHAR(50)
+  - description: TEXT
+  __
+  ' Create Operations
+  + create(String, String): Role
+  + addPermission(Permission): void
+  __
+  ' Query Operations
+  + findById(Integer): Optional<Role>
+  + findByName(String): Optional<Role>
+  + findWithPermissions(String): Optional<Role>
+  + existsByName(String): boolean
+  + getPermissions(): Set<Permission>
+  + getUsers(): Set<User>
+  __
+  ' Update Operations
+  + update(RoleDTO): void
+  + setName(String): void
+  + setDescription(String): void
+  __
+  ' Delete Operations
+  + delete(): void
+  + removePermission(Permission): void
+}
+
+class Permission {
+  - perm_id: INT
+  - name: VARCHAR(100)
+  - description: TEXT
+  __
+  ' Create Operations
+  + create(String, String): Permission
+  __
+  ' Query Operations
+  + findById(Integer): Optional<Permission>
+  + findByName(String): Optional<Permission>
+  + getRoles(): Set<Role>
+  __
+  ' Update Operations
+  + update(PermissionDTO): void
+  __
+  ' Delete Operations
+  + delete(): void
+}
+
+' ==========================================
+' PROJECT MANAGEMENT ENTITIES
+' ==========================================
+
+class Project {
+  - project_id: INT
+  - organization_id: INT
+  - name: VARCHAR(100)
+  - description: TEXT
+  - project_lead_id: INT
+  - start_date: DATE
+  - end_date: DATE
+  - status: VARCHAR(20)
+  __
+  ' Create Operations
+  + create(CreateProjectDTO): Project
+  + addMember(User, String): void
+  + addSprint(Sprint): void
+  + addTask(Task): void
+  __
+  ' Query Operations
+  + findById(Integer): Optional<Project>
+  + findByOrganization(Integer): List<Project>
+  + findByName(String, Integer): Optional<Project>
+  + existsByName(String, Integer): boolean
+  + findWithMembers(Integer): Optional<Project>
+  + findByLead(Integer): List<Project>
+  + findActiveByOrganization(Integer): List<Project>
+  + getMembers(): List<ProjectMember>
+  + getSprints(): List<Sprint>
+  + getTasks(): List<Task>
+  + countMembers(): long
+  __
+  ' Update Operations
+  + update(UpdateProjectDTO): void
+  + updateMemberRole(Integer, String): void
+  + setStatus(String): void
+  + setProjectLead(User): void
+  __
+  ' Validation Operations
+  + verifyAccess(User): boolean
+  + verifyLeadOrAdmin(User): boolean
+  + isMember(Integer): boolean
+  __
+  ' Delete Operations
+  + delete(): void
+  + removeMember(Integer): void
+}
+
+class Sprint {
+  - sprint_id: INT
+  - project_id: INT
+  - name: VARCHAR(100)
+  - goal: TEXT
+  - start_date: DATE
+  - end_date: DATE
+  - status: ENUM
+  __
+  ' Create Operations
+  + create(CreateSprintDTO): Sprint
+  + addTask(Task): void
+  __
+  ' Query Operations
+  + findById(Integer): Optional<Sprint>
+  + findByProject(Integer): List<Sprint>
+  + findActiveByProject(Integer): List<Sprint>
+  + getTasks(): List<Task>
+  __
+  ' Update Operations
+  + update(UpdateSprintDTO): void
+  + start(): void
+  + complete(): void
+  + setStatus(SprintStatus): void
+  __
+  ' Delete Operations
+  + delete(): void
+}
+
+class Task {
+  - task_id: INT
+  - project_id: INT
+  - sprint_id: INT
+  - title: VARCHAR(255)
+  - description: TEXT
+  - type: ENUM
+  - status: ENUM
+  - priority: ENUM
+  - story_points: INT
+  - due_date: DATE
+  - assignee_id: INT
+  - reporter_id: INT
+  - parent_task_id: INT
+  __
+  ' Create Operations
+  + create(CreateTaskDTO): Task
+  + addComment(Comment): void
+  + addSubtask(Task): void
+  + addDependency(Task): void
+  __
+  ' Query Operations
+  + findById(Integer): Optional<Task>
+  + findByProject(Integer): List<Task>
+  + findByAssignee(Integer): List<Task>
+  + findBySprint(Integer): List<Task>
+  + findByStatus(TaskStatus): List<Task>
+  + getComments(): List<Comment>
+  + getSubtasks(): List<Task>
+  + getDependencies(): List<Task>
+  + getParent(): Optional<Task>
+  __
+  ' Update Operations
+  + update(UpdateTaskDTO): void
+  + assignTo(User): void
+  + changeStatus(TaskStatus): void
+  + setPriority(TaskPriority): void
+  + setStoryPoints(Integer): void
+  + moveTo(Sprint): void
+  __
+  ' Delete Operations
+  + delete(): void
+  + removeComment(Integer): void
+  + removeDependency(Task): void
+}
+
+class Comment {
+  - comment_id: INT
+  - task_id: INT
+  - user_id: INT
+  - content: TEXT
+  - created_at: DATETIME
+  __
+  ' Create Operations
+  + create(Integer, Integer, String): Comment
+  __
+  ' Query Operations
+  + findById(Integer): Optional<Comment>
+  + findByTask(Integer): List<Comment>
+  + countByTask(Integer): long
+  __
+  ' Update Operations
+  + update(String): void
+  + setContent(String): void
+  __
+  ' Delete Operations
+  + delete(): void
+}
+
+' ==========================================
+' COMMUNICATION ENTITIES
+' ==========================================
+
+class ChatChannel {
+  - channel_id: INT
+  - organization_id: INT
+  - project_id: INT
+  - task_id: INT
+  - name: VARCHAR(100)
+  - channel_type: ENUM
+  __
+  ' Create Operations
+  + create(CreateChannelDTO): ChatChannel
+  + addMember(User): void
+  + sendMessage(User, String): ChatMessage
+  __
+  ' Query Operations
+  + findById(Integer): Optional<ChatChannel>
+  + findByOrganization(Integer): List<ChatChannel>
+  + findByProject(Integer): List<ChatChannel>
+  + findByTask(Integer): List<ChatChannel>
+  + getMessages(Pageable): Page<ChatMessage>
+  + getMembers(): List<User>
+  __
+  ' Update Operations
+  + update(UpdateChannelDTO): void
+  + setName(String): void
+  __
+  ' Delete Operations
+  + delete(): void
+  + removeMember(User): void
+}
+
+class ChatMessage {
+  - message_id: INT
+  - channel_id: INT
+  - user_id: INT
+  - content: TEXT
+  - sent_at: DATETIME
+  - parent_message_id: INT
+  __
+  ' Create Operations
+  + send(SendMessageDTO): ChatMessage
+  + reply(User, String): ChatMessage
+  __
+  ' Query Operations
+  + findById(Integer): Optional<ChatMessage>
+  + findByChannel(Integer): List<ChatMessage>
+  + findByChannelOrderByDate(Integer, Pageable): Page<ChatMessage>
+  + getReplies(): List<ChatMessage>
+  + getParent(): Optional<ChatMessage>
+  __
+  ' Update Operations
+  + update(String): void
+  __
+  ' Delete Operations
+  + delete(): void
+}
+
+' ==========================================
+' RESOURCE MANAGEMENT ENTITIES
+' ==========================================
+
+class Resource {
+  - resource_id: INT
+  - organization_id: INT
+  - name: VARCHAR(100)
+  - resource_type: ENUM
+  - details: TEXT
+  __
+  ' Create Operations
+  + create(CreateResourceDTO): Resource
+  __
+  ' Query Operations
+  + findById(Integer): Optional<Resource>
+  + findByOrganization(Integer): List<Resource>
+  + findByType(String): List<Resource>
+  + getBookings(): List<Booking>
+  + getAvailableSlots(LocalDateTime, LocalDateTime): List<TimeSlot>
+  __
+  ' Update Operations
+  + update(UpdateResourceDTO): void
+  __
+  ' Delete Operations
+  + delete(): void
+}
+
+class Booking {
+  - booking_id: INT
+  - resource_id: INT
+  - user_id: INT
+  - start_time: DATETIME
+  - end_time: DATETIME
+  - purpose: VARCHAR(255)
+  __
+  ' Create Operations
+  + create(CreateBookingDTO): Booking
+  __
+  ' Query Operations
+  + findById(Integer): Optional<Booking>
+  + findByResource(Integer): List<Booking>
+  + findByUser(Integer): List<Booking>
+  + findConflicting(Integer, LocalDateTime, LocalDateTime): List<Booking>
+  __
+  ' Update Operations
+  + update(UpdateBookingDTO): void
+  + reschedule(LocalDateTime, LocalDateTime): void
+  __
+  ' Validation Operations
+  + hasConflict(): boolean
+  __
+  ' Delete Operations
+  + cancel(): void
+}
+
+class Event {
+  - event_id: INT
+  - organization_id: INT
+  - project_id: INT
+  - title: VARCHAR(200)
+  - description: TEXT
+  - start_time: DATETIME
+  - end_time: DATETIME
+  - created_by: INT
+  __
+  ' Create Operations
+  + create(CreateEventDTO): Event
+  __
+  ' Query Operations
+  + findById(Integer): Optional<Event>
+  + findByOrganization(Integer): List<Event>
+  + findByProject(Integer): List<Event>
+  + findByCreator(Integer): List<Event>
+  + findByDateRange(LocalDateTime, LocalDateTime): List<Event>
+  __
+  ' Update Operations
+  + update(UpdateEventDTO): void
+  + reschedule(LocalDateTime, LocalDateTime): void
+  __
+  ' Delete Operations
+  + delete(): void
+}
+
+' ==========================================
+' AUTHENTICATION & SECURITY ENTITIES
+' ==========================================
+
+class PasswordResetToken {
+  - token_id: INT
+  - user_id: INT
+  - token: VARCHAR(255)
+  - expiry_time: DATETIME
+  - used: BOOLEAN
+  - created_at: DATETIME
+  __
+  ' Create Operations
+  + generate(User): PasswordResetToken
+  __
+  ' Query Operations
+  + findByToken(String): Optional<PasswordResetToken>
+  + findByUser(User): List<PasswordResetToken>
+  __
+  ' Validation Operations
+  + validate(String): boolean
+  + isExpired(): boolean
+  + isValid(): boolean
+  __
+  ' Delete Operations
+  + invalidateAllForUser(User): void
+  + deleteExpired(LocalDateTime): void
+  + use(): void
+}
+
+class UserSession {
+  - session_id: INT
+  - user_id: INT
+  - token_id: VARCHAR(255)
+  - device_info: VARCHAR(255)
+  - ip_address: VARCHAR(45)
+  - created_at: DATETIME
+  - expires_at: DATETIME
+  - revoked: BOOLEAN
+  __
+  ' Create Operations
+  + create(User, String, String): UserSession
+  __
+  ' Query Operations
+  + findByTokenId(String): Optional<UserSession>
+  + findActiveByUser(User, LocalDateTime): List<UserSession>
+  + findByUserNotRevoked(User): List<UserSession>
+  __
+  ' Validation Operations
+  + isValid(): boolean
+  + isExpired(): boolean
+  __
+  ' Update Operations
+  + revoke(): void
+  __
+  ' Delete Operations
+  + revokeAllForUser(User): void
+  + cleanupExpired(LocalDateTime): void
+}
+
+class AuditLog {
+  - log_id: BIGINT
+  - user_id: INT
+  - event_type: VARCHAR(50)
+  - event_details: TEXT
+  - ip_address: VARCHAR(45)
+  - user_agent: VARCHAR(500)
+  - created_at: DATETIME
+  __
+  ' Create Operations
+  + log(Integer, String, String, String, String): AuditLog
+  __
+  ' Query Operations
+  + findByUser(User, Pageable): Page<AuditLog>
+  + findByEventType(String, Pageable): Page<AuditLog>
+  + findByUserAndDateRange(User, LocalDateTime, LocalDateTime): List<AuditLog>
+  + findRecentByEventType(String, LocalDateTime): List<AuditLog>
+}
+
+' ==========================================
+' RELATIONSHIPS
+' ==========================================
+
+Organization "1" -- "*" User
+Organization "1" -- "*" Project
+Organization "1" -- "*" Resource
+Organization "1" -- "*" ChatChannel
+Organization "1" -- "*" Event
+
+User "*" -- "*" Role
+Role "*" -- "*" Permission
+
+User "1" -- "*" PasswordResetToken
+User "1" -- "*" UserSession
+User "1" -- "*" AuditLog
+
+Project "1" -- "*" Sprint
+Project "1" -- "*" Task
+Sprint "1" -- "*" Task
+Task "1" -- "*" Comment
+Task "1" -- "*" Task : parent/subtask
+
+User "1" -- "*" Project : leads
+User "*" -- "*" Project : member
+User "1" -- "*" Task : assigned
+User "1" -- "*" Task : reported
+User "1" -- "*" Comment : writes
+
+ChatChannel "1" -- "*" ChatMessage
+ChatChannel "*" -- "*" User : members
+ChatMessage "*" -- "1" User : author
+
+Resource "1" -- "*" Booking
+Booking "*" -- "1" User
+
+Event "*" -- "1" User : creator
+Event "*" -- "0..1" Project
+
+@enduml

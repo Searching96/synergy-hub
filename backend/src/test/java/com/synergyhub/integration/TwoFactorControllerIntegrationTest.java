@@ -8,33 +8,34 @@ import com.synergyhub.domain.entity.User;
 import com.synergyhub.dto.request.LoginRequest;
 import com.synergyhub.dto.request.TwoFactorDisableRequest;
 import com.synergyhub.dto.request.TwoFactorVerifyRequest;
-import com.synergyhub.dto.response.LoginResponse;
 import com.synergyhub.dto.response.TwoFactorSetupResponse;
 import com.synergyhub.repository.*;
 import com.synergyhub.security.JwtTokenProvider;
+import com.synergyhub.util.EmailService;
 import dev.samstevens.totp.code.CodeGenerator;
 import dev.samstevens.totp.code.DefaultCodeGenerator;
 import dev.samstevens.totp.time.SystemTimeProvider;
 import dev.samstevens.totp.time.TimeProvider;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -42,6 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Import(TestSecurityConfig.class)
 @ActiveProfiles("test")
+@Transactional
 class TwoFactorControllerIntegrationTest {
 
     @Autowired
@@ -63,10 +65,16 @@ class TwoFactorControllerIntegrationTest {
     private TwoFactorSecretRepository twoFactorSecretRepository;
 
     @Autowired
+    private AuditLogRepository auditLogRepository;
+
+    @Autowired
     private UserSessionRepository userSessionRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @MockBean
+    private EmailService emailService;
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
@@ -78,9 +86,14 @@ class TwoFactorControllerIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // Clean up
+        // Mock email service to do nothing
+        doNothing().when(emailService).sendPasswordResetEmail(anyString(), anyString(), any(User.class), anyString());
+        doNothing().when(emailService).sendEmailVerification(anyString(), anyString(), any(User.class), anyString());
+        doNothing().when(emailService).sendWelcomeEmail(anyString(), anyString(), any(User.class), anyString());
+
         userSessionRepository.deleteAll();
         twoFactorSecretRepository.deleteAll();
+        auditLogRepository.deleteAll();
         userRepository.deleteAll();
         roleRepository.deleteAll();
         organizationRepository.deleteAll();
@@ -108,13 +121,11 @@ class TwoFactorControllerIntegrationTest {
                 .accountLocked(false)
                 .failedLoginAttempts(0)
                 .build();
-        testUser.getRoles().add(role);
         testUser = userRepository.save(testUser);
 
-        // Generate access token
         accessToken = jwtTokenProvider.generateTokenFromUserId(testUser.getId(), testUser.getEmail());
 
-        // Initialize TOTP code generator
+        // Initialize TOTP code generator for testing
         codeGenerator = new DefaultCodeGenerator();
         timeProvider = new SystemTimeProvider();
     }
@@ -270,7 +281,15 @@ class TwoFactorControllerIntegrationTest {
                         .header("Authorization", "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(disableRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void get2FAStatus_WhenNotEnabled_ShouldReturnFalse() throws Exception {
+        mockMvc.perform(get("/api/auth/2fa/status")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.enabled").value(false));
     }
 }

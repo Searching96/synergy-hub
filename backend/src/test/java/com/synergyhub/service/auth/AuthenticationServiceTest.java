@@ -1,13 +1,11 @@
 package com.synergyhub.service.auth;
 
 import com.synergyhub.domain.entity.Organization;
-import com.synergyhub.domain.entity.Role;
 import com.synergyhub.domain.entity.User;
 import com.synergyhub.domain.entity.UserSession;
 import com.synergyhub.dto.mapper.UserMapper;
 import com.synergyhub.dto.request.LoginRequest;
 import com.synergyhub.dto.response.LoginResponse;
-import com.synergyhub.dto.response.UserResponse;
 import com.synergyhub.exception.AccountLockedException;
 import com.synergyhub.exception.TwoFactorAuthenticationException;
 import com.synergyhub.repository.UserRepository;
@@ -19,6 +17,7 @@ import com.synergyhub.service.security.LoginAttemptService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -31,7 +30,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -70,18 +68,17 @@ class AuthenticationServiceTest {
     @Mock
     private UserMapper userMapper;
 
-
-
     @InjectMocks
     private AuthenticationService authenticationService;
 
     private User testUser;
-    private Organization testOrganization;
     private LoginRequest loginRequest;
+    private static final String TEST_IP = "192.168.1.1";  // ✅ Added constant
+    private static final String TEST_USER_AGENT = "Mozilla/5.0 Test";  // ✅ Added constant
 
     @BeforeEach
     void setUp() {
-        testOrganization = Organization.builder()
+        Organization testOrganization = Organization.builder()
                 .id(1)
                 .name("Test Org")
                 .build();
@@ -119,8 +116,10 @@ class AuthenticationServiceTest {
         when(jwtTokenProvider.getExpirationMs()).thenReturn(86400000L);
         when(jwtTokenProvider.getTokenIdFromToken(anyString())).thenReturn("token-id-123");
 
+        ArgumentCaptor<UserSession> sessionCaptor = ArgumentCaptor.forClass(UserSession.class);
+
         // When
-        LoginResponse response = authenticationService.login(loginRequest, "127.0.0.1", "Test User Agent");
+        LoginResponse response = authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT);  // ✅ Use constants
 
         // Then
         assertThat(response).isNotNull();
@@ -128,11 +127,26 @@ class AuthenticationServiceTest {
         assertThat(response.getTokenType()).isEqualTo("Bearer");
         assertThat(response.isTwoFactorRequired()).isFalse();
 
-        verify(loginAttemptService).recordLoginAttempt(loginRequest.getEmail(), "127.0.0.1", true);
-        verify(accountLockService).resetFailedAttempts(testUser);
+        verify(loginAttemptService).recordLoginAttempt(
+                eq(loginRequest.getEmail()),
+                eq(TEST_IP),
+                eq(true)
+        );
+        verify(accountLockService).resetFailedAttempts(eq(testUser), eq(TEST_IP));  // ✅ Use eq()
         verify(userRepository).save(testUser);
-        verify(userSessionRepository).save(any(UserSession.class));
-        verify(auditLogService).logLoginSuccess(eq(testUser), anyString(), anyString());
+
+        verify(userSessionRepository).save(sessionCaptor.capture());
+        UserSession savedSession = sessionCaptor.getValue();
+        assertThat(savedSession.getUser()).isEqualTo(testUser);
+        assertThat(savedSession.getTokenId()).isEqualTo("token-id-123");
+        assertThat(savedSession.getIpAddress()).isEqualTo(TEST_IP);
+        assertThat(savedSession.getUserAgent()).isEqualTo(TEST_USER_AGENT);
+
+        verify(auditLogService).logLoginSuccess(
+                eq(testUser),
+                eq(TEST_IP),
+                eq(TEST_USER_AGENT)
+        );
     }
 
     @Test
@@ -145,12 +159,21 @@ class AuthenticationServiceTest {
                 .thenThrow(new BadCredentialsException("Invalid credentials"));
 
         // When & Then
-        assertThatThrownBy(() -> authenticationService.login(loginRequest, "127.0.0.1", "Test User Agent"))
+        assertThatThrownBy(() -> authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT))  // ✅ Use constants
                 .isInstanceOf(BadCredentialsException.class);
 
-        verify(loginAttemptService).recordLoginAttempt(eq(loginRequest.getEmail()), eq("127.0.0.1"), eq(false));  // FIX: Use eq() for all args
-        verify(accountLockService).handleFailedLogin(testUser);
-        verify(auditLogService).logLoginFailed(eq(loginRequest.getEmail()), anyString(), anyString(), anyString());  // FIX: Use eq() for first arg
+        verify(loginAttemptService).recordLoginAttempt(
+                eq(loginRequest.getEmail()),
+                eq(TEST_IP),
+                eq(false)
+        );
+        verify(accountLockService).handleFailedLogin(eq(testUser), eq(TEST_IP));  // ✅ Use eq()
+        verify(auditLogService).logLoginFailed(
+                eq(loginRequest.getEmail()),
+                eq(TEST_IP),
+                eq(TEST_USER_AGENT),
+                contains("Invalid credentials")  // ✅ Use contains() matcher
+        );
     }
 
     @Test
@@ -164,12 +187,17 @@ class AuthenticationServiceTest {
         when(accountLockService.isAccountLocked(testUser)).thenReturn(true);
 
         // When & Then
-        assertThatThrownBy(() -> authenticationService.login(loginRequest, "127.0.0.1", "Test User Agent"))
+        assertThatThrownBy(() -> authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT))  // ✅ Use constants
                 .isInstanceOf(AccountLockedException.class)
                 .hasMessageContaining("Account is locked");
 
         verify(authenticationManager, never()).authenticate(any());
-        verify(auditLogService).logLoginFailed(eq(loginRequest.getEmail()), anyString(), anyString(), contains("locked"));
+        verify(auditLogService).logLoginFailed(
+                eq(loginRequest.getEmail()),
+                eq(TEST_IP),
+                eq(TEST_USER_AGENT),
+                contains("locked")
+        );
     }
 
     @Test
@@ -187,7 +215,7 @@ class AuthenticationServiceTest {
                 .thenReturn("temp-token");
 
         // When
-        LoginResponse response = authenticationService.login(loginRequest, "127.0.0.1", "Test User Agent");
+        LoginResponse response = authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT);  // ✅ Use constants
 
         // Then
         assertThat(response).isNotNull();
@@ -196,7 +224,7 @@ class AuthenticationServiceTest {
         assertThat(response.getAccessToken()).isNull();
 
         verify(userSessionRepository, never()).save(any());
-        verify(auditLogService).logTwoFactorRequired(testUser, "127.0.0.1");
+        verify(auditLogService).logTwoFactorRequired(eq(testUser), eq(TEST_IP));  // ✅ Use eq()
     }
 
     @Test
@@ -211,22 +239,23 @@ class AuthenticationServiceTest {
         when(accountLockService.isAccountLocked(testUser)).thenReturn(false);
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authentication);
-        when(twoFactorAuthService.verifyCode(testUser, "123456")).thenReturn(true);
+        when(twoFactorAuthService.verifyCode(eq(testUser), eq("123456"), eq(TEST_IP)))  // ✅ Use eq()
+                .thenReturn(true);
         when(jwtTokenProvider.generateTokenFromUserId(testUser.getId(), testUser.getEmail()))
                 .thenReturn("jwt-token");
         when(jwtTokenProvider.getExpirationMs()).thenReturn(86400000L);
         when(jwtTokenProvider.getTokenIdFromToken(anyString())).thenReturn("token-id-123");
 
         // When
-        LoginResponse response = authenticationService.login(loginRequest, "127.0.0.1", "Test User Agent");
+        LoginResponse response = authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT);  // ✅ Use constants
 
         // Then
         assertThat(response).isNotNull();
         assertThat(response.getAccessToken()).isEqualTo("jwt-token");
         assertThat(response.isTwoFactorRequired()).isFalse();
 
-        verify(twoFactorAuthService).verifyCode(testUser, "123456");
-        verify(auditLogService).logTwoFactorSuccess(testUser, "127.0.0.1");
+        verify(twoFactorAuthService).verifyCode(eq(testUser), eq("123456"), eq(TEST_IP));  // ✅ Use eq()
+        verify(auditLogService).logTwoFactorSuccess(eq(testUser), eq(TEST_IP));  // ✅ Use eq()
     }
 
     @Test
@@ -241,13 +270,89 @@ class AuthenticationServiceTest {
         when(accountLockService.isAccountLocked(testUser)).thenReturn(false);
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authentication);
-        when(twoFactorAuthService.verifyCode(testUser, "000000")).thenReturn(false);
+        when(twoFactorAuthService.verifyCode(eq(testUser), eq("000000"), eq(TEST_IP)))  // ✅ Use eq()
+                .thenReturn(false);
 
         // When & Then
-        assertThatThrownBy(() -> authenticationService.login(loginRequest, "127.0.0.1", "Test User Agent"))
+        assertThatThrownBy(() -> authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT))  // ✅ Use constants
                 .isInstanceOf(TwoFactorAuthenticationException.class)
                 .hasMessageContaining("Invalid");
 
-        verify(auditLogService).logTwoFactorFailed(testUser, "127.0.0.1");
+        verify(auditLogService).logTwoFactorFailed(eq(testUser), eq(TEST_IP));  // ✅ Use eq()
+    }
+
+    // ✅ Additional tests for better coverage
+    @Test
+    void login_WithNonExistentUser_ShouldThrowException() {
+        // Given
+        when(userRepository.findByEmailWithRolesAndPermissions(loginRequest.getEmail()))
+                .thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT))
+                .isInstanceOf(BadCredentialsException.class)
+                .hasMessageContaining("Invalid credentials");
+
+        verify(authenticationManager, never()).authenticate(any());
+        verify(auditLogService).logLoginFailed(
+                eq(loginRequest.getEmail()),
+                eq(TEST_IP),
+                eq(TEST_USER_AGENT),
+                contains("not found")
+        );
+    }
+
+    @Test
+    void login_WithUnverifiedEmail_ShouldThrowException() {
+        // Given
+        testUser.setEmailVerified(false);
+
+        when(userRepository.findByEmailWithRolesAndPermissions(loginRequest.getEmail()))
+                .thenReturn(Optional.of(testUser));
+
+        // When & Then
+        assertThatThrownBy(() -> authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT))
+                .isInstanceOf(BadCredentialsException.class)
+                .hasMessageContaining("Email not verified");
+
+        verify(authenticationManager, never()).authenticate(any());
+        verify(auditLogService).logLoginFailed(
+                eq(loginRequest.getEmail()),
+                eq(TEST_IP),
+                eq(TEST_USER_AGENT),
+                contains("Email not verified")
+        );
+    }
+
+    @Test
+    void login_ShouldUpdateLastLoginTimestamp() {
+        // Given
+        Authentication authentication = mock(Authentication.class);
+        LocalDateTime beforeLogin = LocalDateTime.now();
+
+        when(userRepository.findByEmailWithRolesAndPermissions(loginRequest.getEmail()))
+                .thenReturn(Optional.of(testUser));
+        when(accountLockService.isAccountLocked(testUser)).thenReturn(false);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authentication);
+        when(jwtTokenProvider.generateTokenFromUserId(testUser.getId(), testUser.getEmail()))
+                .thenReturn("jwt-token");
+        when(jwtTokenProvider.getExpirationMs()).thenReturn(86400000L);
+        when(jwtTokenProvider.getTokenIdFromToken(anyString())).thenReturn("token-id-123");
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+
+        // When
+        authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT);
+
+        LocalDateTime afterLogin = LocalDateTime.now();
+
+        // Then
+        verify(userRepository).save(userCaptor.capture());
+        User savedUser = userCaptor.getValue();
+
+        assertThat(savedUser.getLastLogin()).isNotNull();
+        assertThat(savedUser.getLastLogin()).isAfterOrEqualTo(beforeLogin);
+        assertThat(savedUser.getLastLogin()).isBeforeOrEqualTo(afterLogin);
     }
 }

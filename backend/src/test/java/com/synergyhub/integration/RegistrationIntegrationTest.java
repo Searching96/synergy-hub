@@ -23,7 +23,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 
@@ -53,14 +53,13 @@ class RegistrationIntegrationTest {
     private EmailVerificationRepository emailVerificationRepository;
 
     private Organization testOrganization;
-    private Role testRole;
 
     @BeforeEach
     void setUp() {
         // Mock email service to do nothing
-        doNothing().when(emailService).sendPasswordResetEmail(anyString(), anyString());
-        doNothing().when(emailService).sendEmailVerification(anyString(), anyString());
-        doNothing().when(emailService).sendWelcomeEmail(anyString(), anyString());
+        doNothing().when(emailService).sendPasswordResetEmail(anyString(), anyString(), any(User.class), anyString());
+        doNothing().when(emailService).sendEmailVerification(anyString(), anyString(), any(User.class), anyString());
+        doNothing().when(emailService).sendWelcomeEmail(anyString(), anyString(), any(User.class), anyString());
 
         // Clean up
         emailVerificationRepository.deleteAll();
@@ -75,7 +74,7 @@ class RegistrationIntegrationTest {
                 .build();
         testOrganization = organizationRepository.save(testOrganization);
 
-        testRole = Role.builder()
+        Role testRole = Role.builder()
                 .name("Team Member")
                 .description("Regular team member")
                 .build();

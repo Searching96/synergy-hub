@@ -16,6 +16,7 @@ import java.util.List;
 public class LoginAttemptService {
 
     private final LoginAttemptRepository loginAttemptRepository;
+    private final AuditLogService auditLogService;  // ✅ Added
 
     @Transactional
     public void recordLoginAttempt(String email, String ipAddress, boolean success) {
@@ -27,6 +28,13 @@ public class LoginAttemptService {
 
         loginAttemptRepository.save(attempt);
         log.debug("Recorded login attempt for email: {}, success: {}", email, success);
+
+        // Create audit log for all login attempts
+        String eventType = success ? "LOGIN_ATTEMPT_SUCCESS" : "LOGIN_ATTEMPT_FAILED";
+        String details = String.format("%s login attempt for email: %s",
+                success ? "Successful" : "Failed", email);
+
+        auditLogService.createAuditLog(null, eventType, details, ipAddress, null);
     }
 
     @Transactional(readOnly = true)
@@ -49,6 +57,16 @@ public class LoginAttemptService {
     public void cleanupOldAttempts(int days) {
         LocalDateTime before = LocalDateTime.now().minusDays(days);
         loginAttemptRepository.deleteOldAttempts(before);
+
         log.info("Cleaned up login attempts older than {} days", days);
+
+        // ✅ Create audit log for cleanup operation
+        auditLogService.createAuditLog(
+                null,
+                "LOGIN_ATTEMPTS_CLEANUP",
+                String.format("Cleaned up login attempts older than %d days", days),
+                "system",
+                null
+        );
     }
 }
