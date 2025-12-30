@@ -25,7 +25,10 @@ public class ChangePasswordService {
     private final AuditLogService auditLogService;
 
     @Transactional
-    public void changePassword(User user, ChangePasswordRequest request, String ipAddress) {
+    public void changePassword(String email, ChangePasswordRequest request, String ipAddress) {
+        User user = userRepository.findByEmailWithRolesAndPermissions(email)
+                .orElseThrow(() -> new BadRequestException("User not found for email: " + email));
+
         log.info("Password change request for user: {}", user.getEmail());
 
         // Verify current password

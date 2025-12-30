@@ -2,27 +2,31 @@ package com.synergyhub.domain.entity;
 
 import com.synergyhub.domain.enums.TaskPriority;
 import com.synergyhub.domain.enums.TaskStatus;
+import com.synergyhub.domain.enums.TaskType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "tasks", indexes = {
         @Index(name = "idx_task_sprint", columnList = "sprint_id"),
         @Index(name = "idx_task_assignee", columnList = "assignee_id"),
         @Index(name = "idx_task_project", columnList = "project_id"),
-        @Index(name = "idx_task_status", columnList = "status")
+        @Index(name = "idx_task_status", columnList = "status"),
+        @Index(name = "idx_task_parent", columnList = "parent_task_id") // ✅ Index for performance
 })
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Builder(toBuilder = true)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@ToString(exclude = {"sprint", "project", "assignee", "creator"})
+@ToString(exclude = {"sprint", "project", "assignee", "creator", "parentTask", "subtasks"}) // ✅ Prevent recursion
 public class Task {
 
     @Id
@@ -45,6 +49,16 @@ public class Task {
     @JoinColumn(name = "sprint_id")
     private Sprint sprint;
 
+    // ✅ NEW: Self-Reference for Parent Task
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_task_id")
+    private Task parentTask;
+
+    // ✅ NEW: List of Subtasks
+    @OneToMany(mappedBy = "parentTask", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Task> subtasks = new ArrayList<>();
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
@@ -59,10 +73,14 @@ public class Task {
     @JoinColumn(name = "assignee_id")
     private User assignee;
 
-    // ✅ ADD THIS: Creator field
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private TaskType type = TaskType.TASK;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "creator_id", nullable = false)
-    private User creator;
+    @JoinColumn(name = "reporter_id", nullable = false)
+    private User reporter;
 
     @Column(name = "story_points")
     private Integer storyPoints;
@@ -95,5 +113,10 @@ public class Task {
 
     public boolean isInProgress() {
         return status == TaskStatus.IN_PROGRESS || status == TaskStatus.IN_REVIEW;
+    }
+    
+    // ✅ Helper method to identify subtasks easily
+    public boolean isSubtask() {
+        return parentTask != null;
     }
 }

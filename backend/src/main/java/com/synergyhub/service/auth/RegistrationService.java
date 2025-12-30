@@ -11,16 +11,15 @@ import com.synergyhub.exception.BadRequestException;
 import com.synergyhub.exception.EmailAlreadyExistsException;
 import com.synergyhub.exception.ResourceNotFoundException;
 import com.synergyhub.repository.EmailVerificationRepository;
-import com.synergyhub.repository.OrganizationRepository;
-import com.synergyhub.repository.RoleRepository;
 import com.synergyhub.repository.UserRepository;
 import com.synergyhub.service.security.AuditLogService;
-import com.synergyhub.util.EmailService;
-import com.synergyhub.util.PasswordValidator;
+import com.synergyhub.events.auth.RegistrationCompletedEvent;
+import com.synergyhub.events.email.EmailVerificationEvent;
+
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,87 +31,55 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+
+
 public class RegistrationService {
 
-    private final UserRepository userRepository;
-    private final OrganizationRepository organizationRepository;
-    private final RoleRepository roleRepository;
-    private final EmailVerificationRepository emailVerificationRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final PasswordValidator passwordValidator;
-    private final EmailService emailService;
-    private final AuditLogService auditLogService;
-    private final UserMapper userMapper;
+        private final UserRepository userRepository;
+        private final EmailVerificationRepository emailVerificationRepository;
+        private final ApplicationEventPublisher eventPublisher;
+        private final AuditLogService auditLogService;
+        private final UserMapper userMapper;
+        private final UserProvisioningStrategy userProvisioningStrategy;
+        private final UserValidationService userValidationService;
 
-    @Value("${security.email-verification-token-expiry-hours}")
-    private int emailVerificationTokenExpiryHours;
+        @Value("${security.email-verification-token-expiry-hours}")
+        private int emailVerificationTokenExpiryHours;
 
-    @Value("${app.email-verification-enabled:true}")
-    private boolean emailVerificationEnabled;
-
-    @Value("${app.default-organization-id:1}")
-    private Integer defaultOrganizationId;
-
-    private static final String DEFAULT_ROLE = "Team Member";
+        @Value("${app.email-verification-enabled:true}")
+        private boolean emailVerificationEnabled;
 
     @Transactional
     public UserResponse register(RegisterRequest request, String ipAddress) {
         log.info("Registration request received for email: {}", request.getEmail());
 
-        // Check if email already exists
-        if (userRepository.existsByEmail(request.getEmail())) {
-            // ✅ Audit log for duplicate email attempt
+
+        // Validate email uniqueness and password
+        try {
+            userValidationService.validateEmailUniqueness(request.getEmail());
+            userValidationService.validatePassword(request.getPassword());
+        } catch (EmailAlreadyExistsException | BadRequestException ex) {
             auditLogService.createAuditLog(
                     null,
                     "REGISTRATION_FAILED",
-                    String.format("Registration attempt with duplicate email: %s", request.getEmail()),
+                    ex.getMessage(),
                     ipAddress,
                     null
             );
-            throw new EmailAlreadyExistsException(request.getEmail());
+            throw ex;
         }
 
-        // Validate password
-        if (!passwordValidator.isValid(request.getPassword())) {
-            // ✅ Audit log for weak password attempt
-            auditLogService.createAuditLog(
-                    null,
-                    "REGISTRATION_FAILED",
-                    String.format("Registration attempt with weak password for email: %s", request.getEmail()),
-                    ipAddress,
-                    null
-            );
-            throw new BadRequestException("Password does not meet requirements: " +
-                    passwordValidator.getRequirements());
-        }
 
-        // Determine organization
-        Integer orgId = request.getOrganizationId() != null ?
-                request.getOrganizationId() : defaultOrganizationId;
-
-        Organization organization = organizationRepository.findById(orgId)
-                .orElseThrow(() -> {
-                    // ✅ Audit log for invalid organization
-                    auditLogService.createAuditLog(
-                            null,
-                            "REGISTRATION_FAILED",
-                            String.format("Registration attempt with invalid organization ID: %d for email: %s",
-                                    orgId, request.getEmail()),
-                            ipAddress,
-                            null
-                    );
-                    return new ResourceNotFoundException("Organization", "id", orgId);
-                });
-
-        // Get default role
-        Role defaultRole = roleRepository.findByName(DEFAULT_ROLE)
-                .orElseThrow(() -> new ResourceNotFoundException("Role", "name", DEFAULT_ROLE));
+        // Use strategy for organization and role
+        Organization organization = userProvisioningStrategy.determineOrganization(request);
+        Role defaultRole = userProvisioningStrategy.determineDefaultRole(request);
 
         // Create user
+
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .passwordHash(userValidationService.encodePassword(request.getPassword()))
                 .organization(organization)
                 .emailVerified(!emailVerificationEnabled)
                 .twoFactorEnabled(false)
@@ -127,19 +94,19 @@ public class RegistrationService {
         log.info("User created successfully: {}", savedUser.getEmail());
 
         // Handle email verification
-        if (emailVerificationEnabled) {
-            sendVerificationEmail(savedUser, ipAddress);
-            // ✅ Audit log for verification email sent
-            auditLogService.createAuditLog(
-                    savedUser,
-                    "EMAIL_VERIFICATION_SENT",
-                    "Email verification sent",
-                    ipAddress,
-                    null
-            );
-        } else {
-            emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getName(), savedUser, ipAddress);
-        }
+                if (emailVerificationEnabled) {
+                        sendVerificationEmail(savedUser, ipAddress);
+                        // ✅ Audit log for verification email sent
+                        auditLogService.createAuditLog(
+                                        savedUser,
+                                        "EMAIL_VERIFICATION_SENT",
+                                        "Email verification sent",
+                                        ipAddress,
+                                        null
+                        );
+                } else {
+                        eventPublisher.publishEvent(new RegistrationCompletedEvent(savedUser, ipAddress));
+                }
 
         // Audit log
         auditLogService.logUserCreated(savedUser, ipAddress);
@@ -196,7 +163,7 @@ public class RegistrationService {
         log.info("Email verified successfully for user: {}", user.getEmail());
 
         // Send welcome email
-        emailService.sendWelcomeEmail(user.getEmail(), user.getName(), user, ipAddress);
+        eventPublisher.publishEvent(new RegistrationCompletedEvent(user, ipAddress));
 
         // Audit log
         auditLogService.logEmailVerified(user, ipAddress);
@@ -249,21 +216,21 @@ public class RegistrationService {
         log.info("Verification email resent to: {}", email);
     }
 
-    private void sendVerificationEmail(User user, String ipAddress) {
-        String token = generateVerificationToken();
+        private void sendVerificationEmail(User user, String ipAddress) {
+                String token = generateVerificationToken();
 
-        EmailVerification verification = EmailVerification.builder()
-                .user(user)
-                .token(token)
-                .verified(false)
-                .expiryTime(LocalDateTime.now().plusHours(emailVerificationTokenExpiryHours))
-                .build();
+                EmailVerification verification = EmailVerification.builder()
+                                .user(user)
+                                .token(token)
+                                .verified(false)
+                                .expiryTime(LocalDateTime.now().plusHours(emailVerificationTokenExpiryHours))
+                                .build();
 
-        emailVerificationRepository.save(verification);
+                emailVerificationRepository.save(verification);
 
-        emailService.sendEmailVerification(user.getEmail(), token, user, ipAddress);
-        log.debug("Verification email sent to: {}", user.getEmail());
-    }
+                eventPublisher.publishEvent(new EmailVerificationEvent(user, token, ipAddress));
+                log.debug("Verification email sent to: {}", user.getEmail());
+        }
 
     private String generateVerificationToken() {
         return UUID.randomUUID().toString();

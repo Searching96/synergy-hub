@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
+import com.synergyhub.domain.enums.ProjectStatus;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -24,6 +26,5 @@ public class UpdateProjectRequest {
 
     private LocalDate endDate;
 
-    @Size(max = 20, message = "Status must not exceed 20 characters")
-    private String status; // ACTIVE, COMPLETED, ARCHIVED
+    private ProjectStatus status; // ACTIVE, COMPLETED, ARCHIVED
 }

@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -99,7 +100,7 @@ class ProjectControllerIntegrationTest {
                 .passwordHash(passwordEncoder.encode("password123"))  // ✅ Fixed
                 .name("Test User")
                 .organization(testOrganization)
-                .roles(new HashSet<>(Arrays.asList(userRole)))
+                .roles(new HashSet<>(List.of(userRole)))
                 .emailVerified(true)
                 .accountLocked(false)
                 .twoFactorEnabled(false)
@@ -113,7 +114,7 @@ class ProjectControllerIntegrationTest {
                 .passwordHash(passwordEncoder.encode("password123"))
                 .name("Other User")
                 .organization(testOrganization)
-                .roles(new HashSet<>(Arrays.asList(userRole)))
+                .roles(new HashSet<>(List.of(userRole)))
                 .emailVerified(true)
                 .accountLocked(false)
                 .twoFactorEnabled(false)

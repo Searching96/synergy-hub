@@ -64,14 +64,8 @@ public class AccountLockService {
             }
         } else {
             // ✅ Audit log for failed login attempt
-            auditLogService.createAuditLog(
-                    user,
-                    "LOGIN_FAILED_ATTEMPT",
-                    String.format("Failed login attempt #%d of %d",
-                            user.getFailedLoginAttempts(), maxLoginAttempts),
-                    ipAddress
-            );
-
+            auditLogService.logLoginFailed(user.getEmail(), ipAddress, null,
+                    String.format("Failed login attempt #%d", user.getFailedLoginAttempts()));
             log.debug("Failed login attempt #{} for user: {}",
                     user.getFailedLoginAttempts(), user.getEmail());
         }

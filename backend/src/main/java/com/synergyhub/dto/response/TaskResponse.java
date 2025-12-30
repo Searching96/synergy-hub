@@ -2,6 +2,7 @@ package com.synergyhub.dto.response;
 
 import com.synergyhub.domain.enums.TaskPriority;
 import com.synergyhub.domain.enums.TaskStatus;
+import com.synergyhub.domain.enums.TaskType;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -18,6 +19,8 @@ public class TaskResponse {
     private TaskStatus status;
     private TaskPriority priority;
 
+    private TaskType type;
+
     private Integer projectId;
     private String projectName;
 
@@ -25,7 +28,11 @@ public class TaskResponse {
     private String sprintName;
 
     private UserResponse assignee;
-    private UserResponse creator;
+    private UserResponse reporter;
+
+    private Integer parentTaskId;
+    private String parentTaskTitle;
+    private Boolean isSubtask;
 
     private Integer storyPoints;
     private LocalDateTime dueDate;

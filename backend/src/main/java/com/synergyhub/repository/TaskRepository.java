@@ -27,6 +27,8 @@ public interface TaskRepository extends JpaRepository<Task, Integer> {
     // Find tasks by status
     List<Task> findByProjectIdAndStatus(Integer projectId, TaskStatus status);
 
+    List<Task> findByParentTaskId(Integer parentTaskId);
+
     // Find overdue tasks
     @Query("SELECT t FROM Task t WHERE t.dueDate < CURRENT_TIMESTAMP AND t.status NOT IN ('DONE', 'CANCELLED')")
     List<Task> findOverdueTasks();

@@ -11,6 +11,8 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.util.Set;
 
+import com.synergyhub.domain.enums.ProjectRole;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -39,8 +41,7 @@ public class CreateProjectRequest {
         @NotNull(message = "User ID is required")
         private Integer userId;
 
-        @NotBlank(message = "Role is required")
-        @Size(max = 50, message = "Role must not exceed 50 characters")
-        private String role;
+            @NotNull(message = "Role is required")
+            private ProjectRole role;
     }
 }

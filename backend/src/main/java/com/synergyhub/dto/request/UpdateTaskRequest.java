@@ -2,6 +2,7 @@ package com.synergyhub.dto.request;
 
 import com.synergyhub.domain.enums.TaskPriority;
 import com.synergyhub.domain.enums.TaskStatus;
+import com.synergyhub.domain.enums.TaskType;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -22,6 +23,8 @@ public class UpdateTaskRequest {
     private TaskStatus status;
 
     private TaskPriority priority;
+
+    private TaskType type;
 
     private Integer assigneeId;
 

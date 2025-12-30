@@ -9,7 +9,7 @@ import com.synergyhub.exception.BadRequestException;
 import com.synergyhub.repository.TwoFactorSecretRepository;
 import com.synergyhub.repository.UserRepository;
 import com.synergyhub.service.security.AuditLogService;
-import com.synergyhub.util.TotpUtil;
+// import com.synergyhub.util.TotpUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,8 +34,8 @@ class TwoFactorAuthServiceTest {
     @Mock
     private UserRepository userRepository;
 
-    @Mock
-    private TotpUtil totpUtil;
+        private MockTotpService mockTotpService;
+        private MockBackupCodeService mockBackupCodeService;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -54,14 +54,16 @@ class TwoFactorAuthServiceTest {
         // Create real ObjectMapper
         objectMapper = new ObjectMapper();
 
-        // Manually create the service with dependencies
+        mockTotpService = new MockTotpService();
+        mockBackupCodeService = new MockBackupCodeService();
         twoFactorAuthService = new TwoFactorAuthService(
                 twoFactorSecretRepository,
                 userRepository,
-                totpUtil,
+                mockTotpService,
                 objectMapper,
                 passwordEncoder,
-                auditLogService
+                auditLogService,
+                mockBackupCodeService
         );
 
         Organization org = Organization.builder()
@@ -87,8 +89,8 @@ class TwoFactorAuthServiceTest {
         String secret = "TESTSECRET123456";
         String qrCodeUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...";
 
-        when(totpUtil.generateSecret()).thenReturn(secret);
-        when(totpUtil.generateQrCodeUrl(secret, testUser.getEmail())).thenReturn(qrCodeUrl);
+        mockTotpService.secret = secret;
+        mockTotpService.qrCodeUrl = qrCodeUrl;
 
         ArgumentCaptor<TwoFactorSecret> captor = ArgumentCaptor.forClass(TwoFactorSecret.class);
 
@@ -149,7 +151,7 @@ class TwoFactorAuthServiceTest {
                 .build();
 
         when(twoFactorSecretRepository.findByUser(testUser)).thenReturn(Optional.of(twoFactorSecret));
-        when(totpUtil.verifyCode(secret, code)).thenReturn(true);
+        mockTotpService.validCode = true;
 
         // When
         boolean result = twoFactorAuthService.verifyAndEnableTwoFactor(testUser, code, TEST_IP);  
@@ -174,7 +176,7 @@ class TwoFactorAuthServiceTest {
                 .build();
 
         when(twoFactorSecretRepository.findByUser(testUser)).thenReturn(Optional.of(twoFactorSecret));
-        when(totpUtil.verifyCode(secret, code)).thenReturn(false);
+        mockTotpService.validCode = false;
 
         // When
         boolean result = twoFactorAuthService.verifyAndEnableTwoFactor(testUser, code, TEST_IP);  
@@ -212,7 +214,7 @@ class TwoFactorAuthServiceTest {
                 .build();
 
         when(twoFactorSecretRepository.findByUser(testUser)).thenReturn(Optional.of(twoFactorSecret));
-        when(totpUtil.verifyCode(secret, code)).thenReturn(true);
+        mockTotpService.validCode = true;
 
         // When
         boolean result = twoFactorAuthService.verifyCode(testUser, code, TEST_IP);  
@@ -238,7 +240,7 @@ class TwoFactorAuthServiceTest {
                 .build();
 
         when(twoFactorSecretRepository.findByUser(testUser)).thenReturn(Optional.of(twoFactorSecret));
-        when(totpUtil.verifyCode(secret, backupCode)).thenReturn(false); // TOTP fails
+        mockTotpService.validCode = false; // TOTP fails
 
         ArgumentCaptor<TwoFactorSecret> captor = ArgumentCaptor.forClass(TwoFactorSecret.class);
 
@@ -278,7 +280,7 @@ class TwoFactorAuthServiceTest {
                 .build();
 
         when(twoFactorSecretRepository.findByUser(testUser)).thenReturn(Optional.of(twoFactorSecret));
-        when(totpUtil.verifyCode(secret, code)).thenReturn(false);
+        mockTotpService.validCode = false;
 
         // When
         boolean result = twoFactorAuthService.verifyCode(testUser, code, TEST_IP);  
@@ -393,7 +395,7 @@ class TwoFactorAuthServiceTest {
                 .build();
 
         when(twoFactorSecretRepository.findByUser(testUser)).thenReturn(Optional.of(twoFactorSecret));
-        when(totpUtil.verifyCode(secret, verificationCode)).thenReturn(true);
+        mockTotpService.validCode = true;
 
         ArgumentCaptor<TwoFactorSecret> captor = ArgumentCaptor.forClass(TwoFactorSecret.class);
 
@@ -431,7 +433,7 @@ class TwoFactorAuthServiceTest {
                 .build();
 
         when(twoFactorSecretRepository.findByUser(testUser)).thenReturn(Optional.of(twoFactorSecret));
-        when(totpUtil.verifyCode(secret, invalidCode)).thenReturn(false);
+        mockTotpService.validCode = false;
 
         // When & Then
         assertThatThrownBy(() -> twoFactorAuthService.regenerateBackupCodes(testUser, invalidCode, TEST_IP))

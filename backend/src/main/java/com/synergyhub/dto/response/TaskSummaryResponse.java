@@ -2,6 +2,7 @@ package com.synergyhub.dto.response;
 
 import com.synergyhub.domain.enums.TaskPriority;
 import com.synergyhub.domain.enums.TaskStatus;
+import com.synergyhub.domain.enums.TaskType;
 import lombok.*;
 
 @Data
@@ -14,6 +15,8 @@ public class TaskSummaryResponse {
     private String title;
     private TaskStatus status;
     private TaskPriority priority;
+
+    private TaskType type;
 
     private Integer assigneeId;
     private String assigneeName;

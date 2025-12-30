@@ -8,10 +8,10 @@ import com.synergyhub.dto.request.UpdateTaskRequest;
 import com.synergyhub.dto.response.TaskResponse;
 import com.synergyhub.exception.*;
 import com.synergyhub.repository.*;
-import com.synergyhub.service.security.AuditLogService;  // ✅ Added
+import com.synergyhub.service.security.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize; // ✅ Added
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,26 +28,23 @@ public class TaskService {
     private final UserRepository userRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final TaskMapper taskMapper;
-    private final AuditLogService auditLogService;  // ✅ Added
+    private final AuditLogService auditLogService;
 
+    @PreAuthorize("@projectSecurity.hasProjectAccess(#request.projectId, #currentUser)")
     @Transactional
     public TaskResponse createTask(CreateTaskRequest request, User currentUser) {
         log.info("Creating task: {} in project: {} by user: {}",
                 request.getTitle(), request.getProjectId(), currentUser.getId());
 
-        // Verify project exists
         Project project = projectRepository.findById(request.getProjectId())
                 .orElseThrow(() -> new ProjectNotFoundException(request.getProjectId()));
-
-        // Verify user has access to project
-        verifyProjectAccess(project, currentUser);
 
         // Build task
         Task task = Task.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .project(project)
-                .creator(currentUser)
+                .reporter(currentUser)
                 .status(TaskStatus.TO_DO)
                 .priority(request.getPriority())
                 .storyPoints(request.getStoryPoints())
@@ -62,7 +59,6 @@ public class TaskService {
             if (!sprint.getProject().getId().equals(project.getId())) {
                 throw new BadRequestException("Sprint does not belong to this project");
             }
-
             task.setSprint(sprint);
         }
 
@@ -71,29 +67,48 @@ public class TaskService {
             User assignee = userRepository.findById(request.getAssigneeId())
                     .orElseThrow(() -> new ResourceNotFoundException("User", "id", request.getAssigneeId()));
 
+            // Business Logic: Assignee must be in project (Not a security check for
+            // currentUser, but a validity check for assignee)
             if (!projectMemberRepository.hasAccessToTaskProject(project.getId(), assignee.getId())) {
                 throw new TaskAssignmentException("User is not a member of this project");
             }
-
             task.setAssignee(assignee);
+        }
+
+        // Handle Subtasks
+        if (request.getParentTaskId() != null) {
+            Task parentTask = taskRepository.findById(request.getParentTaskId())
+                    .orElseThrow(() -> new TaskNotFoundException(request.getParentTaskId()));
+
+            // Validation 1: Parent must be in the same project
+            if (!parentTask.getProject().getId().equals(project.getId())) {
+                throw new BadRequestException("Subtask must belong to the same project as the parent task");
+            }
+
+            // Validation 2: Parent cannot be a subtask itself (Prevent infinite nesting for
+            // MVP)
+            if (parentTask.getParentTask() != null) {
+                throw new BadRequestException("Cannot create a subtask of a subtask");
+            }
+
+            task.setParentTask(parentTask);
         }
 
         Task savedTask = taskRepository.save(task);
         log.info("Task created successfully: {}", savedTask.getId());
 
-        // ✅ Audit log for task creation
         auditLogService.createAuditLog(
                 currentUser,
                 "TASK_CREATED",
                 String.format("Task '%s' (ID: %d) created in project '%s'",
                         savedTask.getTitle(), savedTask.getId(), project.getName()),
-                null,  // IP address not available in service layer
-                null
-        );
+                null,
+                null);
 
         return taskMapper.toTaskResponse(savedTask);
     }
 
+    @PreAuthorize("@projectSecurity.hasTaskAccess(#taskId, #currentUser)")
     @Transactional(readOnly = true)
     public TaskResponse getTaskById(Integer taskId, User currentUser) {
         log.info("Getting task: {} for user: {}", taskId, currentUser.getId());
@@ -101,51 +116,51 @@ public class TaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new TaskNotFoundException(taskId));
 
-        verifyProjectAccess(task.getProject(), currentUser);
-
         return taskMapper.toTaskResponse(task);
     }
 
+    @PreAuthorize("@projectSecurity.hasProjectAccess(#projectId, #currentUser)")
     @Transactional(readOnly = true)
     public List<TaskResponse> getTasksByProject(Integer projectId, User currentUser) {
         log.info("Getting tasks for project: {} by user: {}", projectId, currentUser.getId());
 
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new ProjectNotFoundException(projectId));
-
-        verifyProjectAccess(project, currentUser);
+        if (!projectRepository.existsById(projectId)) {
+            throw new ProjectNotFoundException(projectId);
+        }
 
         List<Task> tasks = taskRepository.findByProjectIdWithDetails(projectId);
         return taskMapper.toTaskResponseList(tasks);
     }
 
+    @PreAuthorize("@projectSecurity.hasSprintAccess(#sprintId, #currentUser)")
     @Transactional(readOnly = true)
     public List<TaskResponse> getTasksBySprint(Integer sprintId, User currentUser) {
         log.info("Getting tasks for sprint: {}", sprintId);
 
-        Sprint sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new SprintNotFoundException(sprintId));
-
-        verifyProjectAccess(sprint.getProject(), currentUser);
+        if (!sprintRepository.existsById(sprintId)) {
+            throw new SprintNotFoundException(sprintId);
+        }
 
         List<Task> tasks = taskRepository.findBySprintIdOrderByPriorityDescCreatedAtAsc(sprintId);
         return taskMapper.toTaskResponseList(tasks);
     }
 
+    @PreAuthorize("@projectSecurity.hasProjectAccess(#projectId, #currentUser)")
     @Transactional(readOnly = true)
     public List<TaskResponse> getTasksInBacklog(Integer projectId, User currentUser) {
         log.info("Getting backlog tasks for project: {}", projectId);
 
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new ProjectNotFoundException(projectId));
-
-        verifyProjectAccess(project, currentUser);
+        if (!projectRepository.existsById(projectId)) {
+            throw new ProjectNotFoundException(projectId);
+        }
 
         List<Task> tasks = taskRepository
                 .findByProjectIdAndSprintIsNullOrderByPriorityDescCreatedAtAsc(projectId);
         return taskMapper.toTaskResponseList(tasks);
     }
 
+    // No specific project security needed here as it's "My Tasks",
+    // but good practice to ensure the user exists or is active if needed.
     @Transactional(readOnly = true)
     public List<TaskResponse> getMyTasks(User currentUser) {
         log.info("Getting tasks assigned to user: {}", currentUser.getId());
@@ -155,6 +170,7 @@ public class TaskService {
         return taskMapper.toTaskResponseList(tasks);
     }
 
+    @PreAuthorize("@projectSecurity.hasTaskAccess(#taskId, #currentUser)")
     @Transactional
     public TaskResponse updateTask(Integer taskId, UpdateTaskRequest request, User currentUser) {
         log.info("Updating task: {} by user: {}", taskId, currentUser.getId());
@@ -162,13 +178,8 @@ public class TaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new TaskNotFoundException(taskId));
 
-        verifyProjectAccess(task.getProject(), currentUser);
-
-        // ✅ Track what changed for audit log
         StringBuilder changes = new StringBuilder();
-        String oldStatus = task.getStatus() != null ? task.getStatus().name() : null;
 
-        // Update fields
         if (request.getTitle() != null && !request.getTitle().equals(task.getTitle())) {
             changes.append(String.format("Title: '%s' → '%s'; ", task.getTitle(), request.getTitle()));
             task.setTitle(request.getTitle());
@@ -191,7 +202,6 @@ public class TaskService {
             task.setDueDate(request.getDueDate());
         }
 
-        // Update assignee
         if (request.getAssigneeId() != null) {
             User assignee = userRepository.findById(request.getAssigneeId())
                     .orElseThrow(() -> new ResourceNotFoundException("User", "id", request.getAssigneeId()));
@@ -207,7 +217,6 @@ public class TaskService {
             task.setAssignee(assignee);
         }
 
-        // Update sprint
         if (request.getSprintId() != null) {
             Sprint sprint = sprintRepository.findById(request.getSprintId())
                     .orElseThrow(() -> new SprintNotFoundException(request.getSprintId()));
@@ -215,28 +224,26 @@ public class TaskService {
             if (!sprint.getProject().getId().equals(task.getProject().getId())) {
                 throw new BadRequestException("Sprint does not belong to task's project");
             }
-
             task.setSprint(sprint);
         }
 
         Task updatedTask = taskRepository.save(task);
         log.info("Task updated successfully: {}", taskId);
 
-        // ✅ Audit log for task update
-        if (changes.length() > 0) {
+        if (!changes.isEmpty()) {
             auditLogService.createAuditLog(
                     currentUser,
                     "TASK_UPDATED",
                     String.format("Task '%s' (ID: %d) updated: %s",
-                            task.getTitle(), taskId, changes.toString()),
+                            task.getTitle(), taskId, changes),
                     null,
-                    null
-            );
+                    null);
         }
 
         return taskMapper.toTaskResponse(updatedTask);
     }
 
+    @PreAuthorize("@projectSecurity.hasTaskAccess(#taskId, #currentUser)")
     @Transactional
     public TaskResponse assignTask(Integer taskId, Integer assigneeId, User currentUser) {
         log.info("Assigning task: {} to user: {}", taskId, assigneeId);
@@ -244,18 +251,14 @@ public class TaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new TaskNotFoundException(taskId));
 
-        verifyProjectAccess(task.getProject(), currentUser);
-
         if (!task.canBeAssigned()) {
-            // ✅ Audit log for failed assignment
             auditLogService.createAuditLog(
                     currentUser,
                     "TASK_ASSIGNMENT_FAILED",
                     String.format("Failed to assign task '%s' (ID: %d): Invalid state %s",
                             task.getTitle(), taskId, task.getStatus()),
                     null,
-                    null
-            );
+                    null);
             throw new InvalidTaskStateException("Task cannot be assigned in current state: " + task.getStatus());
         }
 
@@ -263,15 +266,13 @@ public class TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", assigneeId));
 
         if (!projectMemberRepository.hasAccessToTaskProject(task.getProject().getId(), assignee.getId())) {
-            // ✅ Audit log for unauthorized assignment
             auditLogService.createAuditLog(
                     currentUser,
                     "TASK_ASSIGNMENT_FAILED",
                     String.format("Failed to assign task '%s' (ID: %d) to user %d: Not a project member",
                             task.getTitle(), taskId, assigneeId),
                     null,
-                    null
-            );
+                    null);
             throw new TaskAssignmentException("User is not a member of this project");
         }
 
@@ -281,19 +282,18 @@ public class TaskService {
 
         log.info("Task assigned successfully");
 
-        // ✅ Audit log for successful assignment
         auditLogService.createAuditLog(
                 currentUser,
                 "TASK_ASSIGNED",
                 String.format("Task '%s' (ID: %d) assigned: %s → %s",
                         task.getTitle(), taskId, oldAssignee, assignee.getName()),
                 null,
-                null
-        );
+                null);
 
         return taskMapper.toTaskResponse(updatedTask);
     }
 
+    @PreAuthorize("@projectSecurity.hasTaskAccess(#taskId, #currentUser)")
     @Transactional
     public void unassignTask(Integer taskId, User currentUser) {
         log.info("Unassigning task: {}", taskId);
@@ -301,33 +301,28 @@ public class TaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new TaskNotFoundException(taskId));
 
-        verifyProjectAccess(task.getProject(), currentUser);
-
         String oldAssignee = task.getAssignee() != null ? task.getAssignee().getName() : "Unassigned";
         task.setAssignee(null);
         taskRepository.save(task);
 
         log.info("Task unassigned successfully");
 
-        // ✅ Audit log for unassignment
         auditLogService.createAuditLog(
                 currentUser,
                 "TASK_UNASSIGNED",
                 String.format("Task '%s' (ID: %d) unassigned from %s",
                         task.getTitle(), taskId, oldAssignee),
                 null,
-                null
-        );
+                null);
     }
 
+    @PreAuthorize("@projectSecurity.hasTaskAccess(#taskId, #currentUser)")
     @Transactional
     public TaskResponse moveTaskToSprint(Integer taskId, Integer sprintId, User currentUser) {
         log.info("Moving task: {} to sprint: {}", taskId, sprintId);
 
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new TaskNotFoundException(taskId));
-
-        verifyProjectAccess(task.getProject(), currentUser);
 
         String oldLocation;
         String newLocation;
@@ -347,15 +342,13 @@ public class TaskService {
             }
 
             if (!task.canBeMovedToSprint()) {
-                // ✅ Audit log for failed move
                 auditLogService.createAuditLog(
                         currentUser,
                         "TASK_MOVE_FAILED",
                         String.format("Failed to move task '%s' (ID: %d) to sprint: Invalid state",
                                 task.getTitle(), taskId),
                         null,
-                        null
-                );
+                        null);
                 throw new InvalidTaskStateException("Task cannot be moved to sprint in current state");
             }
 
@@ -370,19 +363,18 @@ public class TaskService {
         Task updatedTask = taskRepository.save(task);
         log.info("Task moved successfully");
 
-        // ✅ Audit log for task move
         auditLogService.createAuditLog(
                 currentUser,
                 "TASK_MOVED",
                 String.format("Task '%s' (ID: %d) moved: %s → %s",
                         task.getTitle(), taskId, oldLocation, newLocation),
                 null,
-                null
-        );
+                null);
 
         return taskMapper.toTaskResponse(updatedTask);
     }
 
+    @PreAuthorize("@projectSecurity.hasTaskAccess(#taskId, #currentUser)")
     @Transactional
     public void deleteTask(Integer taskId, User currentUser) {
         log.info("Deleting task: {} by user: {}", taskId, currentUser.getId());
@@ -390,37 +382,31 @@ public class TaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new TaskNotFoundException(taskId));
 
-        verifyProjectAccess(task.getProject(), currentUser);
-
         String taskTitle = task.getTitle();
         String projectName = task.getProject().getName();
 
         taskRepository.delete(task);
         log.info("Task deleted successfully: {}", taskId);
 
-        // ✅ Audit log for task deletion
         auditLogService.createAuditLog(
                 currentUser,
                 "TASK_DELETED",
                 String.format("Task '%s' (ID: %d) deleted from project '%s'",
                         taskTitle, taskId, projectName),
                 null,
-                null
-        );
+                null);
     }
 
-    private void verifyProjectAccess(Project project, User user) {
-        if (!projectMemberRepository.hasAccessToTaskProject(project.getId(), user.getId())) {
-            // ✅ Audit log for access denied
-            auditLogService.createAuditLog(
-                    user,
-                    "TASK_ACCESS_DENIED",
-                    String.format("Access denied to project '%s' (ID: %d)",
-                            project.getName(), project.getId()),
-                    null,
-                    null
-            );
-            throw new AccessDeniedException("You don't have access to this project");
+    @PreAuthorize("@projectSecurity.hasTaskAccess(#parentTaskId, #currentUser)")
+    @Transactional(readOnly = true)
+    public List<TaskResponse> getSubtasks(Integer parentTaskId, User currentUser) {
+        log.info("Fetching subtasks for task: {}", parentTaskId);
+        
+        if (!taskRepository.existsById(parentTaskId)) {
+            throw new TaskNotFoundException(parentTaskId);
         }
+
+        List<Task> subtasks = taskRepository.findByParentTaskId(parentTaskId);
+        return taskMapper.toTaskResponseList(subtasks);
     }
 }

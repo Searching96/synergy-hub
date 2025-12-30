@@ -1,5 +1,6 @@
 package com.synergyhub.dto.response;
 
+import com.synergyhub.domain.enums.ProjectRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,5 +13,5 @@ import lombok.NoArgsConstructor;
 public class ProjectMemberResponse {
 
     private UserResponse user;
-    private String role;
+    private ProjectRole role;
 }

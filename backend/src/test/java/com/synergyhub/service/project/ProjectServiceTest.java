@@ -78,7 +78,7 @@ class ProjectServiceTest {
                 .email("test@example.com")
                 .name("Test User")
                 .organization(testOrganization)
-                .roles(new HashSet<>(Arrays.asList(userRole)))
+                .roles(new HashSet<>(Collections.singletonList(userRole)))
                 .build();
 
         testProject = Project.builder()
@@ -185,7 +185,7 @@ class ProjectServiceTest {
         // Given
         User nonMember = User.builder()
                 .id(2)
-                .roles(new HashSet<>(Arrays.asList(userRole)))
+                .roles(new HashSet<>(Collections.singletonList(userRole)))
                 .build();
 
         when(projectRepository.findByIdWithMembers(1)).thenReturn(Optional.of(testProject));
@@ -300,7 +300,7 @@ class ProjectServiceTest {
         User otherUser = User.builder()
                 .id(2)
                 .email("other@example.com")
-                .roles(new HashSet<>(Arrays.asList(userRole)))
+                .roles(new HashSet<>(Collections.singletonList(userRole)))
                 .build();
 
         UpdateProjectRequest request = UpdateProjectRequest.builder()
@@ -323,7 +323,7 @@ class ProjectServiceTest {
         User adminUser = User.builder()
                 .id(2)
                 .email("admin@example.com")
-                .roles(new HashSet<>(Arrays.asList(adminRole)))
+                .roles(new HashSet<>(Collections.singletonList(adminRole)))
                 .build();
 
         UpdateProjectRequest request = UpdateProjectRequest.builder()
@@ -500,7 +500,7 @@ class ProjectServiceTest {
         // Given
         User nonMember = User.builder()
                 .id(2)
-                .roles(new HashSet<>(Arrays.asList(userRole)))
+                .roles(new HashSet<>(Collections.singletonList(userRole)))
                 .build();
 
         when(projectRepository.findById(1)).thenReturn(Optional.of(testProject));
@@ -517,7 +517,7 @@ class ProjectServiceTest {
         // Given
         User adminUser = User.builder()
                 .id(2)
-                .roles(new HashSet<>(Arrays.asList(adminRole)))
+                .roles(new HashSet<>(Collections.singletonList(adminRole)))
                 .build();
 
         ProjectResponse expectedResponse = ProjectResponse.builder()

@@ -4,13 +4,14 @@ import com.synergyhub.domain.entity.PasswordResetToken;
 import com.synergyhub.domain.entity.User;
 import com.synergyhub.dto.request.PasswordResetConfirmRequest;
 import com.synergyhub.dto.request.PasswordResetRequest;
-import com.synergyhub.exception.BadRequestException;
+import com.synergyhub.events.auth.PasswordResetRequestedEvent;
 import com.synergyhub.exception.InvalidTokenException;
 import com.synergyhub.repository.PasswordResetTokenRepository;
 import com.synergyhub.repository.UserRepository;
 import com.synergyhub.repository.UserSessionRepository;
 import com.synergyhub.service.security.AuditLogService;
-import com.synergyhub.util.EmailService;
+
+import org.springframework.context.ApplicationEventPublisher;
 import com.synergyhub.util.PasswordValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,14 +27,15 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+
 public class PasswordResetService {
 
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
-    private final UserSessionRepository userSessionRepository;
-    private final PasswordEncoder passwordEncoder;
     private final PasswordValidator passwordValidator;
-    private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
+    private final UserSessionRepository userSessionRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final AuditLogService auditLogService;
 
     @Value("${security.password-reset-token-expiry-minutes}")
@@ -44,38 +46,33 @@ public class PasswordResetService {
         log.info("Password reset requested for email: {}", request.getEmail());
 
         // Find user by email
-        Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
+        userRepository.findByEmail(request.getEmail()).ifPresentOrElse(user -> {
+            // Invalidate all existing reset tokens for this user
+            passwordResetTokenRepository.invalidateAllUserTokens(user);
 
-        // Don't reveal if user exists or not (security best practice)
-        if (userOptional.isEmpty()) {
+            // Generate new reset token
+            String token = generateResetToken();
+
+            PasswordResetToken resetToken = PasswordResetToken.builder()
+                    .user(user)
+                    .token(token)
+                    .used(false)
+                    .expiryTime(LocalDateTime.now().plusMinutes(resetTokenExpiryMinutes))
+                    .build();
+
+            passwordResetTokenRepository.save(resetToken);
+
+            // Send reset email via event
+            eventPublisher.publishEvent(new PasswordResetRequestedEvent(user, token, ipAddress));
+
+            // Audit log
+            auditLogService.logPasswordResetRequested(user, ipAddress);
+
+            log.info("Password reset email sent to: {}", user.getEmail());
+        }, () -> {
             log.warn("Password reset requested for non-existent email: {}", request.getEmail());
-            return;
-        }
-
-        User user = userOptional.get();
-
-        // Invalidate all existing reset tokens for this user
-        passwordResetTokenRepository.invalidateAllUserTokens(user);
-
-        // Generate new reset token
-        String token = generateResetToken();
-
-        PasswordResetToken resetToken = PasswordResetToken.builder()
-                .user(user)
-                .token(token)
-                .used(false)
-                .expiryTime(LocalDateTime.now().plusMinutes(resetTokenExpiryMinutes))
-                .build();
-
-        passwordResetTokenRepository.save(resetToken);
-
-        // Send reset email
-        emailService.sendPasswordResetEmail(user.getEmail(), token, user, ipAddress);
-
-        // Audit log
-        auditLogService.logPasswordResetRequested(user, ipAddress);
-
-        log.info("Password reset email sent to: {}", user.getEmail());
+            // Do nothing else for security
+        });
     }
 
     @Transactional
@@ -94,16 +91,13 @@ public class PasswordResetService {
             throw new InvalidTokenException("Password reset token has expired. Please request a new one.");
         }
 
-        // Validate new password
-        if (!passwordValidator.isValid(request.getNewPassword())) {
-            throw new BadRequestException("Password does not meet requirements: " +
-                    passwordValidator.getRequirements());
-        }
-
+        // Validate and encode new password
         User user = resetToken.getUser();
-
-        // Update password
-        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        String newPassword = request.getNewPassword();
+        if (!passwordValidator.isValid(newPassword)) {
+            throw new IllegalArgumentException("Password does not meet requirements: " + passwordValidator.getRequirements());
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
         // Mark token as used

@@ -103,7 +103,7 @@ class TaskServiceTest {
                 .description("Test description")
                 .project(testProject)
                 .sprint(testSprint)
-                .creator(testUser)
+                .reporter(testUser)
                 .assignee(assignee)
                 .status(TaskStatus.TO_DO)
                 .priority(TaskPriority.MEDIUM)
@@ -268,7 +268,7 @@ class TaskServiceTest {
                 .id(2)
                 .title("Task 2")
                 .project(testProject)
-                .creator(testUser)
+                .reporter(testUser)
                 .status(TaskStatus.TO_DO)
                 .priority(TaskPriority.HIGH)
                 .build();

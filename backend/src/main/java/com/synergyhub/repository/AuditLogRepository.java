@@ -28,4 +28,12 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     
     @Query("SELECT a FROM AuditLog a WHERE a.eventType = :eventType AND a.createdAt > :since ORDER BY a.createdAt DESC")
     List<AuditLog> findRecentByEventType(@Param("eventType") String eventType, @Param("since") LocalDateTime since);
+
+    // ✅ NEW: Required for Activity Stream
+    // This finds all actions performed by users who are members of the given project.
+    // (This is an MVP approach. For stricter data, you'd add a 'projectId' column to AuditLog directly)
+    @Query("SELECT a FROM AuditLog a WHERE a.user.id IN " +
+           "(SELECT m.user.id FROM ProjectMember m WHERE m.project.id = :projectId) " +
+           "ORDER BY a.createdAt DESC")
+    Page<AuditLog> findProjectActivity(@Param("projectId") Integer projectId, Pageable pageable);
 }

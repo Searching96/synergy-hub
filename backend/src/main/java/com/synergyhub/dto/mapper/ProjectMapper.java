@@ -20,6 +20,8 @@ public interface ProjectMapper {
     @Mapping(target = "memberCount", expression = "java(project.getProjectMembers() != null ? project.getProjectMembers().size() : 0)")
     ProjectResponse toProjectResponse(Project project);
 
+    List<ProjectResponse> toProjectResponseList(List<Project> projects);
+
     @Mapping(target = "organizationId", source = "organization.id")
     @Mapping(target = "organizationName", source = "organization.name")
     @Mapping(target = "projectLead", source = "projectLead")

@@ -279,7 +279,7 @@ class TaskControllerIntegrationTest {
         Task backlogTask = Task.builder()
                 .title("Backlog Task")
                 .project(testProject)
-                .creator(testUser)
+                .reporter(testUser)
                 .status(TaskStatus.BACKLOG)
                 .priority(TaskPriority.LOW)
                 .build();
@@ -440,7 +440,7 @@ class TaskControllerIntegrationTest {
         Task task = Task.builder()
                 .title("Backlog Task")
                 .project(testProject)
-                .creator(testUser)
+                .reporter(testUser)
                 .status(TaskStatus.BACKLOG)
                 .priority(TaskPriority.MEDIUM)
                 .build();
@@ -498,7 +498,7 @@ class TaskControllerIntegrationTest {
                 .description("Test description")
                 .project(testProject)
                 .sprint(testSprint)
-                .creator(testUser)
+                .reporter(testUser)
                 .status(TaskStatus.TO_DO)
                 .priority(TaskPriority.MEDIUM)
                 .storyPoints(3)

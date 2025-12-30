@@ -36,7 +36,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class AuthenticationServiceTest {
+class LoginServiceTest {
 
     @Mock
     private UserRepository userRepository;
@@ -69,7 +69,7 @@ class AuthenticationServiceTest {
     private UserMapper userMapper;
 
     @InjectMocks
-    private AuthenticationService authenticationService;
+    private LoginService loginService;
 
     private User testUser;
     private LoginRequest loginRequest;
@@ -119,7 +119,7 @@ class AuthenticationServiceTest {
         ArgumentCaptor<UserSession> sessionCaptor = ArgumentCaptor.forClass(UserSession.class);
 
         // When
-        LoginResponse response = authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT);  // ✅ Use constants
+        LoginResponse response = loginService.login(loginRequest, TEST_IP, TEST_USER_AGENT);  // ✅ Use constants
 
         // Then
         assertThat(response).isNotNull();
@@ -159,7 +159,7 @@ class AuthenticationServiceTest {
                 .thenThrow(new BadCredentialsException("Invalid credentials"));
 
         // When & Then
-        assertThatThrownBy(() -> authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT))  // ✅ Use constants
+        assertThatThrownBy(() -> loginService.login(loginRequest, TEST_IP, TEST_USER_AGENT))  // ✅ Use constants
                 .isInstanceOf(BadCredentialsException.class);
 
         verify(loginAttemptService).recordLoginAttempt(
@@ -187,7 +187,7 @@ class AuthenticationServiceTest {
         when(accountLockService.isAccountLocked(testUser)).thenReturn(true);
 
         // When & Then
-        assertThatThrownBy(() -> authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT))  // ✅ Use constants
+        assertThatThrownBy(() -> loginService.login(loginRequest, TEST_IP, TEST_USER_AGENT))  // ✅ Use constants
                 .isInstanceOf(AccountLockedException.class)
                 .hasMessageContaining("Account is locked");
 
@@ -215,7 +215,7 @@ class AuthenticationServiceTest {
                 .thenReturn("temp-token");
 
         // When
-        LoginResponse response = authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT);  // ✅ Use constants
+        LoginResponse response = loginService.login(loginRequest, TEST_IP, TEST_USER_AGENT);  // ✅ Use constants
 
         // Then
         assertThat(response).isNotNull();
@@ -247,7 +247,7 @@ class AuthenticationServiceTest {
         when(jwtTokenProvider.getTokenIdFromToken(anyString())).thenReturn("token-id-123");
 
         // When
-        LoginResponse response = authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT);  // ✅ Use constants
+        LoginResponse response = loginService.login(loginRequest, TEST_IP, TEST_USER_AGENT);  // ✅ Use constants
 
         // Then
         assertThat(response).isNotNull();
@@ -274,7 +274,7 @@ class AuthenticationServiceTest {
                 .thenReturn(false);
 
         // When & Then
-        assertThatThrownBy(() -> authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT))  // ✅ Use constants
+        assertThatThrownBy(() -> loginService.login(loginRequest, TEST_IP, TEST_USER_AGENT))  // ✅ Use constants
                 .isInstanceOf(TwoFactorAuthenticationException.class)
                 .hasMessageContaining("Invalid");
 
@@ -289,7 +289,7 @@ class AuthenticationServiceTest {
                 .thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT))
+        assertThatThrownBy(() -> loginService.login(loginRequest, TEST_IP, TEST_USER_AGENT))
                 .isInstanceOf(BadCredentialsException.class)
                 .hasMessageContaining("Invalid credentials");
 
@@ -311,7 +311,7 @@ class AuthenticationServiceTest {
                 .thenReturn(Optional.of(testUser));
 
         // When & Then
-        assertThatThrownBy(() -> authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT))
+        assertThatThrownBy(() -> loginService.login(loginRequest, TEST_IP, TEST_USER_AGENT))
                 .isInstanceOf(BadCredentialsException.class)
                 .hasMessageContaining("Email not verified");
 
@@ -343,7 +343,7 @@ class AuthenticationServiceTest {
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
 
         // When
-        authenticationService.login(loginRequest, TEST_IP, TEST_USER_AGENT);
+        loginService.login(loginRequest, TEST_IP, TEST_USER_AGENT);
 
         LocalDateTime afterLogin = LocalDateTime.now();
 

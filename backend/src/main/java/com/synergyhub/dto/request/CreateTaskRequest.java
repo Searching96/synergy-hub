@@ -1,6 +1,7 @@
 package com.synergyhub.dto.request;
 
 import com.synergyhub.domain.enums.TaskPriority;
+import com.synergyhub.domain.enums.TaskType;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -27,7 +28,11 @@ public class CreateTaskRequest {
     @NotNull(message = "Priority is required")
     private TaskPriority priority;
 
+    private TaskType type;
+
     private Integer assigneeId;
+
+    private Integer parentTaskId;
 
     @Min(value = 1, message = "Story points must be at least 1")
     @Max(value = 100, message = "Story points must not exceed 100")

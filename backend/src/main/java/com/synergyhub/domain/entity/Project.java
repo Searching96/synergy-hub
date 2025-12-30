@@ -7,6 +7,8 @@ import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.synergyhub.domain.enums.ProjectStatus;
+
 @Entity
 @Table(name = "projects")
 @Getter
@@ -41,9 +43,9 @@ public class Project {
     @Column(name = "end_date")
     private LocalDate endDate;
     
-    @Column(length = 20)
-    @Builder.Default
-    private String status = "ACTIVE";
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ProjectStatus status;
     
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

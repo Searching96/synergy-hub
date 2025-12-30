@@ -8,8 +8,6 @@ skinparam packageStyle rectangle
 skinparam classBackgroundColor WhiteSmoke
 skinparam classBorderColor DarkSlateGray
 
-title SynergyHub - Strict Entity Class Diagram (Entities with Business Methods)
-
 ' ==========================================
 ' CORE ENTITIES
 ' ==========================================

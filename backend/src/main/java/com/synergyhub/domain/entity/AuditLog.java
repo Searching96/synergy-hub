@@ -9,7 +9,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "audit_logs", indexes = {
     @Index(name = "idx_user_time", columnList = "user_id, created_at"),
-    @Index(name = "idx_event_type", columnList = "event_type, created_at")
+    @Index(name = "idx_event_type", columnList = "event_type, created_at"),
+    @Index(name = "idx_project_time", columnList = "project_id, created_at") // ✅ New Index for Activity Stream
 })
 @Getter
 @Setter
@@ -26,6 +27,12 @@ public class AuditLog {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
+    
+    // ✅ NEW: Loose coupling to Project (stores ID only)
+    // We use Integer instead of @ManyToOne Project to prevent issues if a project is hard-deleted,
+    // and to keep log insertions extremely fast.
+    @Column(name = "project_id")
+    private Integer projectId;
     
     @Column(name = "event_type", nullable = false, length = 50)
     private String eventType;

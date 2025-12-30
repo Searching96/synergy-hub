@@ -1,8 +1,8 @@
 package com.synergyhub.domain.entity;
 
+import com.synergyhub.domain.enums.ProjectRole;
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.io.Serializable;
 
 @Entity
@@ -27,8 +27,9 @@ public class ProjectMember {
     @JoinColumn(name = "user_id")
     private User user;
     
-    @Column(length = 50)
-    private String role;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50, nullable = false)
+    private ProjectRole role;
     
     @Embeddable
     @Getter

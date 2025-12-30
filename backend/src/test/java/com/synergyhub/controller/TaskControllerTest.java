@@ -86,7 +86,7 @@ class TaskControllerTest {
                 .email("assignee@example.com")
                 .build();
 
-        UserResponse creatorResponse = UserResponse.builder()
+        UserResponse reporterResponse = UserResponse.builder()
                 .id(1)
                 .name("Test User")
                 .email("test@example.com")
@@ -103,7 +103,7 @@ class TaskControllerTest {
                 .status(TaskStatus.TO_DO)
                 .priority(TaskPriority.MEDIUM)
                 .assignee(assigneeResponse)
-                .creator(creatorResponse)
+                .reporter(reporterResponse)
                 .storyPoints(5)
                 .dueDate(LocalDateTime.now().plusDays(7))
                 .build();
