@@ -10,6 +10,8 @@ import com.synergyhub.repository.CommentRepository;
 import com.synergyhub.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,15 +47,16 @@ public class CommentService {
 
     @PreAuthorize("@projectSecurity.hasTaskAccess(#taskId, #currentUser)")
     @Transactional(readOnly = true)
-    public List<CommentResponse> getTaskComments(Integer taskId, User currentUser) {
-        log.info("Fetching comments for task: {}", taskId);
+    public List<CommentResponse> getTaskComments(Integer taskId, User currentUser, int page, int size) {
+        log.info("Fetching comments for task: {} (page: {}, size: {})", taskId, page, size);
         
         // Quick check to ensure task exists (security check handles the access)
         if (!taskRepository.existsById(taskId)) {
             throw new TaskNotFoundException(taskId);
         }
 
-        List<Comment> comments = commentRepository.findByTaskIdOrderByCreatedAtAsc(taskId);
+        Pageable pageable = PageRequest.of(page, size);
+        List<Comment> comments = commentRepository.findByTaskIdOrderByCreatedAtAsc(taskId, pageable);
         return commentMapper.toResponseList(comments);
     }
 }

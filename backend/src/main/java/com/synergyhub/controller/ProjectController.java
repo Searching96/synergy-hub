@@ -92,6 +92,38 @@ public class ProjectController {
                 .body(ApiResponse.success("Project deleted successfully", null));
     }
 
+    @PutMapping("/{projectId}/archive")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> archiveProject(
+            @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest httpRequest) {
+
+        User user = getUser(principal);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
+
+        projectService.archiveProject(projectId, user, ipAddress);
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Project archived successfully", null));
+    }
+
+    @PutMapping("/{projectId}/unarchive")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> unarchiveProject(
+            @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest httpRequest) {
+
+        User user = getUser(principal);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
+
+        projectService.unarchiveProject(projectId, user, ipAddress);
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Project unarchived successfully", null));
+    }
+
     // ===================================================================================
     // 2. DATA RETRIEVAL (Reads)
     // ===================================================================================

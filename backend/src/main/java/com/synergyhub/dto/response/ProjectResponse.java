@@ -23,4 +23,6 @@ public class ProjectResponse {
     private LocalDate endDate;
     private String status;
     private Integer memberCount;
+    private Integer taskCount;
+    private Integer completedTaskCount;
 }

@@ -6,15 +6,15 @@ public class InvalidProjectMemberException extends BadRequestException {
         super(message);
     }
 
-    public static InvalidProjectMemberException alreadyMember(Integer userId, Integer projectId) {
+    public static InvalidProjectMemberException alreadyMember(String email, String projectName) {
         return new InvalidProjectMemberException(
-                "User " + userId + " is already a member of project " + projectId
+                "User '" + email + "' is already a member of project '" + projectName + "'"
         );
     }
 
-    public static InvalidProjectMemberException notAMember(Integer userId, Integer projectId) {
+    public static InvalidProjectMemberException notAMember(String email, String projectName) {
         return new InvalidProjectMemberException(
-                "User " + userId + " is not a member of project " + projectId
+                "User '" + email + "' is not a member of project '" + projectName + "'"
         );
     }
 

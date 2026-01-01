@@ -7,19 +7,25 @@ CREATE TABLE organizations (
     org_id      INT AUTO_INCREMENT PRIMARY KEY,
     name        VARCHAR(100) NOT NULL UNIQUE,
     address     VARCHAR(255),
-    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- Table: users (each user belongs to an organization)
 CREATE TABLE users (
-    user_id       INT AUTO_INCREMENT PRIMARY KEY,
-    organization_id INT NOT NULL,
-    name          VARCHAR(100) NOT NULL,
-    email         VARCHAR(100) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    two_factor_enabled BOOLEAN DEFAULT FALSE,
-    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    -- Foreign key to organizations (multi-tenant isolation)
+    user_id             INT AUTO_INCREMENT PRIMARY KEY,
+    organization_id     INT NOT NULL,
+    name                VARCHAR(100) NOT NULL,
+    email               VARCHAR(100) NOT NULL UNIQUE,
+    password_hash       VARCHAR(255) NOT NULL,
+    two_factor_enabled  BOOLEAN NOT NULL DEFAULT FALSE,
+    account_locked      BOOLEAN NOT NULL DEFAULT FALSE,
+    lock_until          DATETIME,
+    email_verified      BOOLEAN NOT NULL DEFAULT FALSE,
+    last_login          DATETIME,
+    failed_login_attempts INT NOT NULL DEFAULT 0,
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_email (email),
+    INDEX idx_organization (organization_id),
     CONSTRAINT fk_user_org FOREIGN KEY (organization_id)
         REFERENCES organizations(org_id)
         ON DELETE CASCADE
@@ -32,12 +38,12 @@ INSERT INTO organizations (org_id, name, address) VALUES
 (3, 'EduFuture Labs', '500 Academy Lane, Star City');
 
 -- Insert sample users (with organization linkage)
-INSERT INTO users (user_id, organization_id, name, email, password_hash, two_factor_enabled) VALUES
-(1, 1, 'Alice Johnson', 'alice@technova.com', 'password123', FALSE),
-(2, 1, 'Bob Smith', 'bob@technova.com', 'password123', TRUE),
-(3, 2, 'Carol White', 'carol@healthplus.com', 'password123', FALSE),
-(4, 2, 'David Young', 'david@healthplus.com', 'password123', FALSE),
-(5, 3, 'Eve Jackson', 'eve@edufuture.com', 'password123', FALSE);
+INSERT INTO users (user_id, organization_id, name, email, password_hash, two_factor_enabled, email_verified) VALUES
+(1, 1, 'Alice Johnson', 'alice@technova.com', '$2a$10$dummyhash1', FALSE, TRUE),
+(2, 1, 'Bob Smith', 'bob@technova.com', '$2a$10$dummyhash2', TRUE, TRUE),
+(3, 2, 'Carol White', 'carol@healthplus.com', '$2a$10$dummyhash3', FALSE, TRUE),
+(4, 2, 'David Young', 'david@healthplus.com', '$2a$10$dummyhash4', FALSE, TRUE),
+(5, 3, 'Eve Jackson', 'eve@edufuture.com', '$2a$10$dummyhash5', FALSE, FALSE);
 
 -- Table: roles (predefined roles like Admin, Manager, Member, Guest)
 CREATE TABLE roles (
@@ -50,7 +56,8 @@ CREATE TABLE roles (
 CREATE TABLE permissions (
     perm_id   INT AUTO_INCREMENT PRIMARY KEY,
     name      VARCHAR(100) NOT NULL UNIQUE,
-    description TEXT
+    description TEXT,
+    INDEX idx_permission_name (name)
 ) ENGINE=InnoDB;
 
 -- Table: role_permissions (linking roles to permissions, many-to-many)
@@ -113,10 +120,10 @@ CREATE TABLE projects (
     organization_id INT NOT NULL,
     name            VARCHAR(100) NOT NULL,
     description     TEXT,
-    project_lead_id INT,  -- user who leads or manages the project (nullable)
+    project_lead_id INT,
     start_date      DATE,
     end_date        DATE,
-    status          VARCHAR(20) DEFAULT 'ACTIVE',
+    status          ENUM('PLANNING','ACTIVE','COMPLETED','ON_HOLD','ARCHIVED') NOT NULL DEFAULT 'ACTIVE',
     FOREIGN KEY (organization_id) REFERENCES organizations(org_id) ON DELETE CASCADE,
     FOREIGN KEY (project_lead_id) REFERENCES users(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
@@ -125,7 +132,7 @@ CREATE TABLE projects (
 CREATE TABLE project_members (
     project_id INT NOT NULL,
     user_id    INT NOT NULL,
-    role       VARCHAR(50),
+    role       ENUM('PROJECT_LEAD','DEVELOPER','TESTER','DESIGNER','SCRUM_MASTER','PRODUCT_OWNER','BUSINESS_ANALYST','STAKEHOLDER') NOT NULL,
     PRIMARY KEY (project_id, user_id),
     FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
@@ -139,17 +146,14 @@ INSERT INTO projects (project_id, organization_id, name, description, project_le
 (4, 3, 'E-Learning Platform', 'Online learning portal project', 5, '2025-01-01', '2025-06-30');
 
 -- Insert sample project membership (project_members)
--- role field here is optional descriptive (could also omit since roles are mostly global)
 INSERT INTO project_members (project_id, user_id, role) VALUES
--- Members for Project Alpha (proj 1 in org 1)
-(1, 1, 'Organization Admin'),    -- Alice (Org Admin) included by default
-(1, 2, 'Project Manager'),       -- Bob (Project Manager) is lead
-(1, 4, 'Team Member'),           -- David (from another org? Actually user4 is David of HealthPlus, which normally wouldn't join TechNova's project; for example sake we keep within same org usually. Let's use user with same org)
-(2, 1, 'Organization Admin'),    -- Project Beta (proj 2 in org 1): Alice
-(2, 2, 'Project Manager'),       -- Bob 
-(3, 3, 'Team Member'),           -- Health App (proj 3 in org 2): Carol
-(3, 4, 'Team Member'),           -- David
-(4, 5, 'Guest');                 -- E-Learning (proj 4 in org 3): Eve (Guest)
+(1, 1, 'PROJECT_LEAD'),
+(1, 2, 'DEVELOPER'),
+(2, 1, 'PROJECT_LEAD'),
+(2, 2, 'DEVELOPER'),
+(3, 3, 'PROJECT_LEAD'),
+(3, 4, 'DEVELOPER'),
+(4, 5, 'STAKEHOLDER');
 
 -- Table: sprints (each sprint belongs to a project)
 CREATE TABLE sprints (
@@ -159,7 +163,7 @@ CREATE TABLE sprints (
     goal         TEXT,
     start_date   DATE NOT NULL,
     end_date     DATE NOT NULL,
-    status       ENUM('PLANNED','ACTIVE','COMPLETED') DEFAULT 'PLANNED',
+    status       ENUM('PLANNING','ACTIVE','COMPLETED','CANCELLED') NOT NULL DEFAULT 'PLANNING',
     FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -167,23 +171,31 @@ CREATE TABLE sprints (
 CREATE TABLE tasks (
     task_id         INT AUTO_INCREMENT PRIMARY KEY,
     project_id      INT NOT NULL,
-    sprint_id       INT,  -- if assigned to a sprint (NULL if in backlog)
-    title           VARCHAR(255) NOT NULL,
+    sprint_id       INT,
+    title           VARCHAR(200) NOT NULL,
     description     TEXT,
-    type            ENUM('Story','Bug','Chore','Task') DEFAULT 'Task',
-    status          ENUM('To Do','In Progress','Done') DEFAULT 'To Do',
-    priority        ENUM('Low','Medium','High') DEFAULT 'Medium',
+    type            ENUM('STORY','BUG','CHORE','TASK') NOT NULL DEFAULT 'TASK',
+    status          ENUM('TO_DO','IN_PROGRESS','IN_REVIEW','DONE','BLOCKED','CANCELLED','BACKLOG') NOT NULL DEFAULT 'TO_DO',
+    priority        ENUM('LOW','MEDIUM','HIGH','CRITICAL') NOT NULL DEFAULT 'MEDIUM',
     story_points    INT,
-    due_date        DATE,
-    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    assignee_id     INT,   -- user responsible for the task (nullable)
-    reporter_id     INT,   -- user who created/reported the task
-    parent_task_id  INT,   -- for sub-task grouping (self-referential)
+    estimated_hours DECIMAL(10,2),
+    actual_hours    DECIMAL(10,2),
+    due_date        DATETIME(6),
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    assignee_id     INT,
+    reporter_id     INT NOT NULL,
+    parent_task_id  INT,
+    INDEX idx_task_sprint (sprint_id),
+    INDEX idx_task_assignee (assignee_id),
+    INDEX idx_task_project (project_id),
+    INDEX idx_task_status (status),
+    INDEX idx_task_parent (parent_task_id),
+    INDEX idx_task_reporter (reporter_id),
     FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE,
     FOREIGN KEY (sprint_id)  REFERENCES sprints(sprint_id) ON DELETE SET NULL,
     FOREIGN KEY (assignee_id) REFERENCES users(user_id) ON DELETE SET NULL,
-    FOREIGN KEY (reporter_id) REFERENCES users(user_id) ON DELETE SET NULL,
+    FOREIGN KEY (reporter_id) REFERENCES users(user_id) ON DELETE RESTRICT,
     FOREIGN KEY (parent_task_id) REFERENCES tasks(task_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -202,25 +214,161 @@ INSERT INTO sprints (sprint_id, project_id, name, goal, start_date, end_date, st
 
 -- Insert sample tasks
 INSERT INTO tasks (task_id, project_id, sprint_id, title, description, type, status, priority, story_points, due_date, assignee_id, reporter_id, parent_task_id) VALUES
--- Tasks for Project Alpha (proj_id=1, org 1)
-(1, 1, 1, 'Setup project repository', 'Initialize git repository and CI pipeline', 'Task', 'Done', 'Medium', 1, '2025-10-05', 2, 2, NULL),
-(2, 1, 1, 'Implement authentication module', 'Develop login, registration APIs with JWT', 'Story', 'In Progress', 'High', 8, '2025-10-10', 1, 2, NULL),
-(3, 1, 1, 'Login page UI', 'Create frontend login page (sub-task of auth module)', 'Task', 'To Do', 'Medium', 3, '2025-10-10', 1, 2, 2),  -- sub-task of task 2
-(4, 1, NULL, 'Research OAuth integration', 'Investigate adding Google OAuth2 login', 'Chore', 'To Do', 'Low', 2, '2025-10-20', 2, 1, NULL),  -- backlog item (no sprint)
--- Task for Project Beta (proj_id=2, org 1)
-(5, 2, NULL, 'Upgrade server hardware', 'Install new servers for production environment', 'Story', 'To Do', 'High', 5, '2025-11-01', 1, 1, NULL);
+(1, 1, 1, 'Setup project repository', 'Initialize git repository and CI pipeline', 'TASK', 'DONE', 'MEDIUM', 1, '2025-10-05', 2, 2, NULL),
+(2, 1, 1, 'Implement authentication module', 'Develop login, registration APIs with JWT', 'STORY', 'IN_PROGRESS', 'HIGH', 8, '2025-10-10', 1, 2, NULL),
+(3, 1, 1, 'Login page UI', 'Create frontend login page (sub-task of auth module)', 'TASK', 'TO_DO', 'MEDIUM', 3, '2025-10-10', 1, 2, 2),
+(4, 1, NULL, 'Research OAuth integration', 'Investigate adding Google OAuth2 login', 'TASK', 'TO_DO', 'LOW', 2, '2025-10-20', 2, 1, NULL),
+(5, 2, NULL, 'Upgrade server hardware', 'Install new servers for production environment', 'STORY', 'TO_DO', 'HIGH', 5, '2025-11-01', 1, 1, NULL);
 
 -- Insert task dependencies (e.g., Task 2 depends on Task 1)
 INSERT INTO task_dependencies (task_id, depends_on_task) VALUES
-(2, 1);  -- "Implement authentication module" (task 2) is blocked by "Setup project repository" (task 1)
+(2, 1);
+
+-- Table: user_sessions (JWT session tracking)
+CREATE TABLE user_sessions (
+    session_id          INT AUTO_INCREMENT PRIMARY KEY,
+    user_id             INT NOT NULL,
+    token_id            VARCHAR(255) NOT NULL UNIQUE,
+    user_agent          VARCHAR(500),
+    ip_address          VARCHAR(45),
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at          DATETIME NOT NULL,
+    last_accessed_at    DATETIME NOT NULL,
+    revoked             BOOLEAN NOT NULL DEFAULT FALSE,
+    INDEX idx_token (token_id),
+    INDEX idx_user_active (user_id, revoked, expires_at),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Table: two_factor_secrets (encrypted TOTP secrets)
+CREATE TABLE two_factor_secrets (
+    secret_id   INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL UNIQUE,
+    secret      VARCHAR(512) NOT NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_2fa_user (user_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Table: backup_codes (2FA backup codes)
+CREATE TABLE backup_codes (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL,
+    code        VARCHAR(255) NOT NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    used        BOOLEAN NOT NULL DEFAULT FALSE,
+    INDEX idx_backup_user_used (user_id, used),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Table: password_reset_tokens
+CREATE TABLE password_reset_tokens (
+    token_id    INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL,
+    token       VARCHAR(255) NOT NULL UNIQUE,
+    expiry_time DATETIME NOT NULL,
+    used        BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_token (token),
+    INDEX idx_expiry (expiry_time),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Table: email_verifications
+CREATE TABLE email_verifications (
+    verification_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id         INT NOT NULL,
+    token           VARCHAR(255) NOT NULL UNIQUE,
+    verified        BOOLEAN NOT NULL DEFAULT FALSE,
+    expiry_time     DATETIME NOT NULL,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_token (token),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Table: login_attempts (track failed login attempts)
+CREATE TABLE login_attempts (
+    attempt_id  INT AUTO_INCREMENT PRIMARY KEY,
+    email       VARCHAR(100) NOT NULL,
+    ip_address  VARCHAR(45),
+    success     BOOLEAN NOT NULL,
+    attempted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_email_time (email, attempted_at),
+    INDEX idx_ip_time (ip_address, attempted_at)
+) ENGINE=InnoDB;
+
+-- Table: audit_logs (system audit trail)
+CREATE TABLE audit_logs (
+    audit_log_id    INT AUTO_INCREMENT PRIMARY KEY,
+    user_id         INT,
+    event_type      VARCHAR(100) NOT NULL,
+    event_details   TEXT,
+    ip_address      VARCHAR(45),
+    user_agent      VARCHAR(500),
+    project_id      INT,
+    timestamp       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_audit_user (user_id),
+    INDEX idx_audit_timestamp (timestamp),
+    INDEX idx_audit_event_type (event_type),
+    INDEX idx_audit_project (project_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- Table: sso_providers (Single Sign-On providers)
+CREATE TABLE sso_providers (
+    provider_id     INT AUTO_INCREMENT PRIMARY KEY,
+    org_id          INT NOT NULL,
+    provider_type   ENUM('SAML','OIDC','OAUTH2') NOT NULL,
+    provider_name   VARCHAR(100) NOT NULL,
+    client_id       VARCHAR(255) NOT NULL,
+    client_secret   VARCHAR(512) NOT NULL,
+    metadata_url    VARCHAR(500),
+    enabled         BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (org_id) REFERENCES organizations(org_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Table: sso_user_mappings (Maps SSO external IDs to internal users)
+CREATE TABLE sso_user_mappings (
+    mapping_id      INT AUTO_INCREMENT PRIMARY KEY,
+    user_id         INT NOT NULL,
+    provider_id     INT NOT NULL,
+    external_id     VARCHAR(255) NOT NULL,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_provider_external (provider_id, external_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (provider_id) REFERENCES sso_providers(provider_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Table: comments (task comments)
+CREATE TABLE comments (
+    comment_id   INT AUTO_INCREMENT PRIMARY KEY,
+    task_id      INT NOT NULL,
+    user_id      INT NOT NULL,
+    content      TEXT NOT NULL,
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (task_id) REFERENCES tasks(task_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Insert sample comments on tasks
+INSERT INTO comments (comment_id, task_id, user_id, content, created_at) VALUES
+(1, 2, 1, 'Reminder: Consider password reset feature in auth module.', '2025-10-01 09:00:00'),
+(2, 2, 2, 'Good point, we will add that in a future sprint.', '2025-10-01 09:30:00'),
+(3, 4, 2, 'Any update on OAuth research? Need info by next week.', '2025-10-08 15:45:00');
+
+-- ============================================================
+-- OPTIONAL TABLES (Not yet implemented in backend entities)
+-- Uncomment these when ready to implement resource booking/chat
+-- ============================================================
 
 -- Table: resources
 CREATE TABLE resources (
-    resource_id   INT AUTO_INCREMENT PRIMARY KEY,
+    resource_id     INT AUTO_INCREMENT PRIMARY KEY,
     organization_id INT NOT NULL,
-    name          VARCHAR(100) NOT NULL,
-    resource_type ENUM('Room','Equipment','License','Other') DEFAULT 'Other',
-    details       TEXT,
+    name            VARCHAR(100) NOT NULL,
+    resource_type   ENUM('ROOM','EQUIPMENT','LICENSE','OTHER') NOT NULL DEFAULT 'OTHER',
+    details         TEXT,
     FOREIGN KEY (organization_id) REFERENCES organizations(org_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -236,60 +384,27 @@ CREATE TABLE bookings (
     FOREIGN KEY (user_id)     REFERENCES users(user_id)      ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- Insert sample resources
-INSERT INTO resources (resource_id, organization_id, name, resource_type, details) VALUES
-(1, 1, 'Conference Room A', 'Room', 'Main office large meeting room'),
-(2, 1, '3D Printer', 'Equipment', 'Industrial 3D printer in lab'),
-(3, 2, 'MRI Machine', 'Equipment', 'Imaging device in Radiology dept'),
-(4, 3, 'Training Room', 'Room', 'Room for workshops and training');
-
--- Insert sample bookings
-INSERT INTO bookings (booking_id, resource_id, user_id, start_time, end_time, purpose) VALUES
-(1, 1, 1, '2025-10-05 09:00:00', '2025-10-05 10:00:00', 'Project Alpha kickoff meeting'),   -- Alice booked Conference Room A
-(2, 1, 2, '2025-10-05 11:00:00', '2025-10-05 12:00:00', 'Sprint retrospective'),           -- Bob booked Conference Room A later that day
-(3, 2, 2, '2025-10-07 14:00:00', '2025-10-07 16:00:00', 'Printing prototype model'),       -- Bob booked 3D Printer
-(4, 3, 3, '2025-10-10 08:00:00', '2025-10-10 12:00:00', 'Routine maintenance check'),       -- Carol booked MRI Machine
-(5, 4, 5, '2025-05-20 09:00:00', '2025-05-20 17:00:00', 'On-site training event');          -- Eve booked Training Room
-
 -- Table: events (calendar events/meetings)
 CREATE TABLE events (
-    event_id      INT AUTO_INCREMENT PRIMARY KEY,
+    event_id        INT AUTO_INCREMENT PRIMARY KEY,
     organization_id INT NOT NULL,
-    project_id    INT,       -- optional: link to a project if relevant
-    title         VARCHAR(200) NOT NULL,
-    description   TEXT,
-    start_time    DATETIME NOT NULL,
-    end_time      DATETIME NOT NULL,
-    created_by    INT,       -- user who created the event
+    project_id      INT,
+    title           VARCHAR(200) NOT NULL,
+    description     TEXT,
+    start_time      DATETIME NOT NULL,
+    end_time        DATETIME NOT NULL,
+    created_by      INT NOT NULL,
     FOREIGN KEY (organization_id) REFERENCES organizations(org_id) ON DELETE CASCADE,
     FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE SET NULL,
-    FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE SET NULL
-) ENGINE=InnoDB;
-
--- Insert sample events
-INSERT INTO events (event_id, organization_id, project_id, title, description, start_time, end_time, created_by) VALUES
-(1, 1, 1, 'Sprint 1 Planning', 'Planning meeting for Sprint 1 of Project Alpha', '2025-09-30 10:00:00', '2025-09-30 11:00:00', 2),
-(2, 1, NULL, 'TechNova Town Hall', 'Monthly all-hands meeting', '2025-10-15 16:00:00', '2025-10-15 17:00:00', 1),
-(3, 2, 3, 'Health App Demo', 'Demonstration of new Health App features to stakeholders', '2025-10-10 09:00:00', '2025-10-10 10:30:00', 3),
-(4, 3, 4, 'Workshop: New LMS Training', 'Training session for the new E-Learning platform', '2025-05-20 09:00:00', '2025-05-20 11:00:00', 5);
-
--- Table: comments (task comments)
-CREATE TABLE comments (
-    comment_id   INT AUTO_INCREMENT PRIMARY KEY,
-    task_id      INT NOT NULL,
-    user_id      INT NOT NULL,
-    content      TEXT NOT NULL,
-    created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (task_id) REFERENCES tasks(task_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
 -- Table: chat_channels
 CREATE TABLE chat_channels (
     channel_id   INT AUTO_INCREMENT PRIMARY KEY,
     organization_id INT NOT NULL,
-    project_id   INT,   -- if this is a project-specific channel
-    task_id      INT,   -- if this is a task-specific channel
+    project_id   INT,
+    task_id      INT,
     name         VARCHAR(100),
     channel_type ENUM('TEAM','PROJECT','TASK','DIRECT') NOT NULL,
     FOREIGN KEY (organization_id) REFERENCES organizations(org_id) ON DELETE CASCADE,
@@ -297,7 +412,7 @@ CREATE TABLE chat_channels (
     FOREIGN KEY (task_id) REFERENCES tasks(task_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- Table: channel_members (users in a chat channel, for direct or private channels)
+-- Table: channel_members
 CREATE TABLE channel_members (
     channel_id INT NOT NULL,
     user_id    INT NOT NULL,
@@ -313,45 +428,8 @@ CREATE TABLE chat_messages (
     user_id         INT NOT NULL,
     content         TEXT NOT NULL,
     sent_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
-    parent_message_id INT,   -- for threaded reply (null if top-level message)
+    parent_message_id INT,
     FOREIGN KEY (channel_id) REFERENCES chat_channels(channel_id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (parent_message_id) REFERENCES chat_messages(message_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
-
--- Insert sample comments on tasks
-INSERT INTO comments (comment_id, task_id, user_id, content, created_at) VALUES
-(1, 2, 1, 'Reminder: Consider password reset feature in auth module.', '2025-10-01 09:00:00'),  -- Alice on Task 2
-(2, 2, 2, 'Good point, we will add that in a future sprint.', '2025-10-01 09:30:00'),          -- Bob replies on Task 2
-(3, 4, 2, 'Any update on OAuth research? Need info by next week.', '2025-10-08 15:45:00');     -- Bob commenting on Task 4
-
--- Insert sample chat channels
-INSERT INTO chat_channels (channel_id, organization_id, project_id, task_id, name, channel_type) VALUES
-(1, 1, NULL, NULL, 'General Chat', 'TEAM'),            -- Org 1 general channel
-(2, 1, 1, NULL, 'Project Alpha Chat', 'PROJECT'),      -- Project Alpha channel
-(3, 1, 1, 2, 'Auth Module Discussion', 'TASK'),        -- Task-specific channel for Task 2
-(4, 1, NULL, NULL, NULL, 'DIRECT');                    -- Direct message channel between two users (members defined below)
-
--- Insert channel members for channel 4 (direct channel between Alice and Bob)
-INSERT INTO channel_members (channel_id, user_id) VALUES
-(4, 1),  -- Alice
-(4, 2);  -- Bob
-
--- Insert sample chat messages
--- General channel (Org 1) messages
-INSERT INTO chat_messages (message_id, channel_id, user_id, content, sent_at, parent_message_id) VALUES
-(1, 1, 2, 'Hello team, welcome to the SynergyHub platform!', '2025-10-01 08:00:00', NULL),
-(2, 1, 1, 'Glad to be here! Excited to collaborate.', '2025-10-01 08:05:00', NULL);
-
--- Project channel (Project Alpha) messages, including a threaded reply
-INSERT INTO chat_messages (message_id, channel_id, user_id, content, sent_at, parent_message_id) VALUES
-(3, 2, 2, 'Sprint 1 is underway. Please update your task statuses daily.', '2025-10-02 10:00:00', NULL),
-(4, 2, 1, 'Sure, will do @Bob.', '2025-10-02 10:02:00', 3);  -- Alice replying to Bob's message (threaded under message_id 3)
-
--- Direct channel messages (between Alice and Bob)
-INSERT INTO chat_messages (message_id, channel_id, user_id, content, sent_at, parent_message_id) VALUES
-(5, 4, 1, 'Hey Bob, can you review my code later today?', '2025-10-02 14:00:00', NULL),
-(6, 4, 2, 'Yes Alice, I will review it by 5 PM.', '2025-10-02 14:05:00', NULL);
-
-
-

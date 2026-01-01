@@ -41,12 +41,14 @@ public class SessionService {
         String token = jwtTokenProvider.generateTokenFromUserId(user.getId(), user.getEmail());
         String tokenId = jwtTokenProvider.getTokenIdFromToken(token);
 
+        LocalDateTime now = LocalDateTime.now();
         UserSession session = UserSession.builder()
                 .user(user)
                 .tokenId(tokenId)
                 .userAgent(userAgent)
                 .ipAddress(ipAddress)
-                .expiresAt(LocalDateTime.now().plusSeconds(jwtTokenProvider.getExpirationMs() / 1000))
+                .expiresAt(now.plusSeconds(jwtTokenProvider.getExpirationMs() / 1000))
+                .lastAccessedAt(now)
                 .revoked(false)
                 .build();
         userSessionRepository.save(session);

@@ -44,6 +44,7 @@ public class TaskResponse {
     private LocalDateTime dueDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private boolean archived;
     
     // ✅ Subtasks (nested)
     private List<TaskSummaryResponse> subtasks; // Use summary to avoid deep nesting

@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: jdbc:mysql://localhost:3306/synergy_hub?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: ${DEV_DB_USERNAME:root}
-    password: ${DEV_DB_PASSWORD}
+    username: ${DEV_DB_USERNAME:thinh}
+    password: ${DEV_DB_PASSWORD:thinh}
     driver-class-name: com.mysql.cj.jdbc.Driver
     
   jpa:

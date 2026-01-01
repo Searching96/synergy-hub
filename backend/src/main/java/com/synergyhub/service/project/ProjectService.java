@@ -51,14 +51,28 @@ public class ProjectService {
         Project project = getProjectById(projectId);
         projectSecurity.requireLeadOrAdmin(project, currentUser);
         
-        // ✅ FIXED: Pass ipAddress to lifecycle service
+        // ✅ Permanently delete the project
+        lifecycleService.deleteProjectPermanently(project, currentUser, ipAddress);
+    }
+
+    public void archiveProject(Integer projectId, User currentUser, String ipAddress) {
+        Project project = getProjectById(projectId);
+        projectSecurity.requireLeadOrAdmin(project, currentUser);
+        
         lifecycleService.archiveProject(project, currentUser, ipAddress);
+    }
+
+    public void unarchiveProject(Integer projectId, User currentUser, String ipAddress) {
+        Project project = getProjectById(projectId);
+        projectSecurity.requireLeadOrAdmin(project, currentUser);
+        
+        lifecycleService.unarchiveProject(project, currentUser, ipAddress);
     }
 
     public void addMember(Integer projectId, AddMemberRequest request, User currentUser, String ipAddress) {
         Project project = getProjectById(projectId);
         projectSecurity.requireLeadOrAdmin(project, currentUser);
-        membershipService.addMember(project, request.getUserId(), request.getRole(), currentUser, ipAddress);
+        membershipService.addMemberByEmail(project, request.getEmail(), request.getRole(), currentUser, ipAddress);
     }
 
     public void removeMember(Integer projectId, Integer userId, User currentUser, String ipAddress) {

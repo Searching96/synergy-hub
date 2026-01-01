@@ -6,12 +6,15 @@ import com.synergyhub.dto.response.UserResponse;
 import com.synergyhub.repository.UserRepository;
 import com.synergyhub.security.UserPrincipal;
 import com.synergyhub.service.security.SessionManagementService;
+import com.synergyhub.util.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/users")
@@ -22,13 +25,17 @@ public class UserController {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final SessionManagementService sessionManagementService;
+    private final ClientIpResolver ipResolver;
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser(
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         var user = userRepository.findByEmailWithRolesAndPermissions(currentUser.getEmail())
-                .orElseThrow();
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
 
         UserResponse response = userMapper.toUserResponse(user);
 
@@ -41,7 +48,7 @@ public class UserController {
             HttpServletRequest httpRequest) {
 
         String token = extractToken(httpRequest);
-        String ipAddress = getClientIP(httpRequest);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
 
         sessionManagementService.logout(currentUser, token, ipAddress);
 
@@ -53,7 +60,7 @@ public class UserController {
             @AuthenticationPrincipal UserPrincipal currentUser,
             HttpServletRequest httpRequest) {
 
-        String ipAddress = getClientIP(httpRequest);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
 
         sessionManagementService.logoutAllDevices(currentUser, ipAddress);
 
@@ -69,13 +76,5 @@ public class UserController {
             return bearerToken.substring(7);
         }
         return null;
-    }
-
-    private String getClientIP(HttpServletRequest request) {
-        String xfHeader = request.getHeader("X-Forwarded-For");
-        if (xfHeader == null) {
-            return request.getRemoteAddr();
-        }
-        return xfHeader.split(",")[0];
     }
 }

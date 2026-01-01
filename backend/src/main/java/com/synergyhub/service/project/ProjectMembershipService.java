@@ -29,6 +29,14 @@ public class ProjectMembershipService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
+    public void addMemberByEmail(Project project, String email, ProjectRole role, User actor, String ipAddress) {
+        User memberUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+
+        addMember(project, memberUser.getId(), role, actor, ipAddress);
+    }
+
+    @Transactional
     public void addMember(Project project, Integer userId, ProjectRole role, User actor, String ipAddress) {
         User memberUser = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
@@ -38,7 +46,7 @@ public class ProjectMembershipService {
         }
 
         if (projectMemberRepository.existsByProjectIdAndUserId(project.getId(), userId)) {
-            throw InvalidProjectMemberException.alreadyMember(userId, project.getId());
+            throw InvalidProjectMemberException.alreadyMember(memberUser.getEmail(), project.getName());
         }
 
         ProjectMember.ProjectMemberId id = new ProjectMember.ProjectMemberId(project.getId(), userId);
@@ -59,12 +67,15 @@ public class ProjectMembershipService {
 
     @Transactional
     public void removeMember(Project project, Integer userId, User actor, String ipAddress) {
+        User memberUser = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
         if (project.getProjectLead().getId().equals(userId)) {
             throw InvalidProjectMemberException.cannotRemoveProjectLead();
         }
 
         if (!projectMemberRepository.existsByProjectIdAndUserId(project.getId(), userId)) {
-            throw InvalidProjectMemberException.notAMember(userId, project.getId());
+            throw InvalidProjectMemberException.notAMember(memberUser.getEmail(), project.getName());
         }
 
         projectMemberRepository.deleteByProjectIdAndUserId(project.getId(), userId);
@@ -77,8 +88,11 @@ public class ProjectMembershipService {
 
     @Transactional
     public void updateMemberRole(Project project, Integer userId, ProjectRole role, User actor, String ipAddress) {
+        User memberUser = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
         ProjectMember projectMember = projectMemberRepository.findByProjectIdAndUserId(project.getId(), userId)
-                .orElseThrow(() -> InvalidProjectMemberException.notAMember(userId, project.getId()));
+                .orElseThrow(() -> InvalidProjectMemberException.notAMember(memberUser.getEmail(), project.getName()));
 
         projectMember.setRole(role);
         projectMemberRepository.save(projectMember);

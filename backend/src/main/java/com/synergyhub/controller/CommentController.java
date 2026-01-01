@@ -7,6 +7,8 @@ import com.synergyhub.dto.response.CommentResponse;
 import com.synergyhub.security.UserContext;
 import com.synergyhub.service.comment.CommentService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,18 +52,20 @@ public class CommentController {
 
     /**
      * Get all comments for a task
-     * GET /api/tasks/{taskId}/comments
+     * GET /api/tasks/{taskId}/comments?page=0&size=50
      */
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<CommentResponse>>> getComments(
             @PathVariable @Positive(message = "Task ID must be positive") Integer taskId,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "50") @Min(1) @Max(200) int size,
             UserContext userContext) {
 
         User currentUser = new User();
         currentUser.setId(userContext.getId());
 
-        List<CommentResponse> comments = commentService.getTaskComments(taskId, currentUser);
+        List<CommentResponse> comments = commentService.getTaskComments(taskId, currentUser, page, size);
 
         return ResponseEntity.ok(ApiResponse.success(comments));
     }

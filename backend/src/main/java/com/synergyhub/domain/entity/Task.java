@@ -104,6 +104,10 @@ public class Task {
     @Column(name = "due_date")
     private LocalDateTime dueDate;
 
+    @Column(name = "archived", nullable = false)
+    @Builder.Default
+    private Boolean archived = false;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

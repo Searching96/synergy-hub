@@ -33,7 +33,7 @@ public interface ProjectRepository extends JpaRepository<Project, Integer> {
     @Query("SELECT p FROM Project p WHERE p.id = :id")
     Optional<Project> findByIdWithMembers(@Param("id") Integer id);
 
-    @Query("SELECT DISTINCT p FROM Project p LEFT JOIN p.members m " +
+    @Query("SELECT DISTINCT p FROM Project p LEFT JOIN p.projectMembers m " +
        "WHERE p.projectLead.id = :userId OR m.user.id = :userId")
     List<Project> findProjectsForUser(@Param("userId") Integer userId);
 

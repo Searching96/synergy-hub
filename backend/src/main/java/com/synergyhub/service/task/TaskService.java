@@ -377,7 +377,7 @@ public class TaskService {
     @PreAuthorize("@projectSecurity.hasTaskAccess(#taskId, #currentUser)")
     @Transactional
     public void deleteTask(Integer taskId, User currentUser) {
-        log.info("Deleting task: {} by user: {}", taskId, currentUser.getId());
+        log.info("Permanently deleting task: {} by user: {}", taskId, currentUser.getId());
 
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new TaskNotFoundException(taskId));
@@ -386,14 +386,56 @@ public class TaskService {
         String projectName = task.getProject().getName();
 
         taskRepository.delete(task);
-        log.info("Task deleted successfully: {}", taskId);
+        log.info("Task permanently deleted: {}", taskId);
 
         auditLogService.createAuditLog(
                 currentUser,
                 "TASK_DELETED",
-                String.format("Task '%s' (ID: %d) deleted from project '%s'",
+                String.format("Task '%s' (ID: %d) permanently deleted from project '%s'",
                         taskTitle, taskId, projectName),
                 null,
+                null);
+    }
+
+    @PreAuthorize("@projectSecurity.hasTaskAccess(#taskId, #currentUser)")
+    @Transactional
+    public void archiveTask(Integer taskId, User currentUser) {
+        log.info("Archiving task: {} by user: {}", taskId, currentUser.getId());
+
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new TaskNotFoundException(taskId));
+
+        task.setArchived(true);
+        taskRepository.save(task);
+        log.info("Task archived successfully: {}", taskId);
+
+        auditLogService.createAuditLog(
+                currentUser,
+                "TASK_ARCHIVED",
+                String.format("Task '%s' (ID: %d) archived in project '%s'",
+                        task.getTitle(), taskId, task.getProject().getName()),
+                task.getProject().getId(),
+                null);
+    }
+
+    @PreAuthorize("@projectSecurity.hasTaskAccess(#taskId, #currentUser)")
+    @Transactional
+    public void unarchiveTask(Integer taskId, User currentUser) {
+        log.info("Unarchiving task: {} by user: {}", taskId, currentUser.getId());
+
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new TaskNotFoundException(taskId));
+
+        task.setArchived(false);
+        taskRepository.save(task);
+        log.info("Task unarchived successfully: {}", taskId);
+
+        auditLogService.createAuditLog(
+                currentUser,
+                "TASK_UNARCHIVED",
+                String.format("Task '%s' (ID: %d) unarchived in project '%s'",
+                        task.getTitle(), taskId, task.getProject().getName()),
+                task.getProject().getId(),
                 null);
     }
 

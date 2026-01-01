@@ -18,6 +18,8 @@ public interface ProjectMapper {
     @Mapping(target = "organizationName", source = "organization.name")
     @Mapping(target = "projectLead", source = "projectLead")
     @Mapping(target = "memberCount", expression = "java(project.getProjectMembers() != null ? project.getProjectMembers().size() : 0)")
+    @Mapping(target = "taskCount", expression = "java(project.getTasks() != null ? project.getTasks().size() : 0)")
+    @Mapping(target = "completedTaskCount", expression = "java(project.getTasks() != null ? (int) project.getTasks().stream().filter(task -> \"DONE\".equals(task.getStatus())).count() : 0)")
     ProjectResponse toProjectResponse(Project project);
 
     List<ProjectResponse> toProjectResponseList(List<Project> projects);

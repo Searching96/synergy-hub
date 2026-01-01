@@ -36,6 +36,8 @@ public class ProjectLifecycleService {
         project.setOrganization(owner.getOrganization());
         project.setProjectLead(owner);
         project.setStatus(ProjectStatus.ACTIVE);
+        project.setStartDate(request.getStartDate());
+        project.setEndDate(request.getEndDate());
 
         Project savedProject = projectRepository.save(project);
 
@@ -59,6 +61,8 @@ public class ProjectLifecycleService {
         if (request.getName() != null) project.setName(request.getName());
         if (request.getDescription() != null) project.setDescription(request.getDescription());
         if (request.getStatus() != null) project.setStatus(request.getStatus());
+        if (request.getStartDate() != null) project.setStartDate(request.getStartDate());
+        if (request.getEndDate() != null) project.setEndDate(request.getEndDate());
 
         Project updated = projectRepository.save(project);
         
@@ -75,5 +79,23 @@ public class ProjectLifecycleService {
         // ✅ FIXED: Remove 'this' from constructor
         eventPublisher.publishEvent(new ProjectArchivedEvent(archived, actor, ipAddress));
         return archived;
+    }
+
+    @Transactional
+    public Project unarchiveProject(Project project, User actor, String ipAddress) {
+        project.setStatus(ProjectStatus.ACTIVE);
+        Project unarchived = projectRepository.save(project);
+        
+        eventPublisher.publishEvent(new ProjectUpdatedEvent(unarchived, actor, ipAddress));
+        return unarchived;
+    }
+
+    @Transactional
+    public void deleteProjectPermanently(Project project, User actor, String ipAddress) {
+        // Publish event before deletion for audit purposes
+        eventPublisher.publishEvent(new ProjectArchivedEvent(project, actor, ipAddress));
+        
+        // Permanently delete from database
+        projectRepository.delete(project);
     }
 }

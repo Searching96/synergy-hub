@@ -289,7 +289,7 @@ public class TaskController {
                         @AuthenticationPrincipal UserPrincipal currentUser,
                         HttpServletRequest httpRequest) {
 
-                log.info("Deleting task: {} by user: {}", taskId, currentUser.getId());
+                log.info("Permanently deleting task: {} by user: {}", taskId, currentUser.getId());
 
                 User user = userRepository.findByEmailWithRolesAndPermissions(currentUser.getEmail())
                                 .orElseThrow();
@@ -299,5 +299,41 @@ public class TaskController {
                 return ResponseEntity
                                 .status(HttpStatus.NO_CONTENT)
                                 .body(ApiResponse.success("Task deleted successfully", null));
+        }
+
+        @PutMapping("/api/tasks/{taskId}/archive")
+        @PreAuthorize("isAuthenticated()")
+        public ResponseEntity<ApiResponse<Void>> archiveTask(
+                        @PathVariable @Positive(message = "Task ID must be positive") Integer taskId,
+                        @AuthenticationPrincipal UserPrincipal currentUser,
+                        HttpServletRequest httpRequest) {
+
+                log.info("Archiving task: {} by user: {}", taskId, currentUser.getId());
+
+                User user = userRepository.findByEmailWithRolesAndPermissions(currentUser.getEmail())
+                                .orElseThrow();
+
+                taskService.archiveTask(taskId, user);
+
+                return ResponseEntity.ok(
+                                ApiResponse.success("Task archived successfully", null));
+        }
+
+        @PutMapping("/api/tasks/{taskId}/unarchive")
+        @PreAuthorize("isAuthenticated()")
+        public ResponseEntity<ApiResponse<Void>> unarchiveTask(
+                        @PathVariable @Positive(message = "Task ID must be positive") Integer taskId,
+                        @AuthenticationPrincipal UserPrincipal currentUser,
+                        HttpServletRequest httpRequest) {
+
+                log.info("Unarchiving task: {} by user: {}", taskId, currentUser.getId());
+
+                User user = userRepository.findByEmailWithRolesAndPermissions(currentUser.getEmail())
+                                .orElseThrow();
+
+                taskService.unarchiveTask(taskId, user);
+
+                return ResponseEntity.ok(
+                                ApiResponse.success("Task unarchived successfully", null));
         }
 }

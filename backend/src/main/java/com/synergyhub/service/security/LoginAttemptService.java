@@ -84,7 +84,7 @@ public class LoginAttemptService {
         LocalDateTime before = LocalDateTime.now().minusDays(days);
         
         // Count before deletion for audit purposes
-        long countBeforeDelete = loginAttemptRepository.countByCreatedAtBefore(before);
+        long countBeforeDelete = loginAttemptRepository.countByAttemptedAtBefore(before);
         
         // Delete old attempts
         loginAttemptRepository.deleteOldAttempts(before);
@@ -102,7 +102,7 @@ public class LoginAttemptService {
      */
     @Transactional(readOnly = true)
     public List<LoginAttempt> getAllAttemptsByEmail(String email) {
-        return loginAttemptRepository.findByEmailOrderByCreatedAtDesc(email);
+        return loginAttemptRepository.findByEmailOrderByAttemptedAtDesc(email);
     }
 
     /**
@@ -111,6 +111,6 @@ public class LoginAttemptService {
     @Transactional(readOnly = true)
     public List<LoginAttempt> getRecentAttemptsByIp(String ipAddress, int hours) {
         LocalDateTime since = LocalDateTime.now().minusHours(hours);
-        return loginAttemptRepository.findByIpAddressAndCreatedAtAfter(ipAddress, since);
+        return loginAttemptRepository.findByIpAddressAndAttemptedAtAfter(ipAddress, since);
     }
 }

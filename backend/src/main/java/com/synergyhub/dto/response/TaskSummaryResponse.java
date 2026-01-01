@@ -22,6 +22,7 @@ public class TaskSummaryResponse {
     
     // ✅ FIX: Added missing field used by SprintMapper
     private Integer storyPoints;
+    private boolean archived;
 
     private Integer assigneeId;
     private String assigneeName;
