@@ -1,4 +1,8 @@
 spring:
+  config:
+    activate:
+      on-profile: production
+  
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
@@ -12,11 +16,7 @@ spring:
 logging:
   level:
     com.synergyhub: INFO
-    
-spring:
-  config:
-    activate:
-      on-profile: production
+    org.springframework.security: WARN
 
 app:
   cors:

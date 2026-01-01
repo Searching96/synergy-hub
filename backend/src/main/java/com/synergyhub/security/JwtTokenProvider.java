@@ -31,11 +31,20 @@ public class JwtTokenProvider {
     // ✅ Validate key strength on startup
     @PostConstruct
     private void validateSecretKey() {
+        // CRITICAL: JWT secret must be set via environment variable
+        if (jwtSecret == null || jwtSecret.isBlank()) {
+            throw new IllegalStateException(
+                "JWT_SECRET environment variable must be set. " +
+                "Application cannot start without a valid JWT secret."
+            );
+        }
+        
         // HS512 requires at least 64 bytes (512 bits)
         if (jwtSecret.getBytes(StandardCharsets.UTF_8).length < 64) {
             throw new IllegalStateException(
                 "JWT secret must be at least 64 bytes (512 bits) for HS512 algorithm. " +
-                "Current length: " + jwtSecret.getBytes(StandardCharsets.UTF_8).length
+                "Current length: " + jwtSecret.getBytes(StandardCharsets.UTF_8).length + ". " +
+                "Use a cryptographically secure random string."
             );
         }
         log.info("JWT secret key validated successfully (length: {} bytes)", 

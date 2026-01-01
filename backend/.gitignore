@@ -1,3 +1,14 @@
+# ============================================
+# ENVIRONMENT VARIABLES - NEVER COMMIT!
+# ============================================
+.env
+.env.local
+.env.production
+.env.*.local
+
+# ============================================
+# MAVEN BUILD
+# ============================================
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/

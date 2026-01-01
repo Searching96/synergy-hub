@@ -10,12 +10,14 @@ import com.synergyhub.service.sprint.SprintService;
 import com.synergyhub.util.ClientIpResolver; // ✅ Import new resolver
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -25,6 +27,7 @@ import java.util.List;
 @RequestMapping("/api/projects")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 public class ProjectController {
 
     private final ProjectService projectService;
@@ -56,7 +59,7 @@ public class ProjectController {
     @PutMapping("/{projectId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<ProjectResponse>> updateProject(
-            @PathVariable Integer projectId,
+            @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
             @Valid @RequestBody UpdateProjectRequest request,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) { // ✅ Added HttpServletRequest
@@ -74,7 +77,7 @@ public class ProjectController {
     @DeleteMapping("/{projectId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> deleteProject(
-            @PathVariable Integer projectId,
+            @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) { // ✅ Added HttpServletRequest
 
@@ -108,7 +111,7 @@ public class ProjectController {
     @GetMapping("/{projectId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<ProjectDetailResponse>> getProjectDetails(
-            @PathVariable Integer projectId,
+            @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
             @AuthenticationPrincipal UserPrincipal principal) {
 
         User user = getUser(principal);
@@ -125,7 +128,7 @@ public class ProjectController {
     @PostMapping("/{projectId}/members")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> addMember(
-            @PathVariable Integer projectId,
+            @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
             @Valid @RequestBody AddMemberRequest request,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) {
@@ -142,8 +145,8 @@ public class ProjectController {
     @DeleteMapping("/{projectId}/members/{userId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> removeMember(
-            @PathVariable Integer projectId,
-            @PathVariable Integer userId,
+            @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
+            @PathVariable @Positive(message = "User ID must be positive") Integer userId,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) {
 
@@ -160,8 +163,8 @@ public class ProjectController {
     @PutMapping("/{projectId}/members/{userId}/role")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> updateMemberRole(
-            @PathVariable Integer projectId,
-            @PathVariable Integer userId,
+            @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
+            @PathVariable @Positive(message = "User ID must be positive") Integer userId,
             @Valid @RequestBody UpdateMemberRoleRequest request,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) {
@@ -178,7 +181,7 @@ public class ProjectController {
     @GetMapping("/{projectId}/members")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<ProjectMemberResponse>>> getProjectMembers(
-            @PathVariable Integer projectId,
+            @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
             @AuthenticationPrincipal UserPrincipal principal) {
 
         User user = getUser(principal);
@@ -191,7 +194,7 @@ public class ProjectController {
     @GetMapping("/{projectId}/sprints")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<SprintResponse>>> getProjectSprints(
-            @PathVariable Integer projectId,
+            @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         log.info("Getting sprints for project: {}", projectId);

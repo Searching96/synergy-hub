@@ -38,8 +38,12 @@ public class PasswordResetService {
     @Value("${security.password-reset-token-expiry-minutes}")
     private int resetTokenExpiryMinutes;
 
+    @Value("${security.rate-limit.password-reset-min-response-ms:200}")
+    private int minResponseTimeMs;
+
     @Transactional
     public void requestPasswordReset(PasswordResetRequest request, String ipAddress) {
+        long startTime = System.currentTimeMillis();
         log.info("Password reset requested for email: {}", request.getEmail());
 
         // Find user by email
@@ -67,6 +71,18 @@ public class PasswordResetService {
             log.warn("Password reset requested for non-existent email: {}", request.getEmail());
             // Do nothing else for security (prevent email enumeration)
         });
+        
+        // SECURITY: Constant-time response to prevent timing attacks
+        // Always take at least minResponseTimeMs to respond, regardless of user existence
+        long elapsed = System.currentTimeMillis() - startTime;
+        if (elapsed < minResponseTimeMs) {
+            try {
+                Thread.sleep(minResponseTimeMs - elapsed);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Interrupted during constant-time delay", e);
+            }
+        }
     }
 
     @Transactional

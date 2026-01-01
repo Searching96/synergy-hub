@@ -1,5 +1,6 @@
 package com.synergyhub.dto.request;
 
+import com.synergyhub.validation.NoHtml;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -13,9 +14,11 @@ public class CreateSprintRequest {
 
     @NotBlank(message = "Sprint name is required")
     @Size(max = 100, message = "Sprint name must not exceed 100 characters")
+    @NoHtml(message = "Sprint name cannot contain HTML")
     private String name;
 
     @Size(max = 500, message = "Sprint goal must not exceed 500 characters")
+    @NoHtml(allowFormatting = true, message = "Sprint goal cannot contain HTML tags")
     private String goal;
 
     @NotNull(message = "Project ID is required")

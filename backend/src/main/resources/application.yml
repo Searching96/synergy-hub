@@ -32,7 +32,7 @@ spring:
 
 # JWT Configuration
 jwt:
-  secret: ${JWT_SECRET:your-very-long-secret-key-here-at-least-64-bytes-for-hs512-algorithm}
+  secret: ${JWT_SECRET:#{null}}  # MUST be set via environment variable - no default for security
   expiration: 86400000  # 24 hours in milliseconds
   refresh-expiration: 604800000  # 7 days
 
@@ -42,6 +42,17 @@ security:
   account-lock-duration-minutes: 30
   password-reset-token-expiry-minutes: 15
   email-verification-token-expiry-hours: 24
+  # Rate limiting configuration
+  rate-limit:
+    two-factor-attempts: 5
+    two-factor-window-minutes: 5
+    email-resend-attempts: 3
+    email-resend-window-minutes: 60
+    password-reset-min-response-ms: 200  # Constant-time response
+  # Two-factor authentication configuration
+  two-factor:
+    backup-codes-count: 10
+    backup-code-length: 8
 
 # Application Configuration
 app:
@@ -52,17 +63,23 @@ app:
   frontend-url: ${FRONTEND_URL:http://localhost:3000}
   email-verification-enabled: ${EMAIL_VERIFICATION_ENABLED:true}
   default-organization-id: ${DEFAULT_ORGANIZATION_ID:1}
+  # Pagination configuration for security and performance
+  pagination:
+    default-page-size: 20
+    max-page-size: 100
+    default-page: 0
 
 logging:
   level:
-    com.synergyhub: DEBUG
-    org.springframework.security: DEBUG
+    com.synergyhub: INFO
+    org.springframework.security: WARN
 
-# Add to application.yml
+# Swagger/OpenAPI Configuration (disabled by default, enable in dev)
 springdoc:
   api-docs:
     path: /v3/api-docs
+    enabled: false
   swagger-ui:
     path: /swagger-ui.html
-    enabled: true
+    enabled: false
 

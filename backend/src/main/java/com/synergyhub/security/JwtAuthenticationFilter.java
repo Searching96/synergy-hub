@@ -1,5 +1,9 @@
 package com.synergyhub.security;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,7 +41,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 
                 // ✅ CHECK IF SESSION IS REVOKED
                 if (sessionService.isSessionRevoked(tokenId)) {
-                    log.warn("Attempted to use revoked token: {}", tokenId);
+                    log.warn("Attempted to use revoked token: {} from IP: {}", tokenId, request.getRemoteAddr());
+                    response.setHeader("X-Auth-Error", "SESSION_REVOKED");
                     filterChain.doFilter(request, response);
                     return;
                 }
@@ -48,8 +53,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
+        } catch (ExpiredJwtException ex) {
+            log.debug("Expired JWT token from IP: {}", request.getRemoteAddr());
+            response.setHeader("X-Auth-Error", "TOKEN_EXPIRED");
+        } catch (MalformedJwtException ex) {
+            log.warn("Malformed JWT token from IP: {} - User-Agent: {}", 
+                    request.getRemoteAddr(), request.getHeader("User-Agent"));
+            response.setHeader("X-Auth-Error", "TOKEN_MALFORMED");
+        } catch (SignatureException ex) {
+            log.error("Invalid JWT signature from IP: {} - Possible tampering attempt", 
+                    request.getRemoteAddr());
+            response.setHeader("X-Auth-Error", "INVALID_SIGNATURE");
+        } catch (UnsupportedJwtException ex) {
+            log.warn("Unsupported JWT token from IP: {}", request.getRemoteAddr());
+            response.setHeader("X-Auth-Error", "TOKEN_UNSUPPORTED");
+        } catch (IllegalArgumentException ex) {
+            log.warn("JWT claims string is empty from IP: {}", request.getRemoteAddr());
+            response.setHeader("X-Auth-Error", "TOKEN_INVALID");
         } catch (Exception ex) {
-            log.error("Could not set user authentication in security context", ex);
+            log.error("Unexpected error during JWT authentication from IP: {} - Error: {}", 
+                    request.getRemoteAddr(), ex.getMessage(), ex);
+            response.setHeader("X-Auth-Error", "INTERNAL_ERROR");
         }
         
         filterChain.doFilter(request, response);

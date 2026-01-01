@@ -9,6 +9,11 @@ import com.synergyhub.repository.UserRepository;
 import com.synergyhub.repository.UserSessionRepository;
 import com.synergyhub.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +23,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class SessionService {
 
@@ -61,6 +67,7 @@ public class SessionService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "sessionRevocation", key = "#tokenId", unless = "#result == true")
     public boolean isSessionRevoked(String tokenId) {
         return userSessionRepository.findByTokenId(tokenId)
                 .map(UserSession::getRevoked)
@@ -72,6 +79,7 @@ public class SessionService {
      * Includes OWNERSHIP CHECK to prevent IDOR attacks.
      */
     @Transactional
+    @CacheEvict(value = "sessionRevocation", key = "#tokenId")
     public void revokeSession(String tokenId, Integer userId) {
         // 1. Fetch the session
         UserSession session = userSessionRepository.findByTokenId(tokenId)
@@ -91,6 +99,7 @@ public class SessionService {
      * Revoke all sessions for a user (force logout everywhere)
      */
     @Transactional
+    @CacheEvict(value = "sessionRevocation", allEntries = true)
     public void revokeAllSessions(Integer userId) {
         User user = getUserById(userId);
         userSessionRepository.revokeAllUserSessions(user);
@@ -98,10 +107,14 @@ public class SessionService {
 
     /**
      * Cleanup expired and revoked sessions
+     * Scheduled to run daily at 2 AM
      */
     @Transactional
+    @Scheduled(cron = "0 0 2 * * *")
+    @CacheEvict(value = "sessionRevocation", allEntries = true)
     public void cleanupExpiredAndRevokedSessions() {
-        userSessionRepository.cleanupExpiredAndRevokedSessions(LocalDateTime.now());
+        int deleted = userSessionRepository.cleanupExpiredAndRevokedSessions(LocalDateTime.now());
+        log.info("Cleaned up {} expired and revoked sessions", deleted);
     }
 
     // Helper to fetch user or throw exception

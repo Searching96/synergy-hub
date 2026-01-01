@@ -10,11 +10,13 @@ import com.synergyhub.security.UserContext;
 import com.synergyhub.service.sprint.SprintService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +25,7 @@ import java.util.List;
 @RequestMapping("/api/sprints")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 public class SprintController {
 
         private final SprintService sprintService;
@@ -56,7 +59,7 @@ public class SprintController {
         @GetMapping("/{sprintId}")
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<SprintResponse>> getSprintById(
-                        @PathVariable Integer sprintId,
+                        @PathVariable @Positive(message = "Sprint ID must be positive") Integer sprintId,
                         UserContext userContext) {
 
                 log.info("Getting sprint: {} for user: {}", sprintId, userContext.getId());
@@ -72,7 +75,7 @@ public class SprintController {
         @GetMapping("/{sprintId}/details")
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<SprintDetailResponse>> getSprintDetails(
-                        @PathVariable Integer sprintId,
+                        @PathVariable @Positive(message = "Sprint ID must be positive") Integer sprintId,
                         UserContext userContext) {
 
                 log.info("Getting sprint details: {} for user: {}", sprintId, userContext.getId());
@@ -88,7 +91,7 @@ public class SprintController {
         @PutMapping("/{sprintId}")
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<SprintResponse>> updateSprint(
-                        @PathVariable Integer sprintId,
+                        @PathVariable @Positive(message = "Sprint ID must be positive") Integer sprintId,
                         @Valid @RequestBody UpdateSprintRequest request,
                         UserContext userContext,
                         HttpServletRequest httpRequest) {
@@ -106,7 +109,7 @@ public class SprintController {
         @PostMapping("/{sprintId}/start")
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<SprintResponse>> startSprint(
-                        @PathVariable Integer sprintId,
+                        @PathVariable @Positive(message = "Sprint ID must be positive") Integer sprintId,
                         UserContext userContext,
                         HttpServletRequest httpRequest) {
 
@@ -123,7 +126,7 @@ public class SprintController {
         @PostMapping("/{sprintId}/complete")
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<SprintResponse>> completeSprint(
-                        @PathVariable Integer sprintId,
+                        @PathVariable @Positive(message = "Sprint ID must be positive") Integer sprintId,
                         UserContext userContext,
                         HttpServletRequest httpRequest) {
 
@@ -140,7 +143,7 @@ public class SprintController {
         @PostMapping("/{sprintId}/cancel")
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<SprintResponse>> cancelSprint(
-                        @PathVariable Integer sprintId,
+                        @PathVariable @Positive(message = "Sprint ID must be positive") Integer sprintId,
                         UserContext userContext,
                         HttpServletRequest httpRequest) {
 
@@ -157,7 +160,7 @@ public class SprintController {
         @DeleteMapping("/{sprintId}")
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<Void>> deleteSprint(
-                        @PathVariable Integer sprintId,
+                        @PathVariable @Positive(message = "Sprint ID must be positive") Integer sprintId,
                         UserContext userContext,
                         HttpServletRequest httpRequest) {
 
@@ -175,7 +178,7 @@ public class SprintController {
         @GetMapping("/projects/{projectId}/active")
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<SprintResponse>> getActiveSprint(
-                        @PathVariable Integer projectId,
+                        @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
                         UserContext userContext) {
 
                 log.info("Getting active sprint for project: {}", projectId);
@@ -191,7 +194,7 @@ public class SprintController {
         @GetMapping("/projects/{projectId}/completed")
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<List<SprintResponse>>> getCompletedSprints(
-                        @PathVariable Integer projectId,
+                        @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
                         UserContext userContext) {
 
                 log.info("Getting completed sprints for project: {}", projectId);

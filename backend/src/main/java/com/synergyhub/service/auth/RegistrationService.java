@@ -14,6 +14,7 @@ import com.synergyhub.exception.EmailAlreadyExistsException;
 import com.synergyhub.exception.ResourceNotFoundException;
 import com.synergyhub.repository.EmailVerificationRepository;
 import com.synergyhub.repository.UserRepository;
+import com.synergyhub.service.security.RateLimitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +38,7 @@ public class RegistrationService {
     private final UserMapper userMapper;
     private final UserProvisioningStrategy userProvisioningStrategy;
     private final UserValidationService userValidationService;
+    private final RateLimitService rateLimitService;
 
     @Value("${security.email-verification-token-expiry-hours}")
     private int emailVerificationTokenExpiryHours;
@@ -152,6 +154,9 @@ public class RegistrationService {
 
     @Transactional
     public void resendVerificationEmail(String email, String ipAddress) {
+        // SECURITY: Rate limit email resends to prevent abuse
+        rateLimitService.checkEmailResend(email);
+        
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> {
                     // ✅ Publish failed event for non-existent user
@@ -184,6 +189,9 @@ public class RegistrationService {
 
         // Send new verification email
         sendVerificationEmail(user, ipAddress);
+        
+        // Record the resend for rate limiting
+        rateLimitService.recordEmailResend(email);
 
         log.info("Verification email resent to: {}", email);
     }

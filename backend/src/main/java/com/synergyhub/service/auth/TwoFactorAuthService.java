@@ -7,8 +7,10 @@ import com.synergyhub.events.auth.*;
 import com.synergyhub.exception.BadRequestException;
 import com.synergyhub.repository.TwoFactorSecretRepository;
 import com.synergyhub.repository.UserRepository;
+import com.synergyhub.service.security.RateLimitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,10 +28,14 @@ public class TwoFactorAuthService {
     private final TotpService totpService;
     private final PasswordEncoder passwordEncoder;
     private final BackupCodeService backupCodeService;
-    private final ApplicationEventPublisher eventPublisher; // ✅ Event publisher
+    private final ApplicationEventPublisher eventPublisher;
+    private final RateLimitService rateLimitService;
 
-    private static final int BACKUP_CODES_COUNT = 10;
-    private static final int BACKUP_CODE_LENGTH = 8;
+    @Value("${security.two-factor.backup-codes-count:10}")
+    private int backupCodesCount;
+
+    @Value("${security.two-factor.backup-code-length:8}")
+    private int backupCodeLength;
 
     @Transactional
     public TwoFactorSetupResponse setupTwoFactor(String email, String ipAddress) {
@@ -47,7 +53,7 @@ public class TwoFactorAuthService {
         String qrCodeUrl = totpService.generateQrCodeUrl(secret, user.getEmail());
 
         // Generate backup codes
-        List<String> backupCodes = backupCodeService.generateBackupCodes(BACKUP_CODES_COUNT, BACKUP_CODE_LENGTH);
+        List<String> backupCodes = backupCodeService.generateBackupCodes(backupCodesCount, backupCodeLength);
 
         // Save secret and backup codes
         backupCodeService.setBackupCodes(user.getId().toString(), backupCodes);
@@ -99,6 +105,9 @@ public class TwoFactorAuthService {
 
     @Transactional
     public boolean verifyCode(String email, String code, String ipAddress) {
+        // SECURITY: Rate limit 2FA attempts to prevent brute force
+        rateLimitService.check2FAAttempt(email);
+        
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("User not found for email: " + email));
         
@@ -111,6 +120,14 @@ public class TwoFactorAuthService {
         if (!isValid) {
             // Try backup codes
             isValid = verifyAndConsumeBackupCode(secret, code, ipAddress);
+        }
+        
+        if (isValid) {
+            // Clear rate limit on successful verification
+            rateLimitService.clear2FAAttempts(email);
+        } else {
+            // Record failed attempt
+            rateLimitService.recordFailed2FAAttempt(email);
         }
 
         return isValid;
@@ -159,7 +176,7 @@ public class TwoFactorAuthService {
         }
 
         // Generate new backup codes
-        List<String> newBackupCodes = backupCodeService.generateBackupCodes(BACKUP_CODES_COUNT, BACKUP_CODE_LENGTH);
+        List<String> newBackupCodes = backupCodeService.generateBackupCodes(backupCodesCount, backupCodeLength);
         backupCodeService.setBackupCodes(user.getId().toString(), newBackupCodes);
 
         // ✅ Publish backup code regenerated event

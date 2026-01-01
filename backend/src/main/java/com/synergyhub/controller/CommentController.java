@@ -7,11 +7,13 @@ import com.synergyhub.dto.response.CommentResponse;
 import com.synergyhub.security.UserContext;
 import com.synergyhub.service.comment.CommentService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +22,7 @@ import java.util.List;
 @RequestMapping("/api/tasks/{taskId}/comments")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 public class CommentController {
 
     private final CommentService commentService;
@@ -31,7 +34,7 @@ public class CommentController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CommentResponse>> addComment(
-            @PathVariable Integer taskId,
+            @PathVariable @Positive(message = "Task ID must be positive") Integer taskId,
             @Valid @RequestBody CreateCommentRequest request,
             UserContext userContext) {
 
@@ -52,7 +55,7 @@ public class CommentController {
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<CommentResponse>>> getComments(
-            @PathVariable Integer taskId,
+            @PathVariable @Positive(message = "Task ID must be positive") Integer taskId,
             UserContext userContext) {
 
         User currentUser = new User();
