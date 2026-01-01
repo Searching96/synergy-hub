@@ -4,7 +4,7 @@ import com.synergyhub.domain.entity.Project;
 import com.synergyhub.domain.entity.User;
 import com.synergyhub.domain.enums.ProjectRole;
 import com.synergyhub.domain.enums.ProjectStatus;
-import com.synergyhub.dto.request.CreateProjectRequest; // ✅ Directly using DTO
+import com.synergyhub.dto.request.CreateProjectRequest;
 import com.synergyhub.dto.request.UpdateProjectRequest;
 import com.synergyhub.events.project.ProjectArchivedEvent;
 import com.synergyhub.events.project.ProjectCreatedEvent;
@@ -49,26 +49,31 @@ public class ProjectLifecycleService {
             );
         }
 
-        eventPublisher.publishEvent(new ProjectCreatedEvent(this, savedProject, owner, ipAddress));
+        // ✅ FIXED: Remove 'this' from constructor
+        eventPublisher.publishEvent(new ProjectCreatedEvent(savedProject, owner, ipAddress));
         return savedProject;
     }
 
     @Transactional
-    public Project updateProject(Project project, UpdateProjectRequest request, User actor) {
+    public Project updateProject(Project project, UpdateProjectRequest request, User actor, String ipAddress) {
         if (request.getName() != null) project.setName(request.getName());
         if (request.getDescription() != null) project.setDescription(request.getDescription());
         if (request.getStatus() != null) project.setStatus(request.getStatus());
 
         Project updated = projectRepository.save(project);
-        eventPublisher.publishEvent(new ProjectUpdatedEvent(this, updated, actor, null));
+        
+        // ✅ FIXED: Remove 'this' from constructor
+        eventPublisher.publishEvent(new ProjectUpdatedEvent(updated, actor, ipAddress));
         return updated;
     }
 
     @Transactional
-    public Project archiveProject(Project project, User actor) {
+    public Project archiveProject(Project project, User actor, String ipAddress) {
         project.setStatus(ProjectStatus.ARCHIVED);
         Project archived = projectRepository.save(project);
-        eventPublisher.publishEvent(new ProjectArchivedEvent(this, archived, actor, null));
+        
+        // ✅ FIXED: Remove 'this' from constructor
+        eventPublisher.publishEvent(new ProjectArchivedEvent(archived, actor, ipAddress));
         return archived;
     }
 }

@@ -297,19 +297,4 @@ public class TaskController {
                                 .status(HttpStatus.NO_CONTENT)
                                 .body(ApiResponse.success("Task deleted successfully", null));
         }
-
-        // ========================================
-        // Helper Methods
-        // ========================================
-
-        /**
-         * Extract client IP address from request
-         */
-        private String getClientIP(HttpServletRequest request) {
-                String xfHeader = request.getHeader("X-Forwarded-For");
-                if (xfHeader == null) {
-                        return request.getRemoteAddr();
-                }
-                return xfHeader.split(",")[0];
-        }
 }

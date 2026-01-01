@@ -9,6 +9,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Service for creating audit log entries.
+ * This is a WRITE-ONLY service following Command-Query Separation.
+ * For reading audit logs, use AuditLogQueryService.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -18,39 +23,72 @@ public class AuditLogService {
 
     /**
      * Main entry point for logging.
-     * Listeners are responsible for formatting the 'details' string.
+     * Event listeners are responsible for formatting the 'eventDetails' string.
+     * 
+     * @param user The user who performed the action (null for system events)
+     * @param eventType The type of event (e.g., "LOGIN_SUCCESS", "PROJECT_CREATED")
+     * @param eventDetails Human-readable description of what happened
+     * @param ipAddress IP address of the request origin
+     * @param userAgent Browser/client user agent string
+     * @param projectId Optional project context
      */
     @Transactional
-    public void createAuditLog(User user, String eventType, String details, 
+    public void createAuditLog(User user, String eventType, String eventDetails, 
                                String ipAddress, String userAgent, Integer projectId) {
         
         AuditLog auditLog = AuditLog.builder()
                 .user(user)
                 .eventType(eventType)
-                .eventDetails(details)
+                .eventDetails(eventDetails)
                 .ipAddress(ipAddress)
                 .userAgent(userAgent)
                 .projectId(projectId)
                 .build();
 
         auditLogRepository.save(auditLog);
-        log.debug("Audit: [{}] {} (Project: {})", eventType, details, projectId);
+        
+        // ✅ Structured logging for monitoring/debugging
+        log.debug("Audit: [{}] {} | User: {} | Project: {} | IP: {}", 
+                 eventType, 
+                 eventDetails, 
+                 user != null ? user.getEmail() : "SYSTEM",
+                 projectId,
+                 ipAddress);
     }
 
-    // --- Convenience Overloads (Optional wrappers to save null passing) ---
-
+    // ========== CONVENIENCE OVERLOADS ==========
+    
+    /**
+     * Log with AuditEventType enum (type-safe).
+     */
     @Transactional
-    public void createAuditLog(User user, AuditEventType eventType, String details, String ipAddress) {
-        createAuditLog(user, eventType.name(), details, ipAddress, null, null);
+    public void createAuditLog(User user, AuditEventType eventType, String eventDetails, 
+                               String ipAddress, String userAgent, Integer projectId) {
+        createAuditLog(user, eventType.name(), eventDetails, ipAddress, userAgent, projectId);
     }
 
+    /**
+     * Log without userAgent and projectId (common for auth events).
+     */
     @Transactional
-    public void createAuditLog(User user, String eventType, String details, String ipAddress) {
-        createAuditLog(user, eventType, details, ipAddress, null, null);
+    public void createAuditLog(User user, String eventType, String eventDetails, String ipAddress) {
+        createAuditLog(user, eventType, eventDetails, ipAddress, null, null);
     }
     
+    /**
+     * Log with projectId but no userAgent (common for project events).
+     */
     @Transactional
-    public void createAuditLog(User user, String eventType, String details, String ipAddress, Integer projectId) {
-        createAuditLog(user, eventType, details, ipAddress, null, projectId);
+    public void createAuditLog(User user, String eventType, String eventDetails, 
+                               String ipAddress, Integer projectId) {
+        createAuditLog(user, eventType, eventDetails, ipAddress, null, projectId);
+    }
+
+    /**
+     * Log with AuditEventType enum and no optional fields.
+     */
+    @Transactional
+    public void createAuditLog(User user, AuditEventType eventType, String eventDetails, String ipAddress) {
+        createAuditLog(user, eventType.name(), eventDetails, ipAddress, null, null);
     }
 }

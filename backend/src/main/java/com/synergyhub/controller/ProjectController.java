@@ -7,6 +7,7 @@ import com.synergyhub.repository.UserRepository;
 import com.synergyhub.security.UserPrincipal;
 import com.synergyhub.service.project.ProjectService;
 import com.synergyhub.service.sprint.SprintService;
+import com.synergyhub.util.ClientIpResolver; // ✅ Import new resolver
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,198 +27,195 @@ import java.util.List;
 @Slf4j
 public class ProjectController {
 
-        private final ProjectService projectService;
-        private final SprintService sprintService;
-        private final UserRepository userRepository;
+    private final ProjectService projectService;
+    private final SprintService sprintService;
+    private final UserRepository userRepository;
+    private final ClientIpResolver ipResolver; // ✅ Inject IP resolver
 
-        // ===================================================================================
-        // 1. PROJECT LIFECYCLE (Create, Update, Delete)
-        // ===================================================================================
+    // ===================================================================================
+    // 1. PROJECT LIFECYCLE (Create, Update, Delete)
+    // ===================================================================================
 
-        @PostMapping
-        @PreAuthorize("isAuthenticated()")
-        public ResponseEntity<ApiResponse<ProjectResponse>> createProject(
-                        @Valid @RequestBody CreateProjectRequest request,
-                        @AuthenticationPrincipal UserPrincipal principal,
-                        HttpServletRequest httpRequest) {
+    @PostMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<ProjectResponse>> createProject(
+            @Valid @RequestBody CreateProjectRequest request,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest httpRequest) {
 
-                User user = getUser(principal);
-                String ipAddress = getClientIP(httpRequest);
+        User user = getUser(principal);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest); // ✅ Use resolver
 
-                ProjectResponse response = projectService.createProject(request, user, ipAddress);
+        ProjectResponse response = projectService.createProject(request, user, ipAddress);
 
-                return ResponseEntity
-                                .status(HttpStatus.CREATED)
-                                .body(ApiResponse.success("Project created successfully", response));
-        }
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Project created successfully", response));
+    }
 
-        @PutMapping("/{projectId}")
-        @PreAuthorize("isAuthenticated()")
-        public ResponseEntity<ApiResponse<ProjectResponse>> updateProject(
-                        @PathVariable Integer projectId,
-                        @Valid @RequestBody UpdateProjectRequest request,
-                        @AuthenticationPrincipal UserPrincipal principal) {
+    @PutMapping("/{projectId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<ProjectResponse>> updateProject(
+            @PathVariable Integer projectId,
+            @Valid @RequestBody UpdateProjectRequest request,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest httpRequest) { // ✅ Added HttpServletRequest
 
-                User user = getUser(principal);
+        User user = getUser(principal);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest); // ✅ Get IP address
 
-                // Security check is handled inside projectService
-                ProjectResponse response = projectService.updateProject(projectId, request, user);
+        // ✅ Pass ipAddress to service
+        ProjectResponse response = projectService.updateProject(projectId, request, user, ipAddress);
 
-                return ResponseEntity.ok(
-                                ApiResponse.success("Project updated successfully", response));
-        }
+        return ResponseEntity.ok(
+                ApiResponse.success("Project updated successfully", response));
+    }
 
-        @DeleteMapping("/{projectId}")
-        @PreAuthorize("isAuthenticated()")
-        public ResponseEntity<ApiResponse<Void>> deleteProject(
-                        @PathVariable Integer projectId,
-                        @AuthenticationPrincipal UserPrincipal principal) {
+    @DeleteMapping("/{projectId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> deleteProject(
+            @PathVariable Integer projectId,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest httpRequest) { // ✅ Added HttpServletRequest
 
-                User user = getUser(principal);
+        User user = getUser(principal);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest); // ✅ Get IP address
 
-                projectService.deleteProject(projectId, user);
+        // ✅ Pass ipAddress to service
+        projectService.deleteProject(projectId, user, ipAddress);
 
-                return ResponseEntity
-                                .status(HttpStatus.NO_CONTENT)
-                                .body(ApiResponse.success("Project deleted successfully", null));
-        }
+        return ResponseEntity
+                .status(HttpStatus.NO_CONTENT)
+                .body(ApiResponse.success("Project deleted successfully", null));
+    }
 
-        // ===================================================================================
-        // 2. DATA RETRIEVAL (Reads)
-        // ===================================================================================
+    // ===================================================================================
+    // 2. DATA RETRIEVAL (Reads)
+    // ===================================================================================
 
-        @GetMapping
-        @PreAuthorize("isAuthenticated()")
-        public ResponseEntity<ApiResponse<List<ProjectResponse>>> getUserProjects(
-                        @AuthenticationPrincipal UserPrincipal principal) {
+    @GetMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<List<ProjectResponse>>> getUserProjects(
+            @AuthenticationPrincipal UserPrincipal principal) {
 
-                User user = getUser(principal);
-                List<ProjectResponse> projects = projectService.getUserProjects(user);
+        User user = getUser(principal);
+        List<ProjectResponse> projects = projectService.getUserProjects(user);
 
-                return ResponseEntity.ok(
-                                ApiResponse.success("Projects retrieved successfully", projects));
-        }
+        return ResponseEntity.ok(
+                ApiResponse.success("Projects retrieved successfully", projects));
+    }
 
-        @GetMapping("/{projectId}")
-        @PreAuthorize("isAuthenticated()")
-        public ResponseEntity<ApiResponse<ProjectDetailResponse>> getProjectDetails(
-                        @PathVariable Integer projectId,
-                        @AuthenticationPrincipal UserPrincipal principal) {
+    @GetMapping("/{projectId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<ProjectDetailResponse>> getProjectDetails(
+            @PathVariable Integer projectId,
+            @AuthenticationPrincipal UserPrincipal principal) {
 
-                User user = getUser(principal);
-                ProjectDetailResponse project = projectService.getProjectDetails(projectId, user);
+        User user = getUser(principal);
+        ProjectDetailResponse project = projectService.getProjectDetails(projectId, user);
 
-                return ResponseEntity.ok(
-                                ApiResponse.success("Project details retrieved successfully", project));
-        }
+        return ResponseEntity.ok(
+                ApiResponse.success("Project details retrieved successfully", project));
+    }
 
-        // ===================================================================================
-        // 3. MEMBERSHIP MANAGEMENT
-        // ===================================================================================
+    // ===================================================================================
+    // 3. MEMBERSHIP MANAGEMENT
+    // ===================================================================================
 
-        @PostMapping("/{projectId}/members")
-        @PreAuthorize("isAuthenticated()")
-        public ResponseEntity<ApiResponse<Void>> addMember(
-                        @PathVariable Integer projectId,
-                        @Valid @RequestBody AddMemberRequest request,
-                        @AuthenticationPrincipal UserPrincipal principal,
-                        HttpServletRequest httpRequest) {
+    @PostMapping("/{projectId}/members")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> addMember(
+            @PathVariable Integer projectId,
+            @Valid @RequestBody AddMemberRequest request,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest httpRequest) {
 
-                User user = getUser(principal);
-                String ipAddress = getClientIP(httpRequest);
+        User user = getUser(principal);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest); // ✅ Use resolver
 
-                projectService.addMember(projectId, request, user, ipAddress);
+        projectService.addMember(projectId, request, user, ipAddress);
 
-                return ResponseEntity.ok(
-                                ApiResponse.success("Member added successfully", null));
-        }
+        return ResponseEntity.ok(
+                ApiResponse.success("Member added successfully", null));
+    }
 
-        @DeleteMapping("/{projectId}/members/{userId}")
-        @PreAuthorize("isAuthenticated()")
-        public ResponseEntity<ApiResponse<Void>> removeMember(
-                        @PathVariable Integer projectId,
-                        @PathVariable Integer userId,
-                        @AuthenticationPrincipal UserPrincipal principal,
-                        HttpServletRequest httpRequest) {
+    @DeleteMapping("/{projectId}/members/{userId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> removeMember(
+            @PathVariable Integer projectId,
+            @PathVariable Integer userId,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest httpRequest) {
 
-                User user = getUser(principal);
-                String ipAddress = getClientIP(httpRequest);
+        User user = getUser(principal);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest); // ✅ Use resolver
 
-                projectService.removeMember(projectId, userId, user, ipAddress);
+        projectService.removeMember(projectId, userId, user, ipAddress);
 
-                return ResponseEntity
-                                .status(HttpStatus.NO_CONTENT)
-                                .body(ApiResponse.success("Member removed successfully", null));
-        }
+        return ResponseEntity
+                .status(HttpStatus.NO_CONTENT)
+                .body(ApiResponse.success("Member removed successfully", null));
+    }
 
-        @PutMapping("/{projectId}/members/{userId}/role")
-        @PreAuthorize("isAuthenticated()")
-        public ResponseEntity<ApiResponse<Void>> updateMemberRole(
-                        @PathVariable Integer projectId,
-                        @PathVariable Integer userId,
-                        @Valid @RequestBody UpdateMemberRoleRequest request,
-                        @AuthenticationPrincipal UserPrincipal principal,
-                        HttpServletRequest httpRequest) {
+    @PutMapping("/{projectId}/members/{userId}/role")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> updateMemberRole(
+            @PathVariable Integer projectId,
+            @PathVariable Integer userId,
+            @Valid @RequestBody UpdateMemberRoleRequest request,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest httpRequest) {
 
-                User user = getUser(principal);
-                String ipAddress = getClientIP(httpRequest);
+        User user = getUser(principal);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest); // ✅ Use resolver
 
-                projectService.updateMemberRole(projectId, userId, request, user, ipAddress);
+        projectService.updateMemberRole(projectId, userId, request, user, ipAddress);
 
-                return ResponseEntity.ok(
-                                ApiResponse.success("Member role updated successfully", null));
-        }
+        return ResponseEntity.ok(
+                ApiResponse.success("Member role updated successfully", null));
+    }
 
-        @GetMapping("/{projectId}/members")
-        @PreAuthorize("isAuthenticated()")
-        public ResponseEntity<ApiResponse<List<ProjectMemberResponse>>> getProjectMembers(
-                        @PathVariable Integer projectId,
-                        @AuthenticationPrincipal UserPrincipal principal) {
+    @GetMapping("/{projectId}/members")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<List<ProjectMemberResponse>>> getProjectMembers(
+            @PathVariable Integer projectId,
+            @AuthenticationPrincipal UserPrincipal principal) {
 
-                User user = getUser(principal);
-                List<ProjectMemberResponse> members = projectService.getProjectMembers(projectId, user);
+        User user = getUser(principal);
+        List<ProjectMemberResponse> members = projectService.getProjectMembers(projectId, user);
 
-                return ResponseEntity.ok(
-                                ApiResponse.success("Project members retrieved successfully", members));
-        }
+        return ResponseEntity.ok(
+                ApiResponse.success("Project members retrieved successfully", members));
+    }
 
-        @GetMapping("/{projectId}/sprints")
-        @PreAuthorize("isAuthenticated()")
-        public ResponseEntity<ApiResponse<List<SprintResponse>>> getProjectSprints(
-                        @PathVariable Integer projectId,
-                        @AuthenticationPrincipal UserPrincipal currentUser) {
+    @GetMapping("/{projectId}/sprints")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<List<SprintResponse>>> getProjectSprints(
+            @PathVariable Integer projectId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
 
-                log.info("Getting sprints for project: {}", projectId);
+        log.info("Getting sprints for project: {}", projectId);
 
-                var user = userRepository.findByEmailWithRolesAndPermissions(currentUser.getEmail())
-                                .orElseThrow();
+        var user = userRepository.findByEmailWithRolesAndPermissions(currentUser.getEmail())
+                .orElseThrow();
 
-                List<SprintResponse> sprints = sprintService.getSprintsByProject(projectId, user);
+        List<SprintResponse> sprints = sprintService.getSprintsByProject(projectId, user);
 
-                return ResponseEntity.ok(
-                                ApiResponse.success("Sprints retrieved successfully", sprints));
-        }
+        return ResponseEntity.ok(
+                ApiResponse.success("Sprints retrieved successfully", sprints));
+    }
 
-        // ===================================================================================
-        // Helper Methods
-        // ===================================================================================
+    // ===================================================================================
+    // Helper Methods
+    // ===================================================================================
 
-        /**
-         * Extracts the Domain User entity from the Security Principal.
-         * Consolidates the lookup logic that was previously repeated in every method.
-         */
-        private User getUser(UserPrincipal principal) {
-                return userRepository.findByEmailWithRolesAndPermissions(principal.getEmail())
-                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
-                                                "User not found"));
-        }
-
-        private String getClientIP(HttpServletRequest request) {
-                String xfHeader = request.getHeader("X-Forwarded-For");
-                if (xfHeader == null) {
-                        return request.getRemoteAddr();
-                }
-                return xfHeader.split(",")[0];
-        }
-
+    /**
+     * Extracts the Domain User entity from the Security Principal.
+     * Consolidates the lookup logic that was previously repeated in every method.
+     */
+    private User getUser(UserPrincipal principal) {
+        return userRepository.findByEmailWithRolesAndPermissions(principal.getEmail())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                        "User not found"));
+    }
 }

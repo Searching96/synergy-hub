@@ -30,24 +30,29 @@ public class ProjectService {
     public ProjectResponse createProject(CreateProjectRequest request, User currentUser, String ipAddress) {
         log.info("Creating project: {}", request.getName());
         
-        // Simplified: Pass DTO directly to Lifecycle service
         Project project = lifecycleService.createProject(request, currentUser, ipAddress);
         
         return projectMapper.toProjectResponse(project);
     }
 
-    public ProjectResponse updateProject(Integer projectId, UpdateProjectRequest request, User currentUser) {
+    // ✅ FIXED: Added ipAddress parameter
+    public ProjectResponse updateProject(Integer projectId, UpdateProjectRequest request, 
+                                        User currentUser, String ipAddress) {
         Project project = getProjectById(projectId);
         projectSecurity.requireLeadOrAdmin(project, currentUser);
         
-        Project updated = lifecycleService.updateProject(project, request, currentUser);
+        // ✅ FIXED: Pass ipAddress to lifecycle service
+        Project updated = lifecycleService.updateProject(project, request, currentUser, ipAddress);
         return projectMapper.toProjectResponse(updated);
     }
 
-    public void deleteProject(Integer projectId, User currentUser) {
+    // ✅ FIXED: Added ipAddress parameter
+    public void deleteProject(Integer projectId, User currentUser, String ipAddress) {
         Project project = getProjectById(projectId);
         projectSecurity.requireLeadOrAdmin(project, currentUser);
-        lifecycleService.archiveProject(project, currentUser);
+        
+        // ✅ FIXED: Pass ipAddress to lifecycle service
+        lifecycleService.archiveProject(project, currentUser, ipAddress);
     }
 
     public void addMember(Integer projectId, AddMemberRequest request, User currentUser, String ipAddress) {
@@ -62,7 +67,8 @@ public class ProjectService {
         membershipService.removeMember(project, userId, currentUser, ipAddress);
     }
 
-    public void updateMemberRole(Integer projectId, Integer userId, UpdateMemberRoleRequest request, User currentUser, String ipAddress) {
+    public void updateMemberRole(Integer projectId, Integer userId, UpdateMemberRoleRequest request, 
+                                User currentUser, String ipAddress) {
         Project project = getProjectById(projectId);
         projectSecurity.requireLeadOrAdmin(project, currentUser);
         membershipService.updateMemberRole(project, userId, request.getRole(), currentUser, ipAddress);

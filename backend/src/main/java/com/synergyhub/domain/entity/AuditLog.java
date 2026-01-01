@@ -8,9 +8,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "audit_logs", indexes = {
-    @Index(name = "idx_user_time", columnList = "user_id, created_at"),
-    @Index(name = "idx_event_type", columnList = "event_type, created_at"),
-    @Index(name = "idx_project_time", columnList = "project_id, created_at") // ✅ New Index for Activity Stream
+    @Index(name = "idx_audit_user", columnList = "user_id"),
+    @Index(name = "idx_audit_timestamp", columnList = "timestamp"),
+    @Index(name = "idx_audit_event_type", columnList = "event_type"),
+    @Index(name = "idx_audit_project", columnList = "project_id")
 })
 @Getter
 @Setter
@@ -18,35 +19,32 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class AuditLog {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "log_id")
-    private Long id;
-    
+    @Column(name = "audit_log_id")
+    private Integer id;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id") // ✅ Can be null for system events
     private User user;
-    
-    // ✅ NEW: Loose coupling to Project (stores ID only)
-    // We use Integer instead of @ManyToOne Project to prevent issues if a project is hard-deleted,
-    // and to keep log insertions extremely fast.
-    @Column(name = "project_id")
-    private Integer projectId;
-    
-    @Column(name = "event_type", nullable = false, length = 50)
-    private String eventType;
-    
+
+    @Column(name = "event_type", nullable = false, length = 100)
+    private String eventType; // ✅ Consistent with your service
+
     @Column(name = "event_details", columnDefinition = "TEXT")
-    private String eventDetails;
-    
+    private String eventDetails; // ✅ Consistent with your service
+
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
-    
+
     @Column(name = "user_agent", length = 500)
     private String userAgent;
-    
+
+    @Column(name = "project_id") // ✅ Context for project-related events
+    private Integer projectId;
+
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime timestamp;
 }

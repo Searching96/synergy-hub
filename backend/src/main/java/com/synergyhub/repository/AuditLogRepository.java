@@ -1,7 +1,7 @@
 package com.synergyhub.repository;
 
 import com.synergyhub.domain.entity.AuditLog;
-import com.synergyhub.domain.entity.User;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,27 +13,31 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
-public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
-    
-    Page<AuditLog> findByUser(User user, Pageable pageable);
-    
-    Page<AuditLog> findByEventType(String eventType, Pageable pageable);
-    
-    @Query("SELECT a FROM AuditLog a WHERE a.user = :user AND a.createdAt BETWEEN :start AND :end ORDER BY a.createdAt DESC")
-    List<AuditLog> findByUserAndDateRange(
-        @Param("user") User user,
-        @Param("start") LocalDateTime start,
-        @Param("end") LocalDateTime end
-    );
-    
-    @Query("SELECT a FROM AuditLog a WHERE a.eventType = :eventType AND a.createdAt > :since ORDER BY a.createdAt DESC")
-    List<AuditLog> findRecentByEventType(@Param("eventType") String eventType, @Param("since") LocalDateTime since);
+public interface AuditLogRepository extends JpaRepository<AuditLog, Integer> {
 
-    // ✅ NEW: Required for Activity Stream
-    // This finds all actions performed by users who are members of the given project.
-    // (This is an MVP approach. For stricter data, you'd add a 'projectId' column to AuditLog directly)
-    @Query("SELECT a FROM AuditLog a WHERE a.user.id IN " +
-           "(SELECT m.user.id FROM ProjectMember m WHERE m.project.id = :projectId) " +
-           "ORDER BY a.createdAt DESC")
+    // ✅ FIX: Added the method used by ActivityStreamService
+    // Using @Query allows us to fetch logs for the project, ordered by time
+    @Query("SELECT a FROM AuditLog a WHERE a.projectId = :projectId ORDER BY a.timestamp DESC")
     Page<AuditLog> findProjectActivity(@Param("projectId") Integer projectId, Pageable pageable);
+
+    // Find by user
+    List<AuditLog> findByUserId(Integer userId, Pageable pageable);
+    
+    // Find by project
+    List<AuditLog> findByProjectId(Integer projectId, Pageable pageable);
+    
+    // Find by user and time range
+    List<AuditLog> findByUserIdAndTimestampAfter(Integer userId, LocalDateTime after);
+    
+    // Find by event type (for filtering)
+    List<AuditLog> findByEventType(String eventType, Pageable pageable);
+    
+    // Find by IP address (security investigation)
+    List<AuditLog> findByIpAddress(String ipAddress, Pageable pageable);
+    
+    // Find system events (no user)
+    List<AuditLog> findByUserIsNull(Pageable pageable);
+    
+    // Find in date range
+    List<AuditLog> findByTimestampBetween(LocalDateTime start, LocalDateTime end, Pageable pageable);
 }

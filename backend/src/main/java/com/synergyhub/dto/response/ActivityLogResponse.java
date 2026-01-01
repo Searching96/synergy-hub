@@ -8,17 +8,25 @@ import java.time.LocalDateTime;
 @Data
 @Builder
 public class ActivityLogResponse {
-    private Long id;
-    private String action;      // e.g., "TASK_MOVED"
-    private String details;     // e.g., "Task 'Login Fix' moved: To Do -> In Progress"
-    private String ipAddress;
-    private LocalDateTime timestamp;
-
-    // Actor info (Who did it?)
+    private Integer id;
+    
+    // Actor information (can be null for system events)
     private Integer actorId;
     private String actorName;
     private String actorEmail;
     
-    // Context (Which project?)
+    // ✅ Event details (aligned with entity)
+    private String eventType;    // Was "action"
+    private String eventDetails;  // Was "details"
+    
+    // Context
+    private String ipAddress;
+    private String userAgent;
     private Integer projectId;
+    
+    // Timestamp
+    private LocalDateTime timestamp;
+    
+    // Computed field
+    private boolean systemEvent;
 }

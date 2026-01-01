@@ -7,12 +7,13 @@ import lombok.Getter;
 
 @Getter
 public class ProjectMemberAddedEvent extends ProjectEvent {
-    private final User addedUser;
+    private final User member;
     private final ProjectRole role;
-
-    public ProjectMemberAddedEvent(Project project, User addedUser, ProjectRole role, User actor, String ipAddress) {
+    
+    public ProjectMemberAddedEvent(Project project, User member, ProjectRole role, 
+                                   User actor, String ipAddress) {
         super(project, actor, ipAddress);
-        this.addedUser = addedUser;
+        this.member = member;
         this.role = role;
     }
 }

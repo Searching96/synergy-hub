@@ -4,84 +4,105 @@ import com.synergyhub.domain.enums.AuditEventType;
 import com.synergyhub.events.project.*;
 import com.synergyhub.service.security.AuditLogService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
 @RequiredArgsConstructor
 public class ProjectAuditListener {
-
+    
     private final AuditLogService auditLogService;
 
-    // ✅ LIFECYCLE EVENTS
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleProjectCreated(ProjectCreatedEvent event) {
+    // ========== PROJECT LIFECYCLE EVENTS ==========
+    
+    @EventListener
+    public void onProjectCreated(ProjectCreatedEvent event) {
         auditLogService.createAuditLog(
-            event.getActor(),
+            event.getActor(), // ✅ getActor() from BaseEvent (actor)
             AuditEventType.PROJECT_CREATED.name(),
-            String.format("Project '%s' (ID: %d) created", event.getProject().getName(), event.getProject().getId()),
+            String.format("Project created: %s (ID: %d)", 
+                         event.getProject().getName(), 
+                         event.getProject().getId()),
             event.getIpAddress(),
-            event.getProject().getId() // ✅ Pass Project ID
+            null,
+            event.getProject().getId()
         );
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleProjectUpdated(ProjectUpdatedEvent event) {
+    @EventListener
+    public void onProjectUpdated(ProjectUpdatedEvent event) {
         auditLogService.createAuditLog(
-            event.getActor(),
+            event.getActor(), // ✅ getActor() from BaseEvent (actor)
             AuditEventType.PROJECT_UPDATED.name(),
-            String.format("Project '%s' (ID: %d) updated", event.getProject().getName(), event.getProject().getId()),
+            String.format("Project updated: %s (ID: %d)", 
+                         event.getProject().getName(), 
+                         event.getProject().getId()),
             event.getIpAddress(),
+            null,
             event.getProject().getId()
         );
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleProjectArchived(ProjectArchivedEvent event) {
+    @EventListener
+    public void onProjectArchived(ProjectArchivedEvent event) {
         auditLogService.createAuditLog(
-            event.getActor(),
+            event.getActor(), // ✅ getActor() from BaseEvent (actor)
             AuditEventType.PROJECT_DELETED.name(),
-            String.format("Project '%s' (ID: %d) archived", event.getProject().getName(), event.getProject().getId()),
+            String.format("Project archived: %s (ID: %d)", 
+                         event.getProject().getName(), 
+                         event.getProject().getId()),
             event.getIpAddress(),
+            null,
             event.getProject().getId()
         );
     }
 
-    // ✅ MEMBERSHIP EVENTS
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleMemberAdded(ProjectMemberAddedEvent event) {
+    // ========== PROJECT MEMBERSHIP EVENTS ==========
+    
+    @EventListener
+    public void onProjectMemberAdded(ProjectMemberAddedEvent event) {
         auditLogService.createAuditLog(
-            event.getActor(),
+            event.getActor(), // ✅ getActor() from BaseEvent (actor)
             AuditEventType.PROJECT_MEMBER_ADDED.name(),
-            String.format("User %s added to project '%s' (Role: %s)", 
-                event.getAddedUser().getEmail(), event.getProject().getName(), event.getRole()),
+            String.format("User %s (ID: %d) added to project %s (ID: %d) with role %s",
+                         event.getMember().getEmail(),
+                         event.getMember().getId(),
+                         event.getProject().getName(),
+                         event.getProject().getId(),
+                         event.getRole()),
             event.getIpAddress(),
+            null,
             event.getProject().getId()
         );
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleMemberRemoved(ProjectMemberRemovedEvent event) {
+    @EventListener
+    public void onProjectMemberRemoved(ProjectMemberRemovedEvent event) {
         auditLogService.createAuditLog(
-            event.getActor(),
+            event.getActor(), // ✅ getActor() from BaseEvent (actor)
             AuditEventType.PROJECT_MEMBER_REMOVED.name(),
-            String.format("User ID %d removed from project '%s'", event.getRemovedUserId(), event.getProject().getName()),
+            String.format("User (ID: %d) removed from project %s (ID: %d)",
+                         event.getRemovedUserId(),
+                         event.getProject().getName(),
+                         event.getProject().getId()),
             event.getIpAddress(),
+            null,
             event.getProject().getId()
         );
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleMemberRoleUpdated(ProjectMemberRoleUpdatedEvent event) {
+    @EventListener
+    public void onProjectMemberRoleUpdated(ProjectMemberRoleUpdatedEvent event) {
         auditLogService.createAuditLog(
-            event.getActor(),
-            AuditEventType.PROJECT_UPDATED.name(), // Using generic update or specific role update type
-            String.format("User ID %d role updated to '%s' in project '%s'", 
-                event.getUserId(), event.getNewRole(), event.getProject().getName()),
+            event.getActor(), // ✅ getActor() from BaseEvent (actor)
+            "PROJECT_MEMBER_ROLE_UPDATED",
+            String.format("User (ID: %d) role updated to %s in project %s (ID: %d)",
+                         event.getUserId(),
+                         event.getNewRole(),
+                         event.getProject().getName(),
+                         event.getProject().getId()),
             event.getIpAddress(),
+            null,
             event.getProject().getId()
         );
     }

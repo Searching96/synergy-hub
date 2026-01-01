@@ -51,8 +51,10 @@ public class ProjectMembershipService {
 
         projectMemberRepository.save(projectMember);
 
-        // ✅ Publish Event instead of calling Logger directly
-        eventPublisher.publishEvent(new ProjectMemberAddedEvent(this, project, memberUser, role, actor, ipAddress));
+        // ✅ FIXED: Remove 'this' from constructor
+        eventPublisher.publishEvent(
+            new ProjectMemberAddedEvent(project, memberUser, role, actor, ipAddress)
+        );
     }
 
     @Transactional
@@ -67,8 +69,10 @@ public class ProjectMembershipService {
 
         projectMemberRepository.deleteByProjectIdAndUserId(project.getId(), userId);
 
-        // ✅ Publish Event
-        eventPublisher.publishEvent(new ProjectMemberRemovedEvent(this, project, userId, actor, ipAddress));
+        // ✅ FIXED: Remove 'this' from constructor
+        eventPublisher.publishEvent(
+            new ProjectMemberRemovedEvent(project, userId, actor, ipAddress)
+        );
     }
 
     @Transactional
@@ -79,12 +83,15 @@ public class ProjectMembershipService {
         projectMember.setRole(role);
         projectMemberRepository.save(projectMember);
 
-        // ✅ Publish Event
-        eventPublisher.publishEvent(new ProjectMemberRoleUpdatedEvent(this, project, userId, role, actor, ipAddress));
+        // ✅ FIXED: Remove 'this' from constructor
+        eventPublisher.publishEvent(
+            new ProjectMemberRoleUpdatedEvent(project, userId, role, actor, ipAddress)
+        );
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectMemberResponse> getProjectMembers(Project project, Function<List<ProjectMember>, List<ProjectMemberResponse>> mapper) {
+    public List<ProjectMemberResponse> getProjectMembers(Project project, 
+                                                         Function<List<ProjectMember>, List<ProjectMemberResponse>> mapper) {
         List<ProjectMember> members = projectMemberRepository.findByProjectId(project.getId());
         return mapper.apply(members);
     }

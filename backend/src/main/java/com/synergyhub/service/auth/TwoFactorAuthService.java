@@ -1,16 +1,15 @@
 package com.synergyhub.service.auth;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.synergyhub.domain.entity.TwoFactorSecret;
 import com.synergyhub.domain.entity.User;
 import com.synergyhub.dto.response.TwoFactorSetupResponse;
+import com.synergyhub.events.auth.*;
 import com.synergyhub.exception.BadRequestException;
 import com.synergyhub.repository.TwoFactorSecretRepository;
 import com.synergyhub.repository.UserRepository;
-import com.synergyhub.service.security.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,19 +24,18 @@ public class TwoFactorAuthService {
     private final TwoFactorSecretRepository twoFactorSecretRepository;
     private final UserRepository userRepository;
     private final TotpService totpService;
-    private final ObjectMapper objectMapper;
     private final PasswordEncoder passwordEncoder;
-    private final AuditLogService auditLogService;  // ✅ Added
+    private final BackupCodeService backupCodeService;
+    private final ApplicationEventPublisher eventPublisher; // ✅ Event publisher
 
     private static final int BACKUP_CODES_COUNT = 10;
     private static final int BACKUP_CODE_LENGTH = 8;
-
-    private final BackupCodeService backupCodeService;
 
     @Transactional
     public TwoFactorSetupResponse setupTwoFactor(String email, String ipAddress) {
         User user = userRepository.findByEmail(email)
             .orElseThrow(() -> new BadRequestException("User not found for email: " + email));
+        
         if (user.getTwoFactorEnabled()) {
             throw new BadRequestException("Two-factor authentication is already enabled");
         }
@@ -52,24 +50,17 @@ public class TwoFactorAuthService {
         List<String> backupCodes = backupCodeService.generateBackupCodes(BACKUP_CODES_COUNT, BACKUP_CODE_LENGTH);
 
         // Save secret and backup codes
-        String backupCodesJson;
-        try {
-            backupCodesJson = objectMapper.writeValueAsString(backupCodes); // or use a helper if needed
-        } catch (JsonProcessingException e) {
-            log.error("Failed to serialize backup codes", e);
-            throw new BadRequestException("Failed to generate backup codes");
-        }
+        backupCodeService.setBackupCodes(user.getId().toString(), backupCodes);
 
         TwoFactorSecret twoFactorSecret = TwoFactorSecret.builder()
             .user(user)
             .secret(secret)
-            .backupCodes(backupCodesJson)
             .build();
 
         twoFactorSecretRepository.save(twoFactorSecret);
 
-        // ✅ Audit log instead of regular log
-        auditLogService.logTwoFactorSetupInitiated(user, ipAddress);
+        // ✅ Publish event instead of calling auditLogService
+        eventPublisher.publishEvent(new TwoFactorSetupInitiatedEvent(user, ipAddress));
         log.debug("Two-factor authentication setup initiated for user: {}", user.getEmail());
 
         return TwoFactorSetupResponse.builder()
@@ -84,6 +75,7 @@ public class TwoFactorAuthService {
     public boolean verifyAndEnableTwoFactor(String email, String code, String ipAddress) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("User not found for email: " + email));
+        
         TwoFactorSecret secret = twoFactorSecretRepository.findByUser(user)
                 .orElseThrow(() -> new BadRequestException("Two-factor setup not found. Please setup 2FA first."));
 
@@ -93,14 +85,14 @@ public class TwoFactorAuthService {
             user.setTwoFactorEnabled(true);
             userRepository.save(user);
 
-            // ✅ Audit log for success
-            auditLogService.logTwoFactorSuccess(user, ipAddress);
+            // ✅ Publish success event
+            eventPublisher.publishEvent(new TwoFactorSuccessEvent(user, ipAddress));
             log.info("Two-factor authentication enabled for user: {}", user.getEmail());
             return true;
         }
 
-        // ✅ Audit log for failure
-        auditLogService.logTwoFactorFailed(user, ipAddress);
+        // ✅ Publish failure event
+        eventPublisher.publishEvent(new TwoFactorFailedEvent(user, ipAddress));
         log.warn("Failed to enable 2FA for user: {} - Invalid code", user.getEmail());
         return false;
     }
@@ -109,6 +101,7 @@ public class TwoFactorAuthService {
     public boolean verifyCode(String email, String code, String ipAddress) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("User not found for email: " + email));
+        
         TwoFactorSecret secret = twoFactorSecretRepository.findByUser(user)
                 .orElseThrow(() -> new BadRequestException("Two-factor authentication not configured"));
 
@@ -127,9 +120,11 @@ public class TwoFactorAuthService {
     public void disableTwoFactor(String email, String password, String ipAddress) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("User not found for email: " + email));
+        
         // Verify password before disabling 2FA
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-            auditLogService.logTwoFactorDisableFailed(user, ipAddress);
+            // ✅ Publish disable failed event
+            eventPublisher.publishEvent(new TwoFactorDisableFailedEvent(user, ipAddress));
             throw new BadRequestException("Invalid password");
         }
 
@@ -141,8 +136,8 @@ public class TwoFactorAuthService {
         userRepository.save(user);
         twoFactorSecretRepository.deleteByUser(user);
 
-        // ✅ Audit log
-        auditLogService.logTwoFactorDisabled(user, ipAddress);
+        // ✅ Publish disabled event
+        eventPublisher.publishEvent(new TwoFactorDisabledEvent(user, ipAddress));
         log.info("Two-factor authentication disabled for user: {}", user.getEmail());
     }
 
@@ -150,6 +145,7 @@ public class TwoFactorAuthService {
     public List<String> regenerateBackupCodes(String email, String verificationCode, String ipAddress) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("User not found for email: " + email));
+        
         if (!user.getTwoFactorEnabled()) {
             throw new BadRequestException("Two-factor authentication is not enabled");
         }
@@ -164,39 +160,29 @@ public class TwoFactorAuthService {
 
         // Generate new backup codes
         List<String> newBackupCodes = backupCodeService.generateBackupCodes(BACKUP_CODES_COUNT, BACKUP_CODE_LENGTH);
-        try {
-            secret.setBackupCodes(objectMapper.writeValueAsString(newBackupCodes));
-        } catch (JsonProcessingException e) {
-            log.error("Failed to serialize new backup codes", e);
-            throw new BadRequestException("Failed to generate new backup codes");
-        }
-        twoFactorSecretRepository.save(secret);
+        backupCodeService.setBackupCodes(user.getId().toString(), newBackupCodes);
 
-        // ✅ Audit log
-        auditLogService.logTwoFactorBackupCodeRegenerated(user, ipAddress);
+        // ✅ Publish backup code regenerated event
+        eventPublisher.publishEvent(new TwoFactorBackupCodeRegeneratedEvent(user, ipAddress));
         log.info("Backup codes regenerated for user: {}", user.getEmail());
 
         return newBackupCodes;
     }
 
     boolean verifyAndConsumeBackupCode(TwoFactorSecret secret, String code, String ipAddress) {
-        try {
-            boolean isValid = backupCodeService.verifyBackupCode(secret.getUser().getId().toString(), code);
-            if (isValid) {
-                backupCodeService.consumeBackupCode(secret.getUser().getId().toString(), code);
-                secret.setBackupCodes(objectMapper.writeValueAsString(backupCodeService.getBackupCodes(secret.getUser().getId().toString())));
-                twoFactorSecretRepository.save(secret);
-                // ✅ Audit log
-                auditLogService.logTwoFactorBackupCodeUsed(secret.getUser(), ipAddress);
-                log.info("Backup code used for user: {} ({} codes remaining)",
-                        secret.getUser().getEmail(), backupCodeService.getBackupCodes(secret.getUser().getId().toString()).size());
-            }
-            return isValid;
-        } catch (JsonProcessingException e) {
-            log.error("Failed to process backup codes", e);
-            return false;
+        boolean isValid = backupCodeService.verifyBackupCode(secret.getUser().getId().toString(), code);
+        
+        if (isValid) {
+            backupCodeService.consumeBackupCode(secret.getUser().getId().toString(), code);
+            
+            // ✅ Publish backup code used event
+            eventPublisher.publishEvent(
+                new TwoFactorBackupCodeUsedEvent(secret.getUser(), ipAddress)
+            );
+            
+            log.info("Backup code used for user: {}", secret.getUser().getEmail());
         }
+        
+        return isValid;
     }
-
-    // Backup code logic moved to BackupCodeService
 }

@@ -4,18 +4,17 @@ import com.synergyhub.domain.entity.PasswordResetToken;
 import com.synergyhub.domain.entity.User;
 import com.synergyhub.dto.request.PasswordResetConfirmRequest;
 import com.synergyhub.dto.request.PasswordResetRequest;
+import com.synergyhub.events.auth.PasswordResetCompletedEvent;
 import com.synergyhub.events.auth.PasswordResetRequestedEvent;
 import com.synergyhub.exception.InvalidTokenException;
 import com.synergyhub.repository.PasswordResetTokenRepository;
 import com.synergyhub.repository.UserRepository;
 import com.synergyhub.repository.UserSessionRepository;
-import com.synergyhub.service.security.AuditLogService;
-
-import org.springframework.context.ApplicationEventPublisher;
 import com.synergyhub.util.PasswordValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +26,6 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-
 public class PasswordResetService {
 
     private final UserRepository userRepository;
@@ -35,8 +33,7 @@ public class PasswordResetService {
     private final PasswordValidator passwordValidator;
     private final PasswordEncoder passwordEncoder;
     private final UserSessionRepository userSessionRepository;
-    private final ApplicationEventPublisher eventPublisher;
-    private final AuditLogService auditLogService;
+    private final ApplicationEventPublisher eventPublisher; // ✅ Only event publisher needed
 
     @Value("${security.password-reset-token-expiry-minutes}")
     private int resetTokenExpiryMinutes;
@@ -62,16 +59,13 @@ public class PasswordResetService {
 
             passwordResetTokenRepository.save(resetToken);
 
-            // Send reset email via event
+            // ✅ Publish single event - handles both email sending AND audit logging
             eventPublisher.publishEvent(new PasswordResetRequestedEvent(user, token, ipAddress));
-
-            // Audit log
-            auditLogService.logPasswordResetRequested(user, ipAddress);
 
             log.info("Password reset email sent to: {}", user.getEmail());
         }, () -> {
             log.warn("Password reset requested for non-existent email: {}", request.getEmail());
-            // Do nothing else for security
+            // Do nothing else for security (prevent email enumeration)
         });
     }
 
@@ -94,9 +88,13 @@ public class PasswordResetService {
         // Validate and encode new password
         User user = resetToken.getUser();
         String newPassword = request.getNewPassword();
+        
         if (!passwordValidator.isValid(newPassword)) {
-            throw new IllegalArgumentException("Password does not meet requirements: " + passwordValidator.getRequirements());
+            throw new IllegalArgumentException(
+                "Password does not meet requirements: " + passwordValidator.getRequirements()
+            );
         }
+        
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
@@ -107,8 +105,8 @@ public class PasswordResetService {
         // Revoke all active sessions (security measure - user must log in again)
         userSessionRepository.revokeAllUserSessions(user);
 
-        // Audit log
-        auditLogService.logPasswordResetCompleted(user, ipAddress);
+        // ✅ Publish event instead of calling auditLogService
+        eventPublisher.publishEvent(new PasswordResetCompletedEvent(user, ipAddress));
 
         log.info("Password reset completed successfully for user: {}", user.getEmail());
     }
@@ -116,9 +114,7 @@ public class PasswordResetService {
     @Transactional(readOnly = true)
     public boolean validateResetToken(String token) {
         Optional<PasswordResetToken> resetToken = passwordResetTokenRepository.findByToken(token);
-
         return resetToken.map(PasswordResetToken::isValid).orElse(false);
-
     }
 
     @Transactional

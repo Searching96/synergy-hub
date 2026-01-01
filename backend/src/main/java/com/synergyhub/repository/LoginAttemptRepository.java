@@ -25,4 +25,15 @@ public interface LoginAttemptRepository extends JpaRepository<LoginAttempt, Inte
     @Modifying
     @Query("DELETE FROM LoginAttempt la WHERE la.attemptedAt < :before")
     void deleteOldAttempts(@Param("before") LocalDateTime before);
+
+    @Query("SELECT COUNT(la) FROM LoginAttempt la WHERE la.ipAddress = :ipAddress AND la.success = false AND la.createdAt > :since")
+    long countFailedAttemptsByIpAddress(@Param("ipAddress") String ipAddress, @Param("since") LocalDateTime since);
+
+    @Query("SELECT COUNT(la) FROM LoginAttempt la WHERE la.createdAt < :before")
+    long countByCreatedAtBefore(@Param("before") LocalDateTime before);
+
+    List<LoginAttempt> findByEmailOrderByCreatedAtDesc(String email);
+
+    List<LoginAttempt> findByIpAddressAndCreatedAtAfter(String ipAddress, LocalDateTime since);
+
 }

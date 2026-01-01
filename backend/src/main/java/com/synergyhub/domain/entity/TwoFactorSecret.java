@@ -27,9 +27,6 @@ public class TwoFactorSecret {
     @Column(nullable = false, length = 255)
     private String secret;
     
-    @Column(name = "backup_codes", columnDefinition = "TEXT")
-    private String backupCodes; // JSON array of backup codes
-    
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
