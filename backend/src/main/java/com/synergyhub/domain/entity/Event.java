@@ -1,6 +1,8 @@
 package com.synergyhub.domain.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -28,6 +30,7 @@ public class Event {
     private Project project;
     
     @Column(nullable = false, length = 200)
+    @NotBlank
     private String title;
     
     @Column(columnDefinition = "TEXT")
@@ -41,5 +44,6 @@ public class Event {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
+    @NotNull
     private User createdBy;
 }

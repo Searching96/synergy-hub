@@ -1,6 +1,5 @@
 package com.synergyhub.listeners.email;
 
-import com.synergyhub.domain.entity.User;
 import com.synergyhub.events.auth.AccountLockedEvent;
 import com.synergyhub.events.auth.PasswordChangedEvent;
 import com.synergyhub.util.EmailService;

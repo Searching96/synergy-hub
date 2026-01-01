@@ -1,8 +1,6 @@
 package com.synergyhub.security;
 
-import com.synergyhub.security.UserPrincipal;
 import org.springframework.core.MethodParameter;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.support.WebDataBinderFactory;

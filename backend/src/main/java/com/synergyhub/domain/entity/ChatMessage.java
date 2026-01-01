@@ -1,7 +1,10 @@
 package com.synergyhub.domain.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -22,14 +25,17 @@ public class ChatMessage {
     @Column(name = "message_id")
     private Integer id;
     
+    @NotNull(message = "Channel is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "channel_id", nullable = false)
     private ChatChannel channel;
     
+    @NotNull(message = "User is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     
+    @NotBlank(message = "Message content is required")
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
     
@@ -42,6 +48,7 @@ public class ChatMessage {
     private ChatMessage parentMessage;
     
     @OneToMany(mappedBy = "parentMessage", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 20)
     @Builder.Default
     private Set<ChatMessage> replies = new HashSet<>();
 }

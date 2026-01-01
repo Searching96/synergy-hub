@@ -1,6 +1,8 @@
 package com.synergyhub.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -16,6 +18,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+// 1. Exclude token from logs to prevent leaks in Splunk/ELK
+// 2. Exclude user to prevent StackOverflowError (circular reference)
+@ToString(exclude = {"token", "user"}) 
 public class PasswordResetToken {
     
     @Id
@@ -27,6 +32,9 @@ public class PasswordResetToken {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     
+    // --- SECURITY FIX APPLIED HERE ---
+    @NotBlank
+    @JsonIgnore
     @Column(nullable = false, unique = true, length = 255)
     private String token;
     

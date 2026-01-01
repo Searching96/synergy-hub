@@ -1,7 +1,11 @@
 package com.synergyhub.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.synergyhub.domain.enums.SsoProviderType;
+import com.synergyhub.security.AttributeEncryptor;
+
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -31,13 +35,19 @@ public class SsoProvider {
     @Column(name = "provider_type", nullable = false)
     private SsoProviderType providerType;
     
+    @NotBlank
     @Column(name = "provider_name", nullable = false, length = 100)
     private String providerName;
     
     @Column(name = "client_id", length = 255)
+    @NotBlank
     private String clientId;
-    
-    @Column(name = "client_secret", length = 255)
+
+    // --- SECURITY FIX APPLIED HERE ---
+    @Column(name = "client_secret", length = 512) // INCREASED LENGTH for ciphertext
+    @Convert(converter = AttributeEncryptor.class) // 1. Encryption at rest
+    @NotBlank
+    @JsonIgnore // 2. Prevent JSON serialization
     private String clientSecret;
     
     @Column(name = "metadata_url", length = 500)

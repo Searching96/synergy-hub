@@ -7,7 +7,6 @@ import com.synergyhub.events.auth.PasswordChangedEvent;
 import com.synergyhub.exception.BadRequestException;
 import com.synergyhub.repository.UserRepository;
 import com.synergyhub.repository.UserSessionRepository;
-import com.synergyhub.service.security.AuditLogService;
 import com.synergyhub.util.PasswordValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

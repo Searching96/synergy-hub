@@ -1,6 +1,10 @@
 package com.synergyhub.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -18,6 +22,9 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+// 1. Exclude sensitive data from logs
+// 2. Exclude relationships to prevent LazyInitException and StackOverflowError
+@ToString(exclude = {"passwordHash", "organization", "roles", "sessions"})
 public class User {
     
     @Id
@@ -27,14 +34,20 @@ public class User {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id", nullable = false)
+    @JsonIgnore // Prevent serialization of the entire parent Org object
+    @NotNull
     private Organization organization;
     
     @Column(nullable = false, length = 100)
+    @NotBlank
     private String name;
     
     @Column(nullable = false, unique = true, length = 100)
+    @Email
     private String email;
     
+    // --- SECURITY FIX APPLIED HERE ---
+    @JsonIgnore
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
     
@@ -71,13 +84,15 @@ public class User {
         inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     @Builder.Default
+    @JsonIgnore // Usually better to expose roles via a specific DTO field, not the raw entity list
     private Set<Role> roles = new HashSet<>();
     
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore // Critical: Prevent serializing all historical sessions when fetching a user
     private Set<UserSession> sessions = new HashSet<>();
     
-    // Helper methods
+    // Helper methods remain unchanged
     public boolean isAccountNonLocked() {
         if (!accountLocked) {
             return true;

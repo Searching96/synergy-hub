@@ -1,6 +1,7 @@
 package com.synergyhub.domain.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -24,6 +25,7 @@ public class LoginAttempt {
     private Integer id;
     
     @Column(nullable = false, length = 100)
+    @Email
     private String email;
     
     @Column(name = "ip_address", length = 45)

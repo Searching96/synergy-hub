@@ -2,7 +2,9 @@ package com.synergyhub.domain.entity;
 
 import com.synergyhub.domain.enums.ChannelType;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -21,6 +23,7 @@ public class ChatChannel {
     @Column(name = "channel_id")
     private Integer id;
     
+    @NotNull(message = "Organization is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id", nullable = false)
     private Organization organization;
@@ -36,6 +39,7 @@ public class ChatChannel {
     @Column(length = 100)
     private String name;
     
+    @NotNull(message = "Channel type is required")
     @Enumerated(EnumType.STRING)
     @Column(name = "channel_type", nullable = false)
     private ChannelType channelType;
@@ -46,10 +50,12 @@ public class ChatChannel {
         joinColumns = @JoinColumn(name = "channel_id"),
         inverseJoinColumns = @JoinColumn(name = "user_id")
     )
+    @BatchSize(size = 20)
     @Builder.Default
     private Set<User> members = new HashSet<>();
     
     @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 20)
     @Builder.Default
     private Set<ChatMessage> messages = new HashSet<>();
 }

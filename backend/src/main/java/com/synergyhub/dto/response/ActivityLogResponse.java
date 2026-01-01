@@ -1,5 +1,6 @@
 package com.synergyhub.dto.response;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
@@ -7,6 +8,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
+@AllArgsConstructor
 public class ActivityLogResponse {
     private Integer id;
     

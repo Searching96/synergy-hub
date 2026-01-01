@@ -1,7 +1,6 @@
 package com.synergyhub.security;
 
 import com.synergyhub.domain.entity.Project;
-import com.synergyhub.domain.entity.Task; // Import Task
 import com.synergyhub.domain.entity.User;
 import com.synergyhub.exception.UnauthorizedProjectAccessException;
 import com.synergyhub.repository.ProjectMemberRepository;

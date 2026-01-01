@@ -3,6 +3,8 @@ package com.synergyhub.dto.response;
 import com.synergyhub.domain.enums.TaskPriority;
 import com.synergyhub.domain.enums.TaskStatus;
 import com.synergyhub.domain.enums.TaskType;
+
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
@@ -10,6 +12,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
+@AllArgsConstructor
 public class TaskSummaryResponse {
     private Integer id;
     private String title;

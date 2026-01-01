@@ -4,6 +4,7 @@ import com.synergyhub.domain.enums.TaskPriority;
 import com.synergyhub.domain.enums.TaskStatus;
 import com.synergyhub.domain.enums.TaskType;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
@@ -12,6 +13,7 @@ import java.util.List;
 
 @Data
 @Builder
+@AllArgsConstructor
 public class TaskResponse {
     private Integer id;
     private String title;

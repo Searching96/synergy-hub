@@ -1,5 +1,6 @@
 package com.synergyhub.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -27,6 +28,7 @@ public class UserSession {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @JsonIgnore
     @Column(name = "token_id", nullable = false, unique = true, length = 255)
     private String tokenId; // JWT jti claim
 

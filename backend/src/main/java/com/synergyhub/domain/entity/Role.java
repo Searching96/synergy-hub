@@ -1,6 +1,7 @@
 package com.synergyhub.domain.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 import java.util.HashSet;
@@ -20,6 +21,7 @@ public class Role {
     @Column(name = "role_id")
     private Integer id;
     
+    @NotBlank
     @Column(nullable = false, unique = true, length = 50)
     private String name;
     

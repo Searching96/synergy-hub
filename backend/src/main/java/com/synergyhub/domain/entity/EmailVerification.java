@@ -1,6 +1,8 @@
 package com.synergyhub.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -15,6 +17,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = {"token", "user"}) // 1. Prevent Log Leaks & Circular Refs
 public class EmailVerification {
     
     @Id
@@ -26,7 +29,10 @@ public class EmailVerification {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     
+    // --- SECURITY FIX APPLIED HERE ---
+    @NotBlank
     @Column(nullable = false, unique = true, length = 255)
+    @JsonIgnore // 2. Prevent JSON serialization
     private String token;
     
     @Column(nullable = false)

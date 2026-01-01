@@ -1,5 +1,6 @@
 package com.synergyhub.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -30,6 +31,7 @@ public class SsoUserMapping {
     @JoinColumn(name = "provider_id", nullable = false)
     private SsoProvider provider;
     
+    @JsonIgnore
     @Column(name = "external_id", nullable = false, length = 255)
     private String externalId;
     

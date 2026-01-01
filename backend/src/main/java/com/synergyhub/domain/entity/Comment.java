@@ -1,6 +1,8 @@
 package com.synergyhub.domain.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -20,14 +22,17 @@ public class Comment {
     @Column(name = "comment_id")
     private Integer id;
     
+    @NotNull(message = "Task is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "task_id", nullable = false)
     private Task task;
     
+    @NotNull(message = "User is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     
+    @NotBlank(message = "Comment content is required")
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
     

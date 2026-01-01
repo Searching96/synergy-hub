@@ -2,7 +2,12 @@ package com.synergyhub.domain.entity;
 
 import com.synergyhub.domain.enums.SprintStatus;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -25,28 +30,35 @@ public class Sprint {
     @EqualsAndHashCode.Include
     private Integer id;
 
+    @NotNull(message = "Project is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
+    @NotBlank(message = "Sprint name is required")
+    @Size(max = 100, message = "Sprint name must not exceed 100 characters")
     @Column(nullable = false, length = 100)
     private String name;
 
     @Column(columnDefinition = "TEXT")
     private String goal;
 
+    @NotNull(message = "Start date is required")
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 
+    @NotNull(message = "End date is required")
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
+    @NotNull(message = "Sprint status is required")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
     private SprintStatus status = SprintStatus.PLANNING;
 
     @OneToMany(mappedBy = "sprint", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 20)
     @Builder.Default
     private List<Task> tasks = new ArrayList<>();
 
@@ -76,5 +88,10 @@ public class Sprint {
 
     public boolean isActive() {
         return status == SprintStatus.ACTIVE;
+    }
+
+    @AssertTrue(message = "End date must be after start date")
+    public boolean isValidDateRange() {
+        return startDate == null || endDate == null || !endDate.isBefore(startDate);
     }
 }

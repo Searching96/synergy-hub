@@ -1,6 +1,8 @@
 package com.synergyhub.domain.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -29,9 +31,12 @@ public class AuditLog {
     @JoinColumn(name = "user_id") // ✅ Can be null for system events
     private User user;
 
+    @NotBlank(message = "Event type is required")
+    @Size(max = 100, message = "Event type must not exceed 100 characters")
     @Column(name = "event_type", nullable = false, length = 100)
     private String eventType; // ✅ Consistent with your service
 
+    @Size(max = 10000, message = "Event details must not exceed 10000 characters")
     @Column(name = "event_details", columnDefinition = "TEXT")
     private String eventDetails; // ✅ Consistent with your service
 

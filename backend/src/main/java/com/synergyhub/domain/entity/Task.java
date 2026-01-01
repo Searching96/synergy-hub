@@ -4,7 +4,11 @@ import com.synergyhub.domain.enums.TaskPriority;
 import com.synergyhub.domain.enums.TaskStatus;
 import com.synergyhub.domain.enums.TaskType;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -36,12 +40,15 @@ public class Task {
     @EqualsAndHashCode.Include
     private Integer id;
 
+    @NotBlank(message = "Task title is required")
+    @Size(max = 200, message = "Task title must not exceed 200 characters")
     @Column(nullable = false, length = 200)
     private String title;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @NotNull(message = "Project is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
@@ -55,14 +62,17 @@ public class Task {
     private Task parentTask;
 
     @OneToMany(mappedBy = "parentTask", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 20)
     @Builder.Default
     private List<Task> subtasks = new ArrayList<>();
 
+    @NotNull(message = "Task status is required")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
     private TaskStatus status = TaskStatus.TO_DO;
 
+    @NotNull(message = "Task priority is required")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
@@ -72,6 +82,7 @@ public class Task {
     @JoinColumn(name = "assignee_id")
     private User assignee;
 
+    @NotNull(message = "Task type is required")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
@@ -82,6 +93,7 @@ public class Task {
      * In Agile terminology, this is the "Reporter" - the person who discovered
      * or reported the issue. This may be different from the assignee.
      */
+    @NotNull(message = "Reporter is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reporter_id", nullable = false)
     private User reporter;
