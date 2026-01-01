@@ -14,6 +14,8 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.synergyhub.service.auth.SessionService;
+
 import java.io.IOException;
 
 @RequiredArgsConstructor
@@ -21,29 +23,36 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
+    private final SessionService sessionService;
     private final CustomUserDetailsService customUserDetailsService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
             String jwt = getJwtFromRequest(request);
-
+            
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
                 Integer userId = tokenProvider.getUserIdFromToken(jwt);
-
+                String tokenId = tokenProvider.getTokenIdFromToken(jwt);
+                
+                // ✅ CHECK IF SESSION IS REVOKED
+                if (sessionService.isSessionRevoked(tokenId)) {
+                    log.warn("Attempted to use revoked token: {}", tokenId);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                
                 UserDetails userDetails = customUserDetailsService.loadUserById(userId);
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                UsernamePasswordAuthenticationToken authentication = 
+                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception ex) {
             log.error("Could not set user authentication in security context", ex);
         }
-
+        
         filterChain.doFilter(request, response);
     }
 

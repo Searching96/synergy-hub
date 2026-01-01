@@ -12,3 +12,32 @@ spring:
 logging:
   level:
     com.synergyhub: INFO
+    
+spring:
+  config:
+    activate:
+      on-profile: production
+
+app:
+  cors:
+    allowed-origins:
+      - https://synergyhub.com
+      - https://app.synergyhub.com
+      - https://www.synergyhub.com
+
+# Disable Swagger in production
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
+# Production - Disable all actuator endpoints except health
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: when-authorized

@@ -21,9 +21,13 @@ public class UserValidationService {
         }
     }
 
-    public void validatePassword(String password) {
-        if (!passwordValidator.isValid(password)) {
-            throw new BadRequestException("Password does not meet requirements: " + passwordValidator.getRequirements());
+    // ✅ Updated to check personal info
+    public void validatePassword(String password, String email, String name) {
+        if (!passwordValidator.isValidWithUserInfo(password, email, name)) {
+            throw new BadRequestException(
+                "Password does not meet requirements: " + 
+                passwordValidator.getRequirements()
+            );
         }
     }
 

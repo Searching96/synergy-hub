@@ -4,6 +4,8 @@ import com.synergyhub.security.CustomUserDetailsService;
 import com.synergyhub.security.JwtAuthenticationEntryPoint;
 import com.synergyhub.security.JwtAuthenticationFilter;
 import com.synergyhub.security.JwtTokenProvider;
+import com.synergyhub.service.auth.SessionService; // Ensure this imports correctly
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,29 +21,27 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@RequiredArgsConstructor
+@RequiredArgsConstructor // ✅ Handles all "private final" injections automatically
 public class SecurityConfig {
 
     private final CustomUserDetailsService customUserDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final SessionService sessionService;
+    private final CorsConfigurationSource corsConfigurationSource; // ✅ Must be defined in another config class
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint() {
-        return new JwtAuthenticationEntryPoint();
+        return new BCryptPasswordEncoder(12);
     }
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtTokenProvider, customUserDetailsService);
+        return new JwtAuthenticationFilter(jwtTokenProvider, sessionService, customUserDetailsService);
     }
 
     @Bean
@@ -60,21 +60,47 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configure(http))
-                .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(jwtAuthenticationEntryPoint())
-                )
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/public/**").permitAll()
-                        .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .anyRequest().authenticated()
-                );
+            .csrf(AbstractHttpConfigurer::disable)
+            // ✅ Use the injected source directly
+            .cors(cors -> cors.configurationSource(corsConfigurationSource)) 
+            .exceptionHandling(exception -> exception
+                // ✅ Use the injected bean directly (no need for @Bean method call if injected)
+                .authenticationEntryPoint(new JwtAuthenticationEntryPoint()) 
+            )
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            .authorizeHttpRequests(auth -> auth
+                // ✅ PUBLIC AUTH ENDPOINTS
+                .requestMatchers(
+                    "/api/auth/login",
+                    "/api/auth/register",
+                    "/api/auth/verify-email",
+                    "/api/auth/resend-verification",
+                    "/api/auth/forgot-password",
+                    "/api/auth/validate-reset-token",
+                    "/api/auth/reset-password",
+                    "/api/public/**",
+                    "/actuator/health/**",
+                    "/swagger-ui/**", 
+                    "/v3/api-docs/**"
+                ).permitAll()
+                
+                // ✅ ALL OTHER ENDPOINTS
+                .anyRequest().authenticated()
+            );
+
+        // ✅ SECURITY HEADERS
+        http.headers(headers -> headers
+            .frameOptions(frame -> frame.deny())
+            .xssProtection(xss -> xss.disable()) // OK if using CSP
+            .contentSecurityPolicy(csp -> csp
+                .policyDirectives("default-src 'self'; frame-ancestors 'none'; form-action 'self'")
+            )
+            .httpStrictTransportSecurity(hsts -> hsts
+                .includeSubDomains(true)
+                .maxAgeInSeconds(31536000))
+        );
 
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);

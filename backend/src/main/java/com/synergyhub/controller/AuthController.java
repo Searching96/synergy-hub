@@ -1,13 +1,11 @@
 package com.synergyhub.controller;
 
-import com.synergyhub.domain.entity.UserSession;
 import com.synergyhub.dto.request.*;
-import com.synergyhub.dto.response.ApiResponse;
-import com.synergyhub.dto.response.LoginResponse;
-import com.synergyhub.dto.response.UserResponse;
+import com.synergyhub.dto.response.*;
+import com.synergyhub.security.JwtTokenProvider;
 import com.synergyhub.security.UserPrincipal;
 import com.synergyhub.service.auth.*;
-import com.synergyhub.util.WebUtils;
+import com.synergyhub.util.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,33 +30,32 @@ public class AuthController {
     private final ChangePasswordService changePasswordService;
     private final TwoFactorAuthService twoFactorAuthService;
     private final SessionService sessionService;
-    // REMOVED: private final UserRepository userRepository; // ✅ Clean architecture
+    
+    private final JwtTokenProvider jwtTokenProvider;
+    private final ClientIpResolver ipResolver;
 
-    /**
-     * User login
-     */
+    // ===================================================================================
+    // PUBLIC AUTHENTICATION ENDPOINTS
+    // ===================================================================================
+
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(
             @Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest) {
 
-        String ipAddress = WebUtils.getClientIP(httpRequest);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
         String userAgent = httpRequest.getHeader("User-Agent");
 
         LoginResponse response = loginService.login(request, ipAddress, userAgent);
-
         return ResponseEntity.ok(ApiResponse.success("Login successful", response));
     }
 
-    /**
-     * User registration
-     */
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<UserResponse>> register(
             @Valid @RequestBody RegisterRequest request,
             HttpServletRequest httpRequest) {
 
-        String ipAddress = WebUtils.getClientIP(httpRequest);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
         UserResponse response = registrationService.register(request, ipAddress);
 
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -68,43 +65,32 @@ public class AuthController {
                 ));
     }
 
-    /**
-     * Verify email with token
-     */
     @PostMapping("/verify-email")
     public ResponseEntity<ApiResponse<Void>> verifyEmail(
-            @RequestParam String token,
+            @Valid @RequestBody EmailVerificationRequest request,
             HttpServletRequest httpRequest) {
-
-        String ipAddress = WebUtils.getClientIP(httpRequest);
-        registrationService.verifyEmail(token, ipAddress);
-
+        
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
+        registrationService.verifyEmail(request.getToken(), ipAddress);
         return ResponseEntity.ok(ApiResponse.success("Email verified successfully", null));
     }
 
-    /**
-     * Resend verification email
-     */
     @PostMapping("/resend-verification")
     public ResponseEntity<ApiResponse<Void>> resendVerificationEmail(
-            @RequestParam String email,
+            @Valid @RequestBody ResendVerificationRequest request,
             HttpServletRequest httpRequest) {
-
-        String ipAddress = WebUtils.getClientIP(httpRequest);
-        registrationService.resendVerificationEmail(email, ipAddress);
-
+        
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
+        registrationService.resendVerificationEmail(request.getEmail(), ipAddress);
         return ResponseEntity.ok(ApiResponse.success("Verification email sent", null));
     }
 
-    /**
-     * Request password reset
-     */
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<Void>> requestPasswordReset(
             @Valid @RequestBody PasswordResetRequest request,
             HttpServletRequest httpRequest) {
 
-        String ipAddress = WebUtils.getClientIP(httpRequest);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
         passwordResetService.requestPasswordReset(request, ipAddress);
 
         return ResponseEntity.ok(ApiResponse.success(
@@ -113,34 +99,29 @@ public class AuthController {
         ));
     }
 
-    /**
-     * Validate password reset token
-     */
-    @GetMapping("/validate-reset-token")
+    @PostMapping("/validate-reset-token")
     public ResponseEntity<ApiResponse<Boolean>> validateResetToken(
-            @RequestParam String token) {
-
-        boolean isValid = passwordResetService.validateResetToken(token);
+            @Valid @RequestBody ValidateResetTokenRequest request) {
+        
+        boolean isValid = passwordResetService.validateResetToken(request.getToken());
         return ResponseEntity.ok(ApiResponse.success(isValid));
     }
 
-    /**
-     * Reset password with token
-     */
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<Void>> resetPassword(
             @Valid @RequestBody PasswordResetConfirmRequest request,
             HttpServletRequest httpRequest) {
 
-        String ipAddress = WebUtils.getClientIP(httpRequest);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
         passwordResetService.resetPassword(request, ipAddress);
 
         return ResponseEntity.ok(ApiResponse.success("Password has been reset successfully", null));
     }
 
-    /**
-     * Change password for authenticated user
-     */
+    // ===================================================================================
+    // PROTECTED ENDPOINTS (REQUIRE AUTH)
+    // ===================================================================================
+
     @PostMapping("/change-password")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> changePassword(
@@ -148,7 +129,7 @@ public class AuthController {
             @AuthenticationPrincipal UserPrincipal currentUser,
             HttpServletRequest httpRequest) {
 
-        String ipAddress = WebUtils.getClientIP(httpRequest);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
         changePasswordService.changePassword(currentUser.getEmail(), request, ipAddress);
 
         return ResponseEntity.ok(ApiResponse.success(
@@ -157,106 +138,101 @@ public class AuthController {
         ));
     }
 
-    /**
-     * Enable two-factor authentication (2FA)
-     */
+    // --- Two-Factor Authentication (2FA) ---
+
     @PostMapping("/2fa/setup")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<?>> setupTwoFactor(
             @AuthenticationPrincipal UserPrincipal currentUser, 
             HttpServletRequest httpRequest) {
         
-        String ipAddress = WebUtils.getClientIP(httpRequest);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
         var response = twoFactorAuthService.setupTwoFactor(currentUser.getEmail(), ipAddress);
         return ResponseEntity.ok(ApiResponse.success("2FA setup initiated", response));
     }
 
-    /**
-     * Verify and enable 2FA
-     */
     @PostMapping("/2fa/verify")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> verifyAndEnableTwoFactor(
             @AuthenticationPrincipal UserPrincipal currentUser,
-            @RequestParam String code,
+            @Valid @RequestBody TwoFactorVerifyRequest request,
             HttpServletRequest httpRequest) {
         
-        String ipAddress = WebUtils.getClientIP(httpRequest);
-        boolean enabled = twoFactorAuthService.verifyAndEnableTwoFactor(currentUser.getEmail(), code, ipAddress);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
+        boolean enabled = twoFactorAuthService.verifyAndEnableTwoFactor(
+            currentUser.getEmail(), request.getCode(), ipAddress);
         
         if (enabled) {
             return ResponseEntity.ok(ApiResponse.success("2FA enabled successfully", null));
         } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error("Invalid 2FA code"));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("Invalid 2FA code"));
         }
     }
 
-    /**
-     * Disable 2FA
-     */
     @PostMapping("/2fa/disable")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> disableTwoFactor(
             @AuthenticationPrincipal UserPrincipal currentUser,
-            @RequestParam String password,
+            @Valid @RequestBody TwoFactorDisableRequest request,
             HttpServletRequest httpRequest) {
         
-        String ipAddress = WebUtils.getClientIP(httpRequest);
-        twoFactorAuthService.disableTwoFactor(currentUser.getEmail(), password, ipAddress);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
+        twoFactorAuthService.disableTwoFactor(
+            currentUser.getEmail(), request.getPassword(), ipAddress);
         return ResponseEntity.ok(ApiResponse.success("2FA disabled successfully", null));
     }
 
-    /**
-     * Regenerate backup codes for 2FA
-     */
     @PostMapping("/2fa/backup-codes")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<?>> regenerateBackupCodes(
             @AuthenticationPrincipal UserPrincipal currentUser,
-            @RequestParam String verificationCode,
+            @Valid @RequestBody RegenerateBackupCodesRequest request,
             HttpServletRequest httpRequest) {
         
-        String ipAddress = WebUtils.getClientIP(httpRequest);
-        // Uses the newly refactored service method that persists to DB
-        var codes = twoFactorAuthService.regenerateBackupCodes(currentUser.getEmail(), verificationCode, ipAddress);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
+        // Regenerates codes and saves HASHED versions to DB. Returns PLAINTEXT codes once.
+        var codes = twoFactorAuthService.regenerateBackupCodes(
+            currentUser.getEmail(), 
+            request.getVerificationCode(), 
+            ipAddress
+        );
         return ResponseEntity.ok(ApiResponse.success("Backup codes regenerated", codes));
     }
 
-    /**
-     * List all active sessions for the authenticated user
-     * GET /api/auth/sessions
-     */
+    // --- Session Management ---
+
     @GetMapping("/sessions")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<List<UserSession>>> listActiveSessions(@AuthenticationPrincipal UserPrincipal currentUser) {
-        // ✅ Refactored: Pass ID directly to service
-        List<UserSession> sessions = sessionService.listActiveSessions(currentUser.getId());
+    public ResponseEntity<ApiResponse<List<UserSessionResponse>>> listActiveSessions(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            HttpServletRequest request) {
+        
+        String currentToken = jwtTokenProvider.getJwtFromRequest(request);
+        String currentTokenId = currentToken != null ? 
+            jwtTokenProvider.getTokenIdFromToken(currentToken) : null;
+        
+        List<UserSessionResponse> sessions = sessionService.listActiveSessions(
+            currentUser.getId(), currentTokenId);
+        
         return ResponseEntity.ok(ApiResponse.success(sessions));
     }
 
-    /**
-     * Revoke a specific session
-     * POST /api/auth/sessions/revoke
-     */
     @PostMapping("/sessions/revoke")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> revokeSession(
-            @RequestParam String tokenId, 
+            @Valid @RequestBody RevokeSessionRequest request, 
             @AuthenticationPrincipal UserPrincipal currentUser) {
         
-        // ✅ Refactored: Pass User ID to ensure ownership check happens in Service
-        sessionService.revokeSession(tokenId, currentUser.getId());
+        sessionService.revokeSession(request.getTokenId(), currentUser.getId());
         return ResponseEntity.ok(ApiResponse.success("Session revoked", null));
     }
 
-    /**
-     * Revoke all sessions for the authenticated user
-     * POST /api/auth/sessions/revoke-all
-     */
     @PostMapping("/sessions/revoke-all")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<Void>> revokeAllSessions(@AuthenticationPrincipal UserPrincipal currentUser) {
-        // ✅ Refactored: Pass ID directly to service
+    public ResponseEntity<ApiResponse<Void>> revokeAllSessions(
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        
         sessionService.revokeAllSessions(currentUser.getId());
         return ResponseEntity.ok(ApiResponse.success("All sessions revoked", null));
     }

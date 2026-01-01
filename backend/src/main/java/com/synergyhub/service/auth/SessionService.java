@@ -2,6 +2,8 @@ package com.synergyhub.service.auth;
 
 import com.synergyhub.domain.entity.User;
 import com.synergyhub.domain.entity.UserSession;
+import com.synergyhub.dto.mapper.UserSessionMapper;
+import com.synergyhub.dto.response.UserSessionResponse;
 import com.synergyhub.exception.ResourceNotFoundException;
 import com.synergyhub.repository.UserRepository;
 import com.synergyhub.repository.UserSessionRepository;
@@ -13,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +23,7 @@ public class SessionService {
 
     private final UserSessionRepository userSessionRepository;
     private final UserRepository userRepository; // ✅ Added dependency
+    private final UserSessionMapper userSessionMapper;
     private final JwtTokenProvider jwtTokenProvider;
 
     public JwtTokenProvider getJwtTokenProvider() {
@@ -47,9 +51,20 @@ public class SessionService {
      * List all active sessions for a user by User ID
      */
     @Transactional(readOnly = true)
-    public List<UserSession> listActiveSessions(Integer userId) {
+    public List<UserSessionResponse> listActiveSessions(Integer userId, String currentTokenId) {
         User user = getUserById(userId);
-        return userSessionRepository.findActiveSessionsByUser(user, LocalDateTime.now());
+        List<UserSession> sessions = userSessionRepository.findActiveSessionsByUser(user, LocalDateTime.now());
+        
+        return sessions.stream()
+                .map(session -> userSessionMapper.toDTO(session, currentTokenId))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isSessionRevoked(String tokenId) {
+        return userSessionRepository.findByTokenId(tokenId)
+                .map(UserSession::getRevoked)
+                .orElse(true); // Treat non-existent sessions as revoked
     }
 
     /**

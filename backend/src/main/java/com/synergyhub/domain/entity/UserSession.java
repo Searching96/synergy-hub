@@ -43,6 +43,9 @@ public class UserSession {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
+    @Column(name = "last_accessed_at", nullable = false, updatable = true)
+    private LocalDateTime lastAccessedAt;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean revoked = false;

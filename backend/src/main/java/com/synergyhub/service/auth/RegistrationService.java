@@ -57,7 +57,11 @@ public class RegistrationService {
         // Validate email uniqueness and password
         try {
             userValidationService.validateEmailUniqueness(request.getEmail());
-            userValidationService.validatePassword(request.getPassword());
+            userValidationService.validatePassword(
+                request.getPassword(), 
+                request.getEmail(),  // ✅ Check against email
+                request.getName()    // ✅ Check against name
+        );
         } catch (EmailAlreadyExistsException | BadRequestException ex) {
             auditLogService.createAuditLog(
                     null,

@@ -7,6 +7,7 @@ import com.synergyhub.repository.BackupCodeRepository;
 import com.synergyhub.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder; // ✅ Import added
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,16 +26,13 @@ public class DefaultBackupCodeService implements BackupCodeService {
     
     private final BackupCodeRepository backupCodeRepository;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder; // ✅ Inject BCrypt/Argon2 encoder
 
     @Override
     @Transactional
     public List<String> generateBackupCodes(int count, int length) {
-        // This method signature in your interface is slightly flawed because it 
-        // doesn't take a userId, but your implementation implies it creates them generic?
-        // Usually, you generate codes FOR a user.
-        // Assuming the Controller handles the User context and calls setBackupCodes, 
-        // or this method is just a helper utility.
-        
+        // Generates random plaintext codes. 
+        // These should be returned to the Controller to be shown to the user ONCE.
         List<String> codes = new ArrayList<>();
         for (int i = 0; i < count; i++) {
             codes.add(generateRandomCode(length));
@@ -42,10 +40,6 @@ public class DefaultBackupCodeService implements BackupCodeService {
         return codes;
     }
 
-    /**
-     * Generates and Saves codes for a specific user (Recommended Method)
-     * You might need to add this to your Interface or use setBackupCodes logic.
-     */
     @Override
     @Transactional
     public void setBackupCodes(String userId, List<String> codes) {
@@ -54,11 +48,11 @@ public class DefaultBackupCodeService implements BackupCodeService {
         // 1. Invalidate/Delete existing codes
         backupCodeRepository.deleteByUser(user);
 
-        // 2. Save new codes
+        // 2. Save new codes (HASHED)
         List<BackupCode> entities = codes.stream()
                 .map(code -> BackupCode.builder()
                         .user(user)
-                        .code(code) // In high security apps, hash this!
+                        .code(passwordEncoder.encode(code)) // ✅ HASH IT (Secure Storage)
                         .used(false)
                         .build())
                 .collect(Collectors.toList());
@@ -71,14 +65,27 @@ public class DefaultBackupCodeService implements BackupCodeService {
     @Transactional(readOnly = true)
     public boolean verifyBackupCode(String userId, String code) {
         User user = getUser(userId);
-        return backupCodeRepository.findByUserAndCodeAndUsedFalse(user, code).isPresent();
+        
+        // We cannot query by specific code because we only have hashes.
+        // We must fetch all unused codes and match them in memory.
+        List<BackupCode> codes = backupCodeRepository.findByUserAndUsedFalse(user);
+        
+        return codes.stream()
+                .anyMatch(bc -> passwordEncoder.matches(code, bc.getCode())); // ✅ Verify Hash
     }
 
     @Override
     @Transactional
     public void consumeBackupCode(String userId, String code) {
         User user = getUser(userId);
-        backupCodeRepository.findByUserAndCodeAndUsedFalse(user, code)
+        
+        // Fetch all unused codes for the user
+        List<BackupCode> codes = backupCodeRepository.findByUserAndUsedFalse(user);
+
+        // Find the specific code that matches the input
+        codes.stream()
+                .filter(bc -> passwordEncoder.matches(code, bc.getCode()))
+                .findFirst()
                 .ifPresent(backupCode -> {
                     backupCode.setUsed(true);
                     backupCodeRepository.save(backupCode);
@@ -89,10 +96,11 @@ public class DefaultBackupCodeService implements BackupCodeService {
     @Override
     @Transactional(readOnly = true)
     public List<String> getBackupCodes(String userId) {
-        User user = getUser(userId);
-        return backupCodeRepository.findByUserAndUsedFalse(user).stream()
-                .map(BackupCode::getCode)
-                .collect(Collectors.toList());
+        // ⚠️ SECURITY NOTE: 
+        // Since we now hash the codes, we CANNOT retrieve the plaintext versions.
+        // You should remove the "View Backup Codes" feature from your UI, 
+        // as codes can only be viewed at the moment of generation.
+        throw new UnsupportedOperationException("Cannot retrieve plaintext backup codes after they have been hashed and saved.");
     }
 
     private User getUser(String userId) {
