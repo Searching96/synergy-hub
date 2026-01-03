@@ -64,7 +64,10 @@ export default function BacklogTaskRow({
     if (target.tagName === 'INPUT' || target.closest('button') || target.closest('[role="combobox"]')) {
       return;
     }
-    setSearchParams({ selectedIssue: task.id.toString() });
+    const next = new URLSearchParams(searchParams);
+    next.delete("create");
+    next.set("issue", `${projectKey}-${task.id}`);
+    setSearchParams(next);
   };
 
   return (

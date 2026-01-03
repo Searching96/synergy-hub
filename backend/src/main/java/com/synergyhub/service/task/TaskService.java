@@ -414,7 +414,7 @@ public class TaskService {
                 "TASK_ARCHIVED",
                 String.format("Task '%s' (ID: %d) archived in project '%s'",
                         task.getTitle(), taskId, task.getProject().getName()),
-                task.getProject().getId(),
+                task.getProject().getId().toString(),
                 null);
     }
 
@@ -435,7 +435,7 @@ public class TaskService {
                 "TASK_UNARCHIVED",
                 String.format("Task '%s' (ID: %d) unarchived in project '%s'",
                         task.getTitle(), taskId, task.getProject().getName()),
-                task.getProject().getId(),
+                task.getProject().getId().toString(),
                 null);
     }
 

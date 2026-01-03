@@ -1,5 +1,6 @@
 import { Droppable } from "@hello-pangea/dnd";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import IssueCard from "./IssueCard";
 import type { BoardTask, TaskStatus } from "@/hooks/useProjectBoard";
 
@@ -9,9 +10,17 @@ interface BoardColumnProps {
   tasks: BoardTask[];
   projectKey?: string;
   isProjectArchived?: boolean;
+  isLoading?: boolean;
 }
 
-export default function BoardColumn({ status, title, tasks, projectKey, isProjectArchived }: BoardColumnProps) {
+export default function BoardColumn({ 
+  status, 
+  title, 
+  tasks, 
+  projectKey, 
+  isProjectArchived,
+  isLoading = false,
+}: BoardColumnProps) {
   return (
     <div className="flex flex-col min-w-[280px] w-[280px] h-full">
       {/* Column Header */}
@@ -31,11 +40,18 @@ export default function BoardColumn({ status, title, tasks, projectKey, isProjec
             ref={provided.innerRef}
             {...provided.droppableProps}
             className={cn(
-              "flex-1 bg-gray-50 rounded-lg p-2 transition-colors min-h-[200px]",
-              snapshot.isDraggingOver && "bg-blue-50 ring-2 ring-blue-300"
+              "flex-1 bg-gray-50 rounded-lg p-2",
+              "transition-all duration-200 ease-in-out",
+              snapshot.isDraggingOver && "bg-blue-50 ring-2 ring-blue-300 scale-[1.01]"
             )}
           >
-            {tasks.length === 0 ? (
+            {isLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-20 w-full rounded-lg" />
+                <Skeleton className="h-24 w-full rounded-lg" />
+                <Skeleton className="h-20 w-full rounded-lg" />
+              </div>
+            ) : tasks.length === 0 ? (
               <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
                 No tasks
               </div>

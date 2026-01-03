@@ -2,7 +2,10 @@ import { Draggable } from "@hello-pangea/dnd";
 import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { AlertCircle, ArrowUp, ArrowDown, Minus } from "lucide-react";
-import type { BoardTask } from "@/hooks/useProjectBoard";
+import { canMoveTask } from "@/lib/rbac";
+import { useAuth } from "@/context/AuthContext";
+import { useProject } from "@/context/ProjectContext";
+import type { BoardTask, TaskStatus } from "@/hooks/useProjectBoard";
 
 interface IssueCardProps {
   task: BoardTask;
@@ -40,15 +43,26 @@ const priorityConfig = {
 
 export default function IssueCard({ task, index, projectKey = "PROJ", isProjectArchived }: IssueCardProps) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
+  const { project } = useProject();
   const priority = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.MEDIUM;
   const PriorityIcon = priority.icon;
 
+  // Get user role from project context - eliminates prop drilling
+  // CRITICAL FIX: Default to VIEWER (most restrictive) if role is undefined
+  // This prevents dragging during project load race condition
+  const userRole = (project?.members?.find(m => m.userId === user?.id)?.role || "VIEWER") as any;
+  const canDrag = canMoveTask(userRole) && !task.archived && !isProjectArchived;
+
   const handleClick = () => {
-    setSearchParams({ selectedIssue: task.id.toString() });
+    const next = new URLSearchParams(searchParams);
+    next.delete("create");
+    next.set("selectedIssue", task.id.toString());
+    setSearchParams(next);
   };
 
   return (
-    <Draggable draggableId={`task-${task.id}`} index={index} isDragDisabled={task.archived || isProjectArchived}>
+    <Draggable draggableId={`task-${task.id}`} index={index} isDragDisabled={!canDrag}>
       {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
@@ -56,14 +70,22 @@ export default function IssueCard({ task, index, projectKey = "PROJ", isProjectA
           {...provided.dragHandleProps}
           onClick={handleClick}
           className={cn(
-            "bg-white rounded-lg border shadow-sm p-3 mb-2 cursor-pointer transition-all hover:shadow-md",
-            snapshot.isDragging && "shadow-lg ring-2 ring-blue-500 rotate-2",
-            task.archived && "opacity-60"
+            "bg-white rounded-lg border shadow-sm p-3 mb-2 cursor-pointer",
+            "transition-all duration-200 ease-out",
+            "hover:shadow-lg hover:scale-[1.02] hover:border-blue-300",
+            snapshot.isDragging && "scale-105 opacity-90 shadow-xl ring-2 ring-blue-400 rotate-2",
+            task.archived && "opacity-60",
+            !canDrag && "cursor-not-allowed opacity-50"
           )}
         >
           {/* Issue Key */}
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-muted-foreground">
+            <span
+              className={cn(
+                "text-xs font-medium text-muted-foreground",
+                (task.status as TaskStatus) === "DONE" && "line-through"
+              )}
+            >
               {projectKey}-{task.id}
             </span>
             <div className={cn("flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium", priority.bg, priority.color)}>

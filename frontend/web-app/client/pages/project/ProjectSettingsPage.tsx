@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { projectService } from "@/services/project.service";
 import { useUpdateProject, useDeleteProject } from "@/hooks/useProjects";
 import { useToast } from "@/hooks/use-toast";
+import type { ProjectMember } from "@/types/project.types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,7 +64,7 @@ export default function ProjectSettingsPage() {
     enabled: !!project?.id,
   });
 
-  const members = membersResponse?.data || [];
+  const members: ProjectMember[] = membersResponse?.data || [];
 
   // Mutations
   const updateProjectMutation = useUpdateProject(project?.id);

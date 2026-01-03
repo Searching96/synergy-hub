@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import SecuritySettingsPage from "@/pages/settings/SecuritySettingsPage";
 import {
   User,
   Mail,
@@ -107,8 +108,12 @@ export default function SettingsPage() {
             Profile
           </TabsTrigger>
           <TabsTrigger value="security" className="gap-2">
-            <Shield className="h-4 w-4" />
+            <Lock className="h-4 w-4" />
             Security
+          </TabsTrigger>
+          <TabsTrigger value="sso" className="gap-2">
+            <Shield className="h-4 w-4" />
+            SSO Providers
           </TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2">
             <Bell className="h-4 w-4" />
@@ -316,6 +321,11 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* SSO Providers Tab */}
+        <TabsContent value="sso" className="space-y-6">
+          <SecuritySettingsPage />
         </TabsContent>
 
         {/* Notifications Tab */}

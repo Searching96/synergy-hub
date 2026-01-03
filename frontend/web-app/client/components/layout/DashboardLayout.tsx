@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
+import IssueModal from "@/components/issue/IssueModal";
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -16,6 +17,7 @@ export default function DashboardLayout() {
           <Outlet />
         </div>
       </main>
+      <IssueModal />
     </div>
   );
 }

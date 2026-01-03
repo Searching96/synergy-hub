@@ -27,7 +27,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     
     @Transactional(readOnly = true)
     public UserDetails loadUserById(Integer id) {
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdWithRolesAndPermissions(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
         
         return UserPrincipal.create(user);

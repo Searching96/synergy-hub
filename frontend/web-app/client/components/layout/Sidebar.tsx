@@ -1,7 +1,8 @@
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Layout, Briefcase, Settings, X } from "lucide-react";
+import { Layout, Briefcase, Settings, Building2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -9,11 +10,23 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
+  const { user } = useAuth();
+  
   const navItems = [
     { to: "/dashboard", label: "Your Work", icon: Layout },
     { to: "/projects", label: "Projects", icon: Briefcase },
     { to: "/settings", label: "Settings", icon: Settings },
   ];
+  
+  // Add Organization Settings for admins
+  const isAdmin = user?.roles?.includes("GLOBAL_ADMIN") || user?.roles?.includes("ORG_ADMIN");
+  if (isAdmin) {
+    navItems.push({
+      to: "/settings/organization",
+      label: "Organization",
+      icon: Building2,
+    });
+  }
 
   return (
     <>

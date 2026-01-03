@@ -105,6 +105,11 @@ export default function IssueDetailModal() {
   const taskId = selectedIssue ? parseInt(selectedIssue) : null;
   const { data: taskResponse, isLoading: isLoadingTask } = useTask(taskId!);
   const { data: commentsResponse, isLoading: isLoadingComments } = useTaskComments(taskId);
+  const { data: subtasksResponse, isLoading: isLoadingSubtasks } = useQuery({
+    queryKey: ["subtasks", taskId],
+    queryFn: () => taskService.getTaskSubtasks(taskId!),
+    enabled: !!taskId,
+  });
   const updateTask = useUpdateTask();
   const updateAssignee = useUpdateTaskAssignee();
   const addComment = useAddComment();
@@ -174,6 +179,7 @@ export default function IssueDetailModal() {
 
   const task = taskResponse?.data;
   const comments = commentsResponse?.data || [];
+  const subtasks = subtasksResponse?.data || [];
 
   // Fetch project data to check if archived
   const { data: projectResponse } = useQuery({
@@ -439,6 +445,52 @@ export default function IssueDetailModal() {
                 </div>
 
                 <Separator className="my-6" />
+
+                {/* Subtasks Section */}
+                {subtasks.length > 0 && (
+                  <>
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold mb-3">Subtasks ({subtasks.length})</h3>
+                      <div className="space-y-2">
+                        {subtasks.map((subtask: any) => (
+                          <div
+                            key={subtask.id}
+                            className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                            onClick={() => {
+                              searchParams.set("selectedIssue", subtask.id.toString());
+                              setSearchParams(searchParams);
+                            }}
+                          >
+                            <CheckCircle2
+                              className={cn(
+                                "h-4 w-4 flex-shrink-0",
+                                subtask.status === "DONE" ? "text-green-600" : "text-gray-400"
+                              )}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className={cn(
+                                "text-sm",
+                                subtask.status === "DONE" && "line-through text-muted-foreground"
+                              )}>
+                                {subtask.title}
+                              </p>
+                            </div>
+                            <Badge
+                              variant="secondary"
+                              className={cn(
+                                "text-xs",
+                                STATUS_COLORS[subtask.status as keyof typeof STATUS_COLORS] || "bg-gray-100"
+                              )}
+                            >
+                              {subtask.status}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <Separator className="my-6" />
+                  </>
+                )}
 
                 {/* Comments Section */}
                 <div>

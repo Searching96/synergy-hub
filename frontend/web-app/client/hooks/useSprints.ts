@@ -1,25 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { sprintService } from "@/services/sprint.service";
-
-export interface Sprint {
-  id: number;
-  name: string;
-  goal?: string;
-  status: "PLANNING" | "PLANNED" | "ACTIVE" | "COMPLETED" | "CANCELLED";
-  startDate: string;
-  endDate: string;
-  taskCount?: number;
-  completedTaskCount?: number;
-  projectId: number;
-}
+import type { Sprint } from "@/types/sprint.types";
 
 export function useProjectSprints(projectId: string | undefined) {
   return useQuery({
     queryKey: ["sprints", projectId],
     queryFn: async () => {
       if (!projectId) throw new Error("Project ID is required");
-      const response = await sprintService.getProjectSprints(projectId);
-      return response.data as Sprint[];
+      return sprintService.getProjectSprints(projectId);
     },
     enabled: !!projectId,
   });
@@ -39,7 +27,7 @@ export function useCreateSprint(projectId: string | undefined) {
         projectId: parseInt(projectId!),
         ...sprintData,
       });
-      return response.data;
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sprints", projectId] });
@@ -53,8 +41,7 @@ export function useStartSprint(projectId: string | undefined) {
 
   return useMutation({
     mutationFn: async (sprintId: number) => {
-      const response = await sprintService.startSprint(sprintId);
-      return response.data;
+      return sprintService.startSprint(sprintId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sprints", projectId] });
@@ -68,8 +55,7 @@ export function useCompleteSprint(projectId: string | undefined) {
 
   return useMutation({
     mutationFn: async (sprintId: number) => {
-      const response = await sprintService.completeSprint(sprintId);
-      return response.data;
+      return sprintService.completeSprint(sprintId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sprints", projectId] });

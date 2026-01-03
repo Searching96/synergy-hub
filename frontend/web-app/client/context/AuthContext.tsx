@@ -1,22 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import authService from '@/services/auth.service';
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  roles?: string[];
-  permissions?: string[];
-  twoFactorEnabled?: boolean;
-  emailVerified?: boolean;
-}
+import type { User, LoginResponse, RegisterResponse } from '@/types/auth.types';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (email: string, password: string, totpCode?: string) => Promise<any>;
-  register: (data: any) => Promise<any>;
+  login: (email: string, password: string, totpCode?: string) => Promise<LoginResponse>;
+  register: (data: { name: string; email: string; password: string; confirmPassword: string }) => Promise<RegisterResponse>;
   logout: () => void;
   setUser: (user: User | null) => void;
 }
@@ -47,7 +38,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initAuth();
   }, []);
 
-  const login = async (email: string, password: string, totpCode?: string) => {
+  const login = async (email: string, password: string, totpCode?: string): Promise<LoginResponse> => {
     const response = await authService.login(email, password, totpCode);
     
     if (response.success && response.data.user) {
@@ -57,7 +48,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return response;
   };
 
-  const register = async (data: any) => {
+  const register = async (data: { name: string; email: string; password: string; confirmPassword: string }): Promise<RegisterResponse> => {
     const response = await authService.register(data);
     return response;
   };

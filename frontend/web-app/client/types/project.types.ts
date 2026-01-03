@@ -21,12 +21,19 @@ export interface ProjectDetails extends Project {
   stats: ProjectStats;
 }
 
-export interface ProjectMember {
-  userId: number;
+export interface ProjectMemberUser {
+  id: number;
   name: string;
   email: string;
+}
+
+export interface ProjectMember {
+  userId?: number;
+  name?: string;
+  email?: string;
   role: string;
-  joinedAt: string;
+  joinedAt?: string;
+  user?: ProjectMemberUser;
 }
 
 export interface ProjectStats {

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,8 +10,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Plus, Menu, LogOut, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useNavigate } from "react-router-dom";
-import CreateIssueDialog from "@/components/CreateIssueDialog";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 interface TopbarProps {
   onMenuClick?: () => void;
@@ -21,7 +19,7 @@ interface TopbarProps {
 export default function Topbar({ onMenuClick }: TopbarProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const handleLogout = () => {
     logout();
@@ -35,6 +33,13 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
       .join("")
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const handleCreateIssue = () => {
+    const next = new URLSearchParams(searchParams);
+    next.set("create", "true");
+    next.delete("issue");
+    setSearchParams(next);
   };
 
   return (
@@ -56,7 +61,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
       <div className="flex items-center gap-3">
         <Button 
           className="bg-blue-600 hover:bg-blue-700"
-          onClick={() => setIsCreateIssueOpen(true)}
+          onClick={handleCreateIssue}
         >
           <Plus className="h-4 w-4 mr-2" />
           Create Issue
@@ -93,11 +98,6 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
         </DropdownMenu>
       </div>
 
-      {/* Create Issue Dialog */}
-      <CreateIssueDialog 
-        open={isCreateIssueOpen} 
-        onOpenChange={setIsCreateIssueOpen} 
-      />
     </header>
   );
 }

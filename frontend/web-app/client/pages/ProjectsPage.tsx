@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Briefcase, Users, CheckCircle2, Clock, Plus, Calendar, Archive } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import type { Project } from "@/types/project.types";
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
@@ -91,11 +92,11 @@ export default function ProjectsPage() {
   }
 
   // Separate active and archived projects
-  const allProjects = response?.data || [];
-  const activeProjects = allProjects.filter((project: any) => project.status !== "ARCHIVED");
-  const archivedProjects = allProjects.filter((project: any) => project.status === "ARCHIVED");
+  const allProjects: Project[] = response?.data || [];
+  const activeProjects = allProjects.filter((project) => project.status !== "ARCHIVED");
+  const archivedProjects = allProjects.filter((project) => project.status === "ARCHIVED");
 
-  const renderProjectGrid = (projects: any[], emptyMessage: string) => {
+  const renderProjectGrid = (projects: Project[], emptyMessage: string) => {
     if (projects.length === 0) {
       return (
         <Card className="border-dashed">

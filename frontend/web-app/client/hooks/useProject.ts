@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { projectService } from "@/services/project.service";
+import type { ProjectDetails } from "@/types/project.types";
 
 export function useProjectById(projectId: string | undefined) {
-  return useQuery({
+  return useQuery<ProjectDetails>({
     queryKey: ["project", projectId],
     queryFn: async () => {
       if (!projectId) throw new Error("Project ID is required");

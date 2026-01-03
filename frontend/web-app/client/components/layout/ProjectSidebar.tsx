@@ -3,7 +3,8 @@ import { cn } from "@/lib/utils";
 import { 
   LayoutDashboard, 
   ListTodo, 
-  Calendar, 
+  Calendar,
+  Activity,
   Settings,
   ChevronLeft 
 } from "lucide-react";
@@ -24,6 +25,11 @@ const projectNavItems = [
     title: "Timeline",
     href: "/timeline",
     icon: Calendar,
+  },
+  {
+    title: "Activity",
+    href: "/activity",
+    icon: Activity,
   },
   {
     title: "Settings",

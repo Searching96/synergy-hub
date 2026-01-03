@@ -76,7 +76,9 @@ export default function CreateIssueDialog({ open, onOpenChange }: CreateIssueDia
         priority: formData.priority,
         type: formData.type,
         storyPoints: formData.estimatedHours ? parseFloat(formData.estimatedHours) : null,
-        dueDate: formData.dueDate ? `${formData.dueDate}T23:59:59` : null,
+        dueDate: formData.dueDate 
+          ? new Date(`${formData.dueDate}T23:59:59Z`).toISOString() 
+          : null,
         sprintId: null,
         parentTaskId: null,
         assigneeId: null,

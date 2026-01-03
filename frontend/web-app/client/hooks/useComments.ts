@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commentService } from "@/services/comment.service";
 import { useToast } from "@/hooks/use-toast";
+import type { Comment } from "@/types/comment.types";
+import type { ApiResponse } from "@/types/auth.types";
 
 export function useTaskComments(taskId: number | null) {
-  return useQuery({
+  return useQuery<ApiResponse<Comment[]>>({
     queryKey: ["comments", taskId],
     queryFn: () => commentService.getTaskComments(taskId!),
     enabled: !!taskId,

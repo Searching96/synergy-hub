@@ -21,11 +21,12 @@ export interface LoginResponse {
   success: boolean;
   message: string;
   data: {
-    token: string;
+    accessToken: string;
     tokenType: string;
     expiresIn: number;
     user: User;
     requiresTwoFactor: boolean;
+    refreshToken?: string;
   };
 }
 

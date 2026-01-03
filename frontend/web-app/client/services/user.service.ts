@@ -1,0 +1,16 @@
+import api from "./api";
+
+export const userService = {
+  // Get tasks assigned to current user
+  getMyIssues: async () => {
+    const response = await api.get("/tasks/my-tasks");
+    return response.data;
+  },
+  // Get projects for current user
+  getMyProjects: async () => {
+    const response = await api.get("/projects");
+    return response.data;
+  },
+  // Note: Activity is project-scoped, not user-global
+  // Use activityService.getProjectActivity(projectId) instead
+};

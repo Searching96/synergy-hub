@@ -186,6 +186,7 @@ CREATE TABLE tasks (
     assignee_id     INT,
     reporter_id     INT NOT NULL,
     parent_task_id  INT,
+    archived        BOOLEAN NOT NULL DEFAULT FALSE,
     INDEX idx_task_sprint (sprint_id),
     INDEX idx_task_assignee (assignee_id),
     INDEX idx_task_project (project_id),

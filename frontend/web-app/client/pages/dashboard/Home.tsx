@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Briefcase, Users, CheckCircle2, Clock } from "lucide-react";
+import type { Project } from "@/types/project.types";
 export default function DashboardHome() {
   const navigate = useNavigate();
   const { data: response, isLoading, isError } = useProjects();
@@ -35,7 +36,7 @@ export default function DashboardHome() {
   }
 
   // Filter out archived projects
-  const projects = (response?.data || []).filter((project: any) => project.status !== "ARCHIVED");
+  const projects: Project[] = (response?.data || []).filter((project: Project) => project.status !== "ARCHIVED");
 
   return (
     <div className="p-6">

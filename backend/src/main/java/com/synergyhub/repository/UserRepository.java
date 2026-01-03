@@ -22,6 +22,10 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     @Query("SELECT u FROM User u WHERE u.email = :email")
     Optional<User> findByEmailWithRolesAndPermissions(@Param("email") String email);
     
+    @EntityGraph(attributePaths = {"roles", "roles.permissions"})
+    @Query("SELECT u FROM User u WHERE u.id = :id")
+    Optional<User> findByIdWithRolesAndPermissions(@Param("id") Integer id);
+    
     List<User> findByOrganizationId(Integer organizationId);
     
     @Query("SELECT u FROM User u WHERE u.accountLocked = true AND u.lockUntil < :now")

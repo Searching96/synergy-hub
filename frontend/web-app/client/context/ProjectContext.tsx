@@ -40,6 +40,7 @@ export interface Project {
 
 interface ProjectContextType {
   project: Project | undefined;
+  projectKey: string;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
@@ -61,10 +62,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
+  // Generate project key from project name
+  const projectKey = data?.name?.substring(0, 4).toUpperCase() || "PROJ";
+
   return (
     <ProjectContext.Provider
       value={{
         project: data,
+        projectKey,
         isLoading,
         error: error as Error | null,
         refetch,

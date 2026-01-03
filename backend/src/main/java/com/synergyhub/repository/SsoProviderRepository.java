@@ -13,5 +13,7 @@ public interface SsoProviderRepository extends JpaRepository<SsoProvider, Intege
     
     List<SsoProvider> findByOrganizationAndEnabledTrue(Organization organization);
     
+    List<SsoProvider> findByOrganization(Organization organization);
+    
     Optional<SsoProvider> findByOrganizationAndProviderName(Organization organization, String providerName);
 }

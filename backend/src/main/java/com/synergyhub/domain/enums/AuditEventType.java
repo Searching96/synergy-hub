@@ -51,6 +51,18 @@ public enum AuditEventType {
     TASK_STATUS_CHANGED,
     TASK_ASSIGNED,
     
+    // RBAC events (Role & Permission Management)
+    ROLE_CREATED,
+    ROLE_UPDATED,
+    ROLE_DELETED,
+    ROLE_PERMISSION_CHANGED,
+    
+    // SSO events (Single Sign-On Provider Management)
+    SSO_PROVIDER_REGISTERED,
+    SSO_PROVIDER_UPDATED,
+    SSO_PROVIDER_DELETED,
+    SSO_PROVIDER_STATE_CHANGED,
+    
     // Security events
     UNAUTHORIZED_ACCESS_ATTEMPT,
     PERMISSION_DENIED,

@@ -2,12 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { projectService } from "@/services/project.service";
 import { useToast } from "@/hooks/use-toast";
 import type { Project, CreateProjectDto, UpdateProjectDto } from "@/types/project.types";
-
-interface ApiResponse<T> {
-  success: boolean;
-  message?: string;
-  data: T;
-}
+import type { ApiResponse } from "@/types/auth.types";
 
 export function useProjects() {
   return useQuery<ApiResponse<Project[]>>({
