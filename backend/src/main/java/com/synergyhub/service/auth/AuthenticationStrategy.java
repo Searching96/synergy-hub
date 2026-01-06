@@ -10,4 +10,5 @@ public interface AuthenticationStrategy {
     User authenticate(LoginRequest request, String ipAddress, String userAgent);
     void handlePostLogin(User user, String ipAddress, String userAgent);
     void handleFailedLogin(String email, String ipAddress, String userAgent, String reason);
+    User getUserByEmail(String email);
 }

@@ -38,4 +38,7 @@ public class UpdateTaskRequest {
     private Integer storyPoints;
 
     private LocalDateTime dueDate;
+    
+    // Position for drag-and-drop ordering (ignored by backend for now)
+    private Integer position;
 }

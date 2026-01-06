@@ -20,8 +20,13 @@ public class ProjectSecurity {
     private final TaskRepository taskRepository; // ✅ Inject TaskRepository
 
     public boolean hasProjectAccess(Integer projectId, User user) {
-        if (projectId == null || user == null) return false;
-        return projectMemberRepository.hasAccessToTaskProject(projectId, user.getId());
+        if (projectId == null || user == null) {
+            log.warn("Project access check failed: projectId={}, user={}", projectId, user != null ? user.getId() : null);
+            return false;
+        }
+        boolean hasAccess = projectMemberRepository.hasAccessToTaskProject(projectId, user.getId());
+        log.debug("User {} access to project {}: {}", user.getId(), projectId, hasAccess);
+        return hasAccess;
     }
 
     public boolean hasSprintAccess(Integer sprintId, User user) {
@@ -33,11 +38,25 @@ public class ProjectSecurity {
 
     // ✅ NEW METHOD for TaskService
     public boolean hasTaskAccess(Integer taskId, User user) {
-        if (taskId == null || user == null) return false;
+        if (taskId == null || user == null) {
+            log.warn("Task access check failed: taskId={}, user={}", taskId, user != null ? user.getId() : null);
+            return false;
+        }
         // Lookup task, get project ID, check access
-        return taskRepository.findById(taskId)
-                .map(task -> hasProjectAccess(task.getProject().getId(), user))
+        boolean hasAccess = taskRepository.findById(taskId)
+                .map(task -> {
+                    Integer projectId = task.getProject().getId();
+                    boolean access = hasProjectAccess(projectId, user);
+                    log.debug("Task {} access check for user {}: project={}, hasAccess={}", 
+                              taskId, user.getId(), projectId, access);
+                    return access;
+                })
                 .orElse(false);
+        
+        if (!hasAccess) {
+            log.warn("User {} denied access to task {}", user.getId(), taskId);
+        }
+        return hasAccess;
     }
 
     public void requireAccess(Project project, User user) {
@@ -47,7 +66,15 @@ public class ProjectSecurity {
     }
 
     public void requireLeadOrAdmin(Project project, User user) {
-        if (!isAdmin(user) && !isProjectLead(project, user)) {
+        boolean isAdminUser = isAdmin(user);
+        boolean isLead = isProjectLead(project, user);
+        
+        log.debug("Permission check for user {} on project {}: isAdmin={}, isProjectLead={}", 
+                  user.getId(), project.getId(), isAdminUser, isLead);
+        
+        if (!isAdminUser && !isLead) {
+            log.warn("Access denied: User {} is neither admin nor project lead for project {}", 
+                     user.getId(), project.getId());
             throw new UnauthorizedProjectAccessException("Only project lead or admin can perform this action");
         }
     }
@@ -59,7 +86,14 @@ public class ProjectSecurity {
     }
 
     private boolean isProjectLead(Project project, User user) {
-        return project.getProjectLead().getId().equals(user.getId());
+        if (project.getProjectLead() == null) {
+            log.warn("Project {} has no project lead set", project.getId());
+            return false;
+        }
+        boolean isLead = project.getProjectLead().getId().equals(user.getId());
+        log.debug("Checking if user {} is project lead for project {}: {}", 
+                  user.getId(), project.getId(), isLead);
+        return isLead;
     }
 
     private boolean isAdmin(User user) {

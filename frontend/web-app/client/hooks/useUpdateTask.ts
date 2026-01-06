@@ -16,6 +16,7 @@ export function useUpdateTask() {
       await queryClient.cancelQueries({ queryKey: ["task", taskId] });
       await queryClient.cancelQueries({ queryKey: ["tasks"] });
       await queryClient.cancelQueries({ queryKey: ["board"] });
+      await queryClient.cancelQueries({ queryKey: ["backlog"] });
 
       // Snapshot previous value INCLUDING any metadata for conflict detection
       const previousTask = queryClient.getQueryData<ApiResponse<Task>>(["task", taskId]);
@@ -48,6 +49,7 @@ export function useUpdateTask() {
         // Trigger immediate refetch to get latest version
         queryClient.invalidateQueries({ queryKey: ["task", variables.taskId] });
         queryClient.invalidateQueries({ queryKey: ["board"] });
+        queryClient.invalidateQueries({ queryKey: ["backlog"] });
         return;
       }
       
@@ -82,6 +84,7 @@ export function useUpdateTask() {
       queryClient.invalidateQueries({ queryKey: ["task", variables.taskId] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["board"] });
+      queryClient.invalidateQueries({ queryKey: ["backlog"] });
     },
   });
 }

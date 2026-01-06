@@ -68,7 +68,13 @@ export default function IssueModal() {
     enabled: !!selectedProjectId,
   });
 
-  const members = membersResponse?.data || membersResponse || [];
+  const members = useMemo(() => {
+    if (!membersResponse) return [];
+    // Handle ApiResponse<ProjectMember[]> structure
+    const memberData = membersResponse.data || membersResponse;
+    // Filter out any undefined items and ensure we have valid members
+    return Array.isArray(memberData) ? memberData.filter((m): m is typeof memberData[0] => m !== undefined && m !== null) : [];
+  }, [membersResponse]);
 
   const handleClose = () => {
     const next = new URLSearchParams(searchParams);
@@ -102,7 +108,6 @@ export default function IssueModal() {
           description: values.description || null,
           priority: values.priority,
           type: values.type,
-          storyPoints: null,
           dueDate: null,
           sprintId: null,
           parentTaskId: null,

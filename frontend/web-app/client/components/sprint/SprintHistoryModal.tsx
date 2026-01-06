@@ -27,7 +27,10 @@ export default function SprintHistoryModal({ projectId, onClose }: SprintHistory
 
   const { data: sprints = [], isLoading } = useQuery<Sprint[]>({
     queryKey: ["completed-sprints", projectId],
-    queryFn: () => sprintService.getCompletedSprints(projectId!),
+    queryFn: async () => {
+      const response = await sprintService.getCompletedSprints(projectId!);
+      return response.data;
+    },
     enabled: !!projectId,
   });
 

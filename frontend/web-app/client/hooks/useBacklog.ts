@@ -52,7 +52,10 @@ export function useMoveTaskToSprint(projectId: string | undefined) {
       taskId: number;
       sprintId: number | null;
     }) => {
-      const response = await taskService.moveTaskToSprint(taskId, sprintId || 0);
+      // If sprintId is null or 0, move to backlog, otherwise move to sprint
+      const response = sprintId 
+        ? await taskService.moveTaskToSprint(taskId, sprintId)
+        : await taskService.moveTaskToBacklog(taskId);
       return response.data;
     },
     onMutate: async ({ taskId, sprintId }) => {

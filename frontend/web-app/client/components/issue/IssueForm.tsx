@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Bug, CheckSquare, Lightbulb } from "lucide-react";
+import { Bug, CheckSquare, Lightbulb, Zap, ListChecks } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -17,7 +17,7 @@ export interface IssueFormValues {
   title: string;
   description: string;
   priority: string;
-  type: "BUG" | "STORY" | "TASK";
+  type: "BUG" | "STORY" | "TASK" | "EPIC" | "SUBTASK";
   assigneeId: number | null;
 }
 
@@ -31,9 +31,11 @@ interface IssueFormProps {
 }
 
 const typeOptions = [
-  { value: "BUG" as const, label: "Bug", icon: Bug, color: "text-red-600" },
+  { value: "EPIC" as const, label: "Epic", icon: Zap, color: "text-purple-600" },
   { value: "STORY" as const, label: "Story", icon: Lightbulb, color: "text-green-600" },
   { value: "TASK" as const, label: "Task", icon: CheckSquare, color: "text-blue-600" },
+  { value: "BUG" as const, label: "Bug", icon: Bug, color: "text-red-600" },
+  { value: "SUBTASK" as const, label: "Subtask", icon: ListChecks, color: "text-gray-600" },
 ];
 
 export default function IssueForm({
@@ -170,7 +172,7 @@ export default function IssueForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="unassigned">Unassigned</SelectItem>
-              {members.map((member) => (
+              {members.filter((member) => member && member.id).map((member) => (
                 <SelectItem key={member.id} value={member.id.toString()}>
                   {member.name}
                 </SelectItem>

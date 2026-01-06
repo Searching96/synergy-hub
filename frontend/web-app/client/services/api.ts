@@ -48,10 +48,18 @@ api.interceptors.request.use(
 // Valid task statuses - must match backend enum exactly
 const VALID_TASK_STATUSES = ["TO_DO", "IN_PROGRESS", "IN_REVIEW", "DONE", "BLOCKED"] as const;
 
+// Valid sprint statuses - must match backend enum exactly
+const VALID_SPRINT_STATUSES = ["PLANNING", "ACTIVE", "COMPLETED", "CANCELLED"] as const;
+
 // Helper function to validate and handle backend status values
-const validateTaskStatus = (status: string): string => {
-  // Accept valid statuses as-is
+const validateTaskStatus = (status: string, fieldName?: string): string => {
+  // Accept valid task statuses as-is
   if (VALID_TASK_STATUSES.includes(status as any)) {
+    return status;
+  }
+  
+  // Accept valid sprint statuses as-is (these appear in sprint objects within responses)
+  if (VALID_SPRINT_STATUSES.includes(status as any)) {
     return status;
   }
   
@@ -62,24 +70,25 @@ const validateTaskStatus = (status: string): string => {
   }
   
   // Unknown status - log for monitoring and use safe fallback
-  console.error(`Unknown task status received: "${status}". Expected one of: ${VALID_TASK_STATUSES.join(", ")}`);
+  const validStatuses = `${VALID_TASK_STATUSES.join(", ")} (task) or ${VALID_SPRINT_STATUSES.join(", ")} (sprint)`;
+  console.error(`Unknown status received: "${status}"${fieldName ? ` in ${fieldName}` : ""}. Expected one of: ${validStatuses}`);
   
   // Error monitoring integration - uncomment and configure when ready:
   // Option 1: Sentry
   // import * as Sentry from "@sentry/react";
-  // Sentry.captureMessage(`Unknown task status: ${status}`, {
+  // Sentry.captureMessage(`Unknown status: ${status}`, {
   //   level: 'warning',
-  //   tags: { module: 'api-normalization', feature: 'task-status' },
-  //   extra: { receivedStatus: status, validStatuses: VALID_TASK_STATUSES }
+  //   tags: { module: 'api-normalization', feature: 'status-validation' },
+  //   extra: { receivedStatus: status, fieldName }
   // });
   
   // Option 2: LogRocket
   // import LogRocket from 'logrocket';
-  // LogRocket.track('Unknown Task Status', { status, timestamp: Date.now() });
+  // LogRocket.track('Unknown Status', { status, fieldName, timestamp: Date.now() });
   
   // Option 3: Datadog
   // import { datadogLogs } from '@datadog/browser-logs';
-  // datadogLogs.logger.warn('Unknown task status', { status, validStatuses: VALID_TASK_STATUSES });
+  // datadogLogs.logger.warn('Unknown status', { status, fieldName });
   
   return "TO_DO"; // Safe fallback to prevent task from disappearing
 };

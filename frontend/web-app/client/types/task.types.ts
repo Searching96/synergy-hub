@@ -1,4 +1,5 @@
 import type { User } from "./auth.types";
+import type { Attachment } from "./attachment.types";
 
 // Task Status Enum (matches backend)
 export type TaskStatus = "TO_DO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE" | "BLOCKED";
@@ -7,7 +8,7 @@ export type TaskStatus = "TO_DO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE" | "BLOCK
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
 // Task Type Enum (matches backend)
-export type TaskType = "TASK" | "BUG" | "STORY" | "EPIC";
+export type TaskType = "TASK" | "BUG" | "STORY" | "EPIC" | "SUBTASK";
 
 export interface TaskUser {
   id: number;
@@ -42,6 +43,13 @@ export interface Task {
   estimatedHours?: number;
   actualHours?: number;
   goal?: string;
+  // Issue hierarchy fields (Jira-style)
+  parentTaskId?: number | null;
+  epicId?: number | null;
+  subtasks?: Task[];
+  parentTask?: { id: number; title: string; type: TaskType } | null;
+  epic?: { id: number; title: string } | null;
+  attachments?: Attachment[];
   [key: string]: unknown;
 }
 

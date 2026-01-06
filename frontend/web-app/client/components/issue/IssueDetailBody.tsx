@@ -4,9 +4,13 @@ import { IssueHeaderEditor } from "@/components/issue/IssueHeaderEditor";
 import { IssueMetadataPanel } from "@/components/issue/IssueMetadataPanel";
 import { IssueMetadataPanelSkeleton } from "@/components/issue/IssueMetadataPanelSkeleton";
 import { IssueCommentsSection } from "@/components/issue/IssueCommentsSection";
+import { IssueHierarchySection } from "@/components/issue/IssueHierarchySection";
+import { IssueAttachmentsSection } from "@/components/issue/IssueAttachmentsSection";
 import type { Task, TaskStatus, TaskPriority } from "@/types/task.types";
 import type { ProjectMember } from "@/types/project.types";
 import type { Comment } from "@/types/comment.types";
+import { enrichTaskWithHierarchy } from "@/lib/mockHierarchy";
+import { enrichTaskWithAttachments } from "@/lib/mockAttachments";
 
 interface IssueDetailBodyProps {
   task: Task;
@@ -53,6 +57,18 @@ export function IssueDetailBody({
   onAssigneeChange,
   onAddComment,
 }: IssueDetailBodyProps) {
+  // Enrich task with mock hierarchy and attachments data
+  let enrichedTask = enrichTaskWithHierarchy(task);
+  enrichedTask = enrichTaskWithAttachments(enrichedTask);
+
+  const handleIssueClick = (issueId: number) => {
+    // Update URL to show the clicked issue
+    const searchParams = new URLSearchParams(window.location.search);
+    searchParams.set('selectedIssue', issueId.toString());
+    window.history.pushState({}, '', `?${searchParams.toString()}`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="grid grid-cols-3 gap-6 p-6">
@@ -60,7 +76,7 @@ export function IssueDetailBody({
         <div className="col-span-2 space-y-6">
           {/* Title */}
           <IssueHeaderEditor
-            task={task}
+            task={enrichedTask}
             isEditing={isEditingTitle}
             isProjectArchived={isProjectArchived}
             onEdit={onEditTitle}
@@ -83,11 +99,24 @@ export function IssueDetailBody({
             />
           </div>
 
+          {/* Issue Hierarchy Section */}
+          <IssueHierarchySection 
+            task={enrichedTask} 
+            onIssueClick={handleIssueClick}
+          />
+
+          {/* Attachments Section */}
+          <IssueAttachmentsSection
+            taskId={enrichedTask.id}
+            attachments={enrichedTask.attachments || []}
+            isReadOnly={isProjectArchived}
+          />
+
           <Separator />
 
           {/* Comments Section */}
           <IssueCommentsSection
-            taskId={task.id}
+            taskId={enrichedTask.id}
             comments={comments}
             isProjectArchived={isProjectArchived}
             onAddComment={onAddComment}
@@ -106,7 +135,7 @@ export function IssueDetailBody({
             </div>
           ) : (
             <IssueMetadataPanel
-              task={task}
+              task={enrichedTask}
               members={members}
               isProjectArchived={isProjectArchived}
               onStatusChange={onStatusChange}

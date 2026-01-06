@@ -5,6 +5,8 @@ import {
   ListTodo, 
   Calendar,
   Activity,
+  MessageSquare,
+  Video,
   Settings,
   ChevronLeft 
 } from "lucide-react";
@@ -30,6 +32,16 @@ const projectNavItems = [
     title: "Activity",
     href: "/activity",
     icon: Activity,
+  },
+  {
+    title: "Chat",
+    href: "/chat",
+    icon: MessageSquare,
+  },
+  {
+    title: "Meetings",
+    href: "/meetings",
+    icon: Video,
   },
   {
     title: "Settings",

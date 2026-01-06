@@ -121,4 +121,8 @@ public class User {
         this.accountLocked = true;
         this.lockUntil = LocalDateTime.now().plusMinutes(durationMinutes);
     }
+
+    public boolean isActive() {
+        return isAccountNonLocked() && emailVerified;
+    }
 }

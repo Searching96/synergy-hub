@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useProjects } from "@/hooks/useProjects";
 import { useCreateTask } from "@/hooks/useTasks";
+import { projectService } from "@/services/project.service";
 import {
   Dialog,
   DialogContent,
@@ -27,25 +29,45 @@ interface CreateIssueDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const INITIAL_FORM_STATE = {
+  projectId: "",
+  title: "",
+  description: "",
+  priority: "MEDIUM",
+  type: "TASK",
+  estimatedHours: "",
+  dueDate: "",
+  assigneeId: null as number | null,
+  parentTaskId: null as number | null,
+  epicId: null as number | null,
+};
+
 export default function CreateIssueDialog({ open, onOpenChange }: CreateIssueDialogProps) {
   const { toast } = useToast();
   const { data: projectsResponse } = useProjects();
-  const createTask = useCreateTask();
+  const { mutate: createTask, isPending } = useCreateTask();
 
-  const [formData, setFormData] = useState({
-    projectId: "",
-    title: "",
-    description: "",
-    priority: "MEDIUM",
-    type: "TASK",
-    estimatedHours: "",
-    dueDate: "",
-  });
+  const [formData, setFormData] = useState(INITIAL_FORM_STATE);
 
   const projects = projectsResponse?.data || [];
   
+  // Load members for selected project
+  const { data: membersResponse } = useQuery({
+    queryKey: ["project-members", formData.projectId],
+    queryFn: () => projectService.getProjectMembers(parseInt(formData.projectId)),
+    enabled: !!formData.projectId,
+  });
+  const members = membersResponse?.data?.filter((m) => m && m.userId) || [];
+  
   // Filter out archived projects
   const activeProjects = projects.filter(project => project.status !== "ARCHIVED");
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setFormData(INITIAL_FORM_STATE);
+    }
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,25 +101,27 @@ export default function CreateIssueDialog({ open, onOpenChange }: CreateIssueDia
         // Send date as-is for backend to handle as LocalDate (no timezone conversion)
         dueDate: formData.dueDate || null,
         sprintId: null,
-        parentTaskId: null,
-        assigneeId: null,
+        // Set parentTaskId for subtasks, epicId for stories/tasks/bugs
+        parentTaskId: formData.type === "SUBTASK" ? formData.parentTaskId : null,
+        assigneeId: formData.assigneeId,
       };
 
-      await createTask.mutateAsync(payload);
-      
-      // Reset form and close dialog
-      setFormData({
-        projectId: "",
-        title: "",
-        description: "",
-        priority: "MEDIUM",
-        type: "TASK",
-        estimatedHours: "",
-        dueDate: "",
+      createTask(payload, {
+        onSuccess: () => {
+          // Reset form and close dialog
+          setFormData(INITIAL_FORM_STATE);
+          onOpenChange(false);
+          
+          // Show success toast
+          toast({
+            title: "Success",
+            description: "Issue created successfully",
+          });
+        },
       });
-      onOpenChange(false);
     } catch (error) {
       // Error handled by mutation
+      console.error("Failed to create task:", error);
     }
   };
 
@@ -167,16 +191,25 @@ export default function CreateIssueDialog({ open, onOpenChange }: CreateIssueDia
                 <Label htmlFor="type">Type</Label>
                 <Select
                   value={formData.type}
-                  onValueChange={(value) => setFormData({ ...formData, type: value })}
+                  onValueChange={(value) => {
+                    // Reset parent/epic when type changes
+                    setFormData({ 
+                      ...formData, 
+                      type: value,
+                      parentTaskId: null,
+                      epicId: null 
+                    });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="EPIC">Epic</SelectItem>
+                    <SelectItem value="STORY">Story</SelectItem>
                     <SelectItem value="TASK">Task</SelectItem>
                     <SelectItem value="BUG">Bug</SelectItem>
-                    <SelectItem value="STORY">Story</SelectItem>
-                    <SelectItem value="CHORE">Chore</SelectItem>
+                    <SelectItem value="SUBTASK">Subtask</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -199,6 +232,87 @@ export default function CreateIssueDialog({ open, onOpenChange }: CreateIssueDia
                 </Select>
               </div>
             </div>
+
+            {/* Parent Issue Selection for Subtasks */}
+            {formData.projectId && formData.type === "SUBTASK" && (
+              <div className="grid gap-2">
+                <Label htmlFor="parentTask">
+                  Parent Issue <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={formData.parentTaskId?.toString() || ""}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, parentTaskId: value ? parseInt(value) : null })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select parent (Story/Task/Bug)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No Parent (will use mock data)</SelectItem>
+                    {/* Mock data - in real app, would fetch stories/tasks/bugs */}
+                    <SelectItem value="1001">PROJ-1: Implement user authentication</SelectItem>
+                    <SelectItem value="1002">PROJ-2: Create dashboard layout</SelectItem>
+                    <SelectItem value="1003">PROJ-3: Fix responsive issues</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Subtasks must belong to a Story, Task, or Bug
+                </p>
+              </div>
+            )}
+
+            {/* Epic Selection for Stories/Tasks/Bugs */}
+            {formData.projectId && ["STORY", "TASK", "BUG"].includes(formData.type) && (
+              <div className="grid gap-2">
+                <Label htmlFor="epic">Epic (Optional)</Label>
+                <Select
+                  value={formData.epicId?.toString() || ""}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, epicId: value ? parseInt(value) : null })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select epic" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No Epic</SelectItem>
+                    {/* Mock data - in real app, would fetch epics */}
+                    <SelectItem value="2001">Epic: User Management System</SelectItem>
+                    <SelectItem value="2002">Epic: Reporting Dashboard</SelectItem>
+                    <SelectItem value="2003">Epic: Mobile App Development</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Link this issue to an epic for better organization
+                </p>
+              </div>
+            )}
+
+            {/* Assignee */}
+            {formData.projectId && (
+              <div className="grid gap-2">
+                <Label htmlFor="assignee">Assign To</Label>
+                <Select
+                  value={formData.assigneeId?.toString() || ""}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, assigneeId: value ? parseInt(value) : null })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select team member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Unassigned</SelectItem>
+                    {members.map((member) => (
+                      <SelectItem key={member.userId} value={member.userId.toString()}>
+                        {member.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Story Points */}
             <div className="grid gap-2">
@@ -239,9 +353,9 @@ export default function CreateIssueDialog({ open, onOpenChange }: CreateIssueDia
             <Button
               type="submit"
               className="bg-blue-600 hover:bg-blue-700"
-              disabled={createTask.isPending}
+              disabled={isPending}
             >
-              {createTask.isPending ? "Creating..." : "Create Issue"}
+              {isPending ? "Creating..." : "Create Issue"}
             </Button>
           </DialogFooter>
         </form>

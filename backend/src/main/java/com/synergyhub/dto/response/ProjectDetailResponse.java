@@ -19,7 +19,7 @@ public class ProjectDetailResponse {
     private String description;
     private Integer organizationId;
     private String organizationName;
-    private UserResponse projectLead;
+    private ProjectLeadResponse projectLead;
     private LocalDate startDate;
     private LocalDate endDate;
     private String status;

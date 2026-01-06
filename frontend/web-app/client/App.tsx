@@ -21,6 +21,9 @@ import ProjectLayout from "./components/layout/ProjectLayout";
 import BacklogPage from "./pages/project/BacklogPage";
 import TimelinePage from "./pages/project/TimelinePage";
 import ActivityPage from "./pages/project/ActivityPage";
+import ChatPage from "./pages/project/ChatPage";
+import MeetingsListPage from "./pages/project/MeetingsListPage";
+import MeetingPage from "./pages/project/MeetingPage";
 import ProjectSettingsPage from "./pages/project/ProjectSettingsPage";
 
 const queryClient = new QueryClient({
@@ -79,8 +82,13 @@ const App = () => (
                   <Route path="backlog" element={<BacklogPage />} />
                   <Route path="timeline" element={<TimelinePage />} />
                   <Route path="activity" element={<ActivityPage />} />
+                  <Route path="chat" element={<ChatPage />} />
+                  <Route path="meetings" element={<MeetingsListPage />} />
                   <Route path="settings" element={<ProjectSettingsPage />} />
                 </Route>
+                
+                {/* Meeting Room (outside ProjectLayout for fullscreen) */}
+                <Route path="/projects/:projectId/meetings/:meetingId" element={<MeetingPage />} />
               </Route>
             </Route>
             

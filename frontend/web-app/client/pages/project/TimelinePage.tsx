@@ -1,20 +1,130 @@
+import { useState } from 'react';
 import { useProject } from "@/context/ProjectContext";
+import { useQuery } from "@tanstack/react-query";
+import timelineService from '@/services/timeline.service';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import TimelineGantt from '@/components/timeline/TimelineGantt';
+import TimelineList from '@/components/timeline/TimelineList';
+import { format } from 'date-fns';
 
 export default function TimelinePage() {
   const { project } = useProject();
+  const [view, setView] = useState<'gantt' | 'list'>('gantt');
+  const [monthsAhead, setMonthsAhead] = useState(6);
+
+  const { data: timelineResponse, isLoading, error } = useQuery({
+    queryKey: ['timeline', project?.id, monthsAhead],
+    queryFn: () => timelineService.getProjectTimeline(project!.id, monthsAhead),
+    enabled: !!project?.id,
+  });
+
+  const timelineData = timelineResponse?.data;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading timeline...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg text-red-600">Error loading timeline</div>
+      </div>
+    );
+  }
+
+  if (!timelineData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">No timeline data available</div>
+      </div>
+    );
+  }
+
+  const handlePreviousMonth = () => {
+    setMonthsAhead(Math.max(1, monthsAhead - 1));
+  };
+
+  const handleNextMonth = () => {
+    setMonthsAhead(monthsAhead + 1);
+  };
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Timeline</h1>
-        <p className="text-muted-foreground mt-1">
-          View project timeline for {project?.name}
-        </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Timeline</h1>
+          <p className="text-muted-foreground mt-1">
+            View project timeline for {project?.name}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant={view === 'gantt' ? 'default' : 'outline'}
+            onClick={() => setView('gantt')}
+          >
+            Gantt Chart
+          </Button>
+          <Button
+            variant={view === 'list' ? 'default' : 'outline'}
+            onClick={() => setView('list')}
+          >
+            List View
+          </Button>
+        </div>
       </div>
 
-      <div className="border rounded-lg p-8 text-center text-muted-foreground">
-        <p>Timeline view coming soon...</p>
-      </div>
+      {/* Date Range Controls */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Timeline Range</CardTitle>
+              <CardDescription>
+                {format(new Date(timelineData.viewStartDate), 'MMM dd, yyyy')} -{' '}
+                {format(new Date(timelineData.viewEndDate), 'MMM dd, yyyy')}
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePreviousMonth}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextMonth}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Timeline Content */}
+      {view === 'gantt' ? (
+        <TimelineGantt
+          sprints={timelineData.sprints}
+          tasks={timelineData.tasks}
+          viewStart={new Date(timelineData.viewStartDate)}
+          viewEnd={new Date(timelineData.viewEndDate)}
+        />
+      ) : (
+        <TimelineList
+          sprints={timelineData.sprints}
+          tasks={timelineData.tasks}
+        />
+      )}
     </div>
   );
 }

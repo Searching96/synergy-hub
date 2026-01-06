@@ -2,6 +2,7 @@ package com.synergyhub.service.task;
 
 import com.synergyhub.domain.entity.*;
 import com.synergyhub.domain.enums.TaskStatus;
+import com.synergyhub.domain.enums.TaskType;
 import com.synergyhub.dto.mapper.TaskMapper;
 import com.synergyhub.dto.request.CreateTaskRequest;
 import com.synergyhub.dto.request.UpdateTaskRequest;
@@ -47,6 +48,7 @@ public class TaskService {
                 .reporter(currentUser)
                 .status(TaskStatus.TO_DO)
                 .priority(request.getPriority())
+                .type(request.getType() != null ? request.getType() : TaskType.TASK)
                 .storyPoints(request.getStoryPoints())
                 .dueDate(request.getDueDate())
                 .build();
@@ -194,6 +196,10 @@ public class TaskService {
         if (request.getPriority() != null && !request.getPriority().equals(task.getPriority())) {
             changes.append(String.format("Priority: %s → %s; ", task.getPriority(), request.getPriority()));
             task.setPriority(request.getPriority());
+        }
+        if (request.getType() != null && !request.getType().equals(task.getType())) {
+            changes.append(String.format("Type: %s → %s; ", task.getType(), request.getType()));
+            task.setType(request.getType());
         }
         if (request.getStoryPoints() != null) {
             task.setStoryPoints(request.getStoryPoints());

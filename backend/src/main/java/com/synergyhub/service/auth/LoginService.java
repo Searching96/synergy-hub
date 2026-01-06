@@ -88,7 +88,7 @@ public class LoginService {
         
         try {
             // Validate refresh token and get user details
-            Long userId = sessionService.getJwtTokenProvider().getUserIdFromToken(refreshToken);
+            Integer userId = sessionService.getJwtTokenProvider().getUserIdFromToken(refreshToken);
             String email = sessionService.getJwtTokenProvider().getEmailFromToken(refreshToken);
             
             if (userId == null || email == null) {
