@@ -71,6 +71,11 @@ export function formatRelativeTime(date: string | Date): string {
  * Uses UTC-aware parsing to prevent timezone issues
  * @param date - ISO date string or Date object
  * @returns true if the date is in the past
+ * 
+ * IMPORTANT: Backend MUST be configured to send dates in ISO 8601 format with explicit timezone:
+ * - Spring Boot: Set spring.jackson.time-zone=UTC in application.yml
+ * - Dates should include 'Z' suffix (e.g., "2026-01-15T14:30:00Z")
+ * - Without 'Z', dates will be parsed in browser's local timezone causing incorrect calculations
  */
 export function isPastDate(date: string | Date): boolean {
   if (!date) return false;
@@ -78,17 +83,20 @@ export function isPastDate(date: string | Date): boolean {
   let dateObj: Date;
   
   if (typeof date === "string") {
-    // Parse ISO strings with proper timezone detection
-    // Check for timezone indicators: Z, +HH:MM, or -HH:MM
+    // Parse ISO strings - browser handles timezone conversion automatically
+    // if date includes timezone indicator (Z or offset)
     const hasTimezone = /Z|[+-]\d{2}:\d{2}$/.test(date);
     
-    if (hasTimezone) {
-      // Has explicit timezone, use as-is
-      dateObj = new Date(date);
-    } else {
-      // No timezone specified, assume backend sends UTC without 'Z'
-      dateObj = new Date(date + 'Z');
+    if (!hasTimezone) {
+      // WARNING: Date without timezone will be parsed as local time
+      // This may cause incorrect due date calculations if backend timezone != user timezone
+      console.warn(
+        `Date "${date}" missing timezone. Configure backend to send ISO 8601 with 'Z' suffix. ` +
+        `See: spring.jackson.time-zone=UTC`
+      );
     }
+    
+    dateObj = new Date(date);
   } else {
     dateObj = date;
   }

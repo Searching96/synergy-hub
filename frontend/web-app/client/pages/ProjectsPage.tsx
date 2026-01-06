@@ -222,7 +222,7 @@ export default function ProjectsPage() {
 
       {/* Create Project Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-modal-sm">
           <form onSubmit={handleCreateProject}>
             <DialogHeader>
               <DialogTitle>Create New Project</DialogTitle>

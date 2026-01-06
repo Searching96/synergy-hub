@@ -76,9 +76,8 @@ export default function CreateIssueDialog({ open, onOpenChange }: CreateIssueDia
         priority: formData.priority,
         type: formData.type,
         storyPoints: formData.estimatedHours ? parseFloat(formData.estimatedHours) : null,
-        dueDate: formData.dueDate 
-          ? new Date(`${formData.dueDate}T23:59:59Z`).toISOString() 
-          : null,
+        // Send date as-is for backend to handle as LocalDate (no timezone conversion)
+        dueDate: formData.dueDate || null,
         sprintId: null,
         parentTaskId: null,
         assigneeId: null,
@@ -104,7 +103,7 @@ export default function CreateIssueDialog({ open, onOpenChange }: CreateIssueDia
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-modal-md max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Create New Issue</DialogTitle>

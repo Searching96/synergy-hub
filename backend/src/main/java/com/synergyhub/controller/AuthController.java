@@ -65,6 +65,25 @@ public class AuthController {
                 ));
     }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<LoginResponse>> refreshToken(
+            @Valid @RequestBody RefreshTokenRequest request,
+            HttpServletRequest httpRequest) {
+        
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
+        
+        try {
+            // Validate the refresh token and generate new access token
+            LoginResponse response = loginService.refreshToken(request.getRefreshToken(), ipAddress, userAgent);
+            return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", response));
+        } catch (Exception ex) {
+            log.error("Token refresh failed: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Invalid or expired refresh token"));
+        }
+    }
+
     @PostMapping("/verify-email")
     public ResponseEntity<ApiResponse<Void>> verifyEmail(
             @Valid @RequestBody EmailVerificationRequest request,

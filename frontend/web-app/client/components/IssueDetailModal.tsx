@@ -8,6 +8,9 @@ import { projectService } from "@/services/project.service";
 import { taskService } from "@/services/task.service";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
+import { EditableTitle } from "@/components/issue/EditableTitle";
+import { IssueSidebar } from "@/components/issue/IssueSidebar";
 import {
   Dialog,
   DialogContent,
@@ -73,13 +76,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const PRIORITY_COLORS = {
-  LOW: "bg-gray-100 text-gray-700",
-  MEDIUM: "bg-blue-100 text-blue-700",
-  HIGH: "bg-orange-100 text-orange-700",
-  CRITICAL: "bg-red-100 text-red-700",
-};
-
 const STATUS_COLORS = {
   TODO: "bg-gray-100 text-gray-700",
   IN_PROGRESS: "bg-blue-100 text-blue-700",
@@ -95,11 +91,8 @@ export default function IssueDetailModal() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [editedTitle, setEditedTitle] = useState("");
   const [editedDescription, setEditedDescription] = useState("");
   const [commentText, setCommentText] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
 
   const taskId = selectedIssue ? parseInt(selectedIssue) : null;
@@ -116,17 +109,27 @@ export default function IssueDetailModal() {
 
   const deleteTask = useMutation({
     mutationFn: (taskId: number) => taskService.deleteTask(taskId),
+    onMutate: async (taskId) => {
+      // Optimistically hide the task immediately
+      await queryClient.cancelQueries({ queryKey: ["task", taskId] });
+      const previousTask = queryClient.getQueryData(["task", taskId]);
+      
+      // Hide from UI
+      queryClient.setQueryData(["task", taskId], null);
+      
+      return { previousTask };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["board"] });
       queryClient.invalidateQueries({ queryKey: ["backlog"] });
-      toast({
-        title: "Success",
-        description: "Task deleted permanently",
-      });
       handleClose();
     },
-    onError: (error: any) => {
+    onError: (error: any, taskId, context) => {
+      // Rollback on error
+      if (context?.previousTask) {
+        queryClient.setQueryData(["task", taskId], context.previousTask);
+      }
       toast({
         title: "Error",
         description: error?.response?.data?.message || "Failed to delete task",
@@ -202,7 +205,6 @@ export default function IssueDetailModal() {
 
   useEffect(() => {
     if (task) {
-      setEditedTitle(task.title);
       setEditedDescription(task.description || "");
     }
   }, [task]);
@@ -212,14 +214,11 @@ export default function IssueDetailModal() {
     setSearchParams(searchParams);
   };
 
-  const handleSaveTitle = async () => {
-    if (editedTitle.trim() && editedTitle !== task?.title) {
-      await updateTask.mutateAsync({
-        taskId: taskId!,
-        data: { title: editedTitle },
-      });
-    }
-    setIsEditingTitle(false);
+  const handleTitleChange = async (newTitle: string) => {
+    await updateTask.mutateAsync({
+      taskId: taskId!,
+      data: { title: newTitle },
+    });
   };
 
   const handleSaveDescription = async () => {
@@ -280,7 +279,29 @@ export default function IssueDetailModal() {
 
   const handleDelete = () => {
     if (taskId) {
-      deleteTask.mutate(taskId);
+      // Close modal immediately for instant feedback
+      handleClose();
+      
+      // Show undo toast
+      sonnerToast("Task deleted", {
+        description: "The task has been removed from your project",
+        action: {
+          label: "Undo",
+          onClick: () => {
+            // Cancel the deletion if undo clicked within 5 seconds
+            deleteTask.reset();
+            // Reopen the modal
+            setSearchParams({ selectedIssue: taskId.toString() });
+          },
+        },
+        duration: 5000,
+      });
+      
+      // Execute delete after 5 seconds if not undone
+      setTimeout(() => {
+        if (!deleteTask.isIdle) return; // Already executed or cancelled
+        deleteTask.mutate(taskId);
+      }, 5000);
     }
   };
 
@@ -307,7 +328,7 @@ export default function IssueDetailModal() {
 
   return (
     <Dialog open={!!selectedIssue} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-6xl max-h-[90vh] p-0 gap-0 flex flex-col" hideClose>
+      <DialogContent className="max-w-modal-xl max-h-[90vh] p-0 gap-0 flex flex-col" hideClose>
         {isLoadingTask ? (
           <div className="flex items-center justify-center h-96">
             <div className="text-muted-foreground">Loading...</div>
@@ -384,10 +405,10 @@ export default function IssueDetailModal() {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="text-red-600 focus:text-red-600"
-                        onClick={() => setDeleteDialogOpen(true)}
+                        onClick={handleDelete}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
-                        Delete Permanently
+                        Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -404,31 +425,11 @@ export default function IssueDetailModal() {
               <div className="flex-1 overflow-y-auto px-6 py-6">
                 {/* Title */}
                 <div className="mb-6">
-                  {isEditingTitle ? (
-                    <Input
-                      value={editedTitle}
-                      onChange={(e) => setEditedTitle(e.target.value)}
-                      onBlur={handleSaveTitle}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleSaveTitle();
-                        if (e.key === "Escape") {
-                          setEditedTitle(task.title);
-                          setIsEditingTitle(false);
-                        }
-                      }}
-                      className="text-2xl font-bold border-0 px-0 focus-visible:ring-0"
-                      autoFocus
-                    />
-                  ) : (
-                    <h1
-                      className={`text-2xl font-bold px-2 py-1 -mx-2 rounded ${
-                        (task.archived || isProjectArchived) ? '' : 'cursor-pointer hover:bg-gray-50'
-                      }`}
-                      onClick={() => !task.archived && !isProjectArchived && setIsEditingTitle(true)}
-                    >
-                      {task.title}
-                    </h1>
-                  )}
+                  <EditableTitle
+                    value={task.title}
+                    onChange={handleTitleChange}
+                    disabled={task.archived || isProjectArchived}
+                  />
                 </div>
 
                 {/* Description */}
@@ -560,177 +561,15 @@ export default function IssueDetailModal() {
                 </div>
               </div>
 
-              {/* Right Column - Metadata */}
-              <div className="w-80 border-l bg-gray-50/50 overflow-y-auto">
-                <div className="space-y-6 px-6 py-6">
-                  {/* Status */}
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4" />
-                      Status
-                    </Label>
-                    <Select value={task.status} onValueChange={handleStatusChange} disabled={task.archived || isProjectArchived}>
-                      <SelectTrigger>
-                        <SelectValue>
-                          <Badge className={cn(STATUS_COLORS[task.status as keyof typeof STATUS_COLORS])}>
-                            {task.status.replace("_", " ")}
-                          </Badge>
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="TODO">To Do</SelectItem>
-                        <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                        <SelectItem value="IN_REVIEW">In Review</SelectItem>
-                        <SelectItem value="DONE">Done</SelectItem>
-                        <SelectItem value="BLOCKED">Blocked</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Assignee */}
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      Assignee
-                    </Label>
-                    <Select
-                      value={task.assigneeId?.toString() || "unassigned"}
-                      onValueChange={handleAssigneeChange}
-                      disabled={task.archived || isProjectArchived}
-                    >
-                      <SelectTrigger>
-                        <SelectValue>
-                          {task.assigneeId && task.assigneeName ? (
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-6 w-6">
-                                <AvatarFallback className="text-xs">
-                                  {getInitials(task.assigneeName)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span>{task.assigneeName}</span>
-                            </div>
-                          ) : (
-                            "Unassigned"
-                          )}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                        {members
-                          .filter((member: any) => member?.user?.id && member?.user?.name)
-                          .map((member: any) => (
-                            <SelectItem key={member.user.id} value={member.user.id.toString()}>
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
-                                  <AvatarFallback className="text-xs">
-                                    {getInitials(member.user.name)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span>{member.user.name}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Reporter */}
-                  {(task.reporterName || task.createdBy?.name) && (
-                    <div>
-                      <Label className="text-xs font-semibold mb-2 flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        Reporter
-                      </Label>
-                      <div className="flex items-center gap-2 p-2 bg-white rounded-md border">
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback className="text-xs">
-                            {getInitials(task.reporterName || task.createdBy?.name || "U")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">{task.reporterName || task.createdBy?.name || "Unknown"}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Priority */}
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4" />
-                      Priority
-                    </Label>
-                    <Select value={task.priority} onValueChange={handlePriorityChange} disabled={task.archived || isProjectArchived}>
-                      <SelectTrigger>
-                        <SelectValue>
-                          <Badge className={cn(PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>
-                            {task.priority}
-                          </Badge>
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="LOW">Low</SelectItem>
-                        <SelectItem value="MEDIUM">Medium</SelectItem>
-                        <SelectItem value="HIGH">High</SelectItem>
-                        <SelectItem value="CRITICAL">Critical</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Labels */}
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 flex items-center gap-2">
-                      <Tag className="h-4 w-4" />
-                      Labels
-                    </Label>
-                    <div className="flex flex-wrap gap-1">
-                      <Badge variant="outline">{task.type}</Badge>
-                      {task.sprintName && <Badge variant="outline">{task.sprintName}</Badge>}
-                    </div>
-                  </div>
-
-                  {/* Due Date */}
-                  {task.dueDate && (
-                    <div>
-                      <Label className="text-xs font-semibold mb-2 flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Due Date
-                      </Label>
-                      <div className="p-2 bg-white rounded-md border text-sm">
-                        {new Date(task.dueDate).toLocaleDateString()}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Time Tracking */}
-                  <div>
-                    <Label className="text-xs font-semibold mb-2 flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Time Tracking
-                    </Label>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Estimated:</span>
-                        <span>{task.estimatedHours || 0}h</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Actual:</span>
-                        <span>{task.actualHours || 0}h</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Metadata */}
-                  <div className="space-y-2 text-xs text-muted-foreground">
-                    <div>
-                      Created {new Date(task.createdAt).toLocaleDateString()}
-                    </div>
-                    <div>
-                      Updated {new Date(task.updatedAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {/* Right Column - Metadata Sidebar */}
+              <IssueSidebar
+                task={task}
+                members={members}
+                disabled={task.archived || isProjectArchived}
+                onStatusChange={handleStatusChange}
+                onAssigneeChange={handleAssigneeChange}
+                onPriorityChange={handlePriorityChange}
+              />
             </div>
           </>
         )}
@@ -755,28 +594,6 @@ export default function IssueDetailModal() {
               className="bg-orange-600 hover:bg-orange-700"
             >
               Archive Issue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Issue Permanently?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to permanently delete this issue? This action cannot be undone.
-              All comments and attachments will be permanently removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete Permanently
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -64,6 +64,21 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      spacing: {
+        // Board and column widths
+        'board-column': '18rem',     // 288px - min width for board columns
+        'board-column-md': '18rem',  // 288px - tablet and up
+        'sidebar': '20rem',           // 320px - standard sidebar width
+        'sidebar-wide': '24rem',      // 384px - wide sidebar (issue detail)
+        // Modal widths
+        'modal-sm': '28rem',          // 448px
+        'modal-md': '37.5rem',        // 600px
+        'modal-lg': '56rem',          // 896px
+        'modal-xl': '75rem',          // 1200px
+      },
+      minHeight: {
+        'board-column': '16rem',      // 256px - minimum board column height
+      },
       keyframes: {
         "accordion-down": {
           from: {

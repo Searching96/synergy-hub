@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { useProject } from "@/context/ProjectContext";
+import { useAuth } from "@/context/AuthContext";
+import { usePermissionError } from "@/hooks/usePermissionError";
 import {
   COLUMN_LABELS,
   COLUMN_ORDER,
@@ -14,16 +16,21 @@ import CreateSprintDialog from "@/components/sprint/CreateSprintDialog";
 import SprintListDialog from "@/components/sprint/SprintListDialog";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, List, Loader2, Plus } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, List, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import { canMoveTask } from "@/lib/rbac";
 
 export default function BoardView() {
   const { projectId } = useParams<{ projectId: string }>();
   const { project, projectKey } = useProject();
+  const { user } = useAuth();
+  const { error: permissionError, clearError } = usePermissionError();
   const {
     activeSprint,
     backlogTasks,
     isLoading,
+    isFetching,
     error,
     moveTask,
     isMoving,
@@ -84,9 +91,13 @@ export default function BoardView() {
     }
   };
 
-  if (isLoading) {
+  const userRole = project?.members?.find((m) => m.userId === user?.id)?.role as any;
+  const canMove = userRole ? canMoveTask(userRole) && !isProjectArchived : !isProjectArchived;
+
+  // Show loading for initial load OR when fetching new project data
+  if (isLoading || (isFetching && !activeSprint)) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-12rem)]">
+      <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
@@ -94,7 +105,7 @@ export default function BoardView() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-12rem)]">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-destructive mb-2">
@@ -159,6 +170,25 @@ export default function BoardView() {
 
   return (
     <div>
+      {/* Permission Error Banner - Persistent until dismissed */}
+      {permissionError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Access Denied</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            <span>{permissionError}</span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={clearError}
+              className="ml-4 h-6 px-2"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Board</h1>
@@ -180,7 +210,7 @@ export default function BoardView() {
 
       <DragDropContext onDragEnd={handleDragEnd}>
         <ErrorBoundary>
-          <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-16rem)]">
+          <div className="flex gap-4 overflow-x-auto pb-4 min-h-96">
             {COLUMN_ORDER.map((status) => (
               <BoardColumn
                 key={status}
@@ -190,6 +220,7 @@ export default function BoardView() {
                 projectKey={projectKey}
                 isProjectArchived={isProjectArchived}
                 isLoading={isLoading || isMoving}
+                canMove={canMove}
               />
             ))}
           </div>

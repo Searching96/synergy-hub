@@ -45,9 +45,88 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Valid task statuses - must match backend enum exactly
+const VALID_TASK_STATUSES = ["TO_DO", "IN_PROGRESS", "IN_REVIEW", "DONE", "BLOCKED"] as const;
+
+// Helper function to validate and handle backend status values
+const validateTaskStatus = (status: string): string => {
+  // Accept valid statuses as-is
+  if (VALID_TASK_STATUSES.includes(status as any)) {
+    return status;
+  }
+  
+  // Legacy backend compatibility - remove once backend is updated
+  if (status === "TODO") {
+    console.warn("Backend sent deprecated status 'TODO', expected 'TO_DO'");
+    return "TO_DO";
+  }
+  
+  // Unknown status - log for monitoring and use safe fallback
+  console.error(`Unknown task status received: "${status}". Expected one of: ${VALID_TASK_STATUSES.join(", ")}`);
+  
+  // Error monitoring integration - uncomment and configure when ready:
+  // Option 1: Sentry
+  // import * as Sentry from "@sentry/react";
+  // Sentry.captureMessage(`Unknown task status: ${status}`, {
+  //   level: 'warning',
+  //   tags: { module: 'api-normalization', feature: 'task-status' },
+  //   extra: { receivedStatus: status, validStatuses: VALID_TASK_STATUSES }
+  // });
+  
+  // Option 2: LogRocket
+  // import LogRocket from 'logrocket';
+  // LogRocket.track('Unknown Task Status', { status, timestamp: Date.now() });
+  
+  // Option 3: Datadog
+  // import { datadogLogs } from '@datadog/browser-logs';
+  // datadogLogs.logger.warn('Unknown task status', { status, validStatuses: VALID_TASK_STATUSES });
+  
+  return "TO_DO"; // Safe fallback to prevent task from disappearing
+};
+
+const normalizeResponseData = (data: any): any => {
+  if (!data) return data;
+  
+  // Normalize task status in single task response
+  if (data.data && typeof data.data === "object" && data.data.status) {
+    data.data.status = validateTaskStatus(data.data.status);
+  }
+  
+  // Normalize task status in array responses
+  if (data.data && Array.isArray(data.data)) {
+    data.data = data.data.map((item: any) => {
+      if (item && item.status) {
+        return { ...item, status: validateTaskStatus(item.status) };
+      }
+      return item;
+    });
+  }
+  
+  // Normalize nested tasks in board/sprint responses
+  if (data.data && data.data.activeSprints && Array.isArray(data.data.activeSprints)) {
+    data.data.activeSprints = data.data.activeSprints.map((sprint: any) => {
+      if (sprint.tasks && Array.isArray(sprint.tasks)) {
+        sprint.tasks = sprint.tasks.map((task: any) => {
+          if (task && task.status) {
+            return { ...task, status: validateTaskStatus(task.status) };
+          }
+          return task;
+        });
+      }
+      return sprint;
+    });
+  }
+  
+  return data;
+};
+
 // Response Interceptor: Handle 401 with token refresh, and 403 errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Normalize status enums in response data
+    response.data = normalizeResponseData(response.data);
+    return response;
+  },
   (error) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     const status = error.response?.status;

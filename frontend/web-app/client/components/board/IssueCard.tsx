@@ -12,6 +12,7 @@ interface IssueCardProps {
   index: number;
   projectKey?: string;
   isProjectArchived?: boolean;
+  canMove?: boolean;
 }
 
 const priorityConfig = {
@@ -41,18 +42,18 @@ const priorityConfig = {
   },
 };
 
-export default function IssueCard({ task, index, projectKey = "PROJ", isProjectArchived }: IssueCardProps) {
+export default function IssueCard({ task, index, projectKey = "PROJ", isProjectArchived, canMove = true }: IssueCardProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
-  const { project } = useProject();
+  const { project, isLoading: isLoadingProject } = useProject();
   const priority = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.MEDIUM;
   const PriorityIcon = priority.icon;
 
   // Get user role from project context - eliminates prop drilling
-  // CRITICAL FIX: Default to VIEWER (most restrictive) if role is undefined
-  // This prevents dragging during project load race condition
-  const userRole = (project?.members?.find(m => m.userId === user?.id)?.role || "VIEWER") as any;
-  const canDrag = canMoveTask(userRole) && !task.archived && !isProjectArchived;
+  // Respect board-level move restriction and avoid flicker while project roles load
+  const userRole = project?.members?.find(m => m.userId === user?.id)?.role || "VIEWER";
+  const roleAllowsMove = isLoadingProject || canMoveTask(userRole as any);
+  const canDrag = canMove && roleAllowsMove && !task.archived && !isProjectArchived;
 
   const handleClick = () => {
     const next = new URLSearchParams(searchParams);
@@ -73,7 +74,8 @@ export default function IssueCard({ task, index, projectKey = "PROJ", isProjectA
             "bg-white rounded-lg border shadow-sm p-3 mb-2 cursor-pointer",
             "transition-all duration-200 ease-out",
             "hover:shadow-lg hover:scale-[1.02] hover:border-blue-300",
-            snapshot.isDragging && "scale-105 opacity-90 shadow-xl ring-2 ring-blue-400 rotate-2",
+            "will-change-transform", // GPU acceleration for smoother animations
+            snapshot.isDragging && "scale-105 opacity-90 shadow-xl ring-2 ring-blue-400 rotate-2 transition-none",
             task.archived && "opacity-60",
             !canDrag && "cursor-not-allowed opacity-50"
           )}

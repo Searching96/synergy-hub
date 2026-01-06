@@ -240,10 +240,15 @@ public class GlobalExceptionHandler {
             AccessDeniedException ex, WebRequest request) {
         log.error("Access denied: {}", ex.getMessage());
         
+        // Provide helpful error message with context about what permission is needed
+        String errorMessage = ex.getMessage() != null && !ex.getMessage().isEmpty() 
+            ? ex.getMessage() 
+            : "You don't have permission to access this resource";
+        
         ApiResponse<Object> response = ApiResponse.builder()
                 .success(false)
-                .message("Access denied")
-                .error("You don't have permission to access this resource")
+                .message(errorMessage)  // Use exception message if available for specific context
+                .error("Insufficient permissions. Contact your project administrator if you need access.")
                 .timestamp(LocalDateTime.now())
                 .build();
         

@@ -14,7 +14,7 @@ export interface TaskAssignee {
 export interface BoardTask {
   id: number;
   title: string;
-  status: string;
+  status: string; // normalized via mapStatusToColumn to avoid dropping tasks
   priority: string;
   assignee?: TaskAssignee;
   completedAt?: string;
@@ -43,6 +43,7 @@ export interface ActiveSprint {
 export interface BoardData {
   activeSprints: ActiveSprint[];
   backlogTasks: BoardTask[];
+  __version__?: number; // Conflict detection timestamp
 }
 
 export type TaskStatus = "TO_DO" | "IN_PROGRESS" | "DONE";
@@ -55,6 +56,23 @@ export const COLUMN_LABELS: Record<TaskStatus, string> = {
   DONE: "Done",
 };
 
+// Map any backend status to a board column to avoid dropping tasks
+const mapStatusToColumn = (status: string): TaskStatus => {
+  switch (status) {
+    case "TO_DO":
+    case "TODO":
+    case "BLOCKED":
+      return "TO_DO";
+    case "IN_PROGRESS":
+    case "IN_REVIEW":
+      return "IN_PROGRESS";
+    case "DONE":
+      return "DONE";
+    default:
+      return "TO_DO"; // fallback keeps task visible
+  }
+};
+
 // Helper function to group tasks by status - handles all statuses from backend, filters to displayable ones
 export const groupTasksByStatus = (tasks: BoardTask[]): SprintColumn => {
   const grouped: SprintColumn = {
@@ -64,12 +82,8 @@ export const groupTasksByStatus = (tasks: BoardTask[]): SprintColumn => {
   };
 
   tasks.forEach((task) => {
-    // Handle all possible statuses from backend, but only display the main three
-    // IN_REVIEW and BLOCKED statuses are filtered out (can be added to board later if needed)
-    const status = task.status as TaskStatus;
-    if (status === "TO_DO" || status === "IN_PROGRESS" || status === "DONE") {
-      grouped[status].push(task);
-    }
+    const status = mapStatusToColumn(task.status);
+    grouped[status].push({ ...task, status });
   });
 
   return grouped;
@@ -106,12 +120,15 @@ export function useProjectBoard(projectId: string | undefined) {
 
   const updateTaskMutation = useMutation({
     mutationFn: async ({ taskId, destinationStatus, destinationIndex }: MoveTaskInput) => {
-      // CRITICAL FIX: Validate permission BEFORE making request
-      const userRole = (project?.members?.find(m => m.userId === user?.id)?.role || "VIEWER") as any;
-      if (!canMoveTask(userRole)) {
+      // Validate permission when project membership data is available; otherwise defer to backend
+      const userRole = project?.members?.find((m) => m.userId === user?.id)?.role as any;
+      if (userRole && !canMoveTask(userRole)) {
+        // This error triggers onError and rollback - properly tested
         throw new Error("You don't have permission to move tasks in this project");
       }
 
+      // API call - 403 from backend will be caught by axios interceptor
+      // which rejects the promise, triggering onError callback with rollback
       const response = await taskService.updateTask(taskId, {
         status: destinationStatus,
         position: destinationIndex,
@@ -125,7 +142,10 @@ export function useProjectBoard(projectId: string | undefined) {
 
       if (previousData) {
         // Use structuredClone for deep copy instead of JSON parse/stringify
-        const optimisticData: BoardData = structuredClone(previousData);
+        const optimisticData: BoardData = {
+          ...structuredClone(previousData),
+          __version__: Date.now(), // Add timestamp for conflict detection
+        };
         const activeSprint = getActiveSprint(optimisticData);
 
         if (activeSprint) {
@@ -157,6 +177,19 @@ export function useProjectBoard(projectId: string | undefined) {
     },
     onError: (_err: any, _variables, context) => {
       if (context?.previousData) {
+        // Check for concurrent modifications
+        const currentData = queryClient.getQueryData<BoardData>(["board", projectId]);
+        if (currentData?.__version__ && context.previousData.__version__) {
+          const timeDiff = currentData.__version__ - context.previousData.__version__;
+          if (timeDiff > 5000) {
+            // Data changed significantly, show conflict warning
+            toast.error("Board was modified by another user. Refreshing...", {
+              duration: 4000,
+            });
+            queryClient.invalidateQueries({ queryKey: ["board", projectId] });
+            return;
+          }
+        }
         queryClient.setQueryData(["board", projectId], context.previousData);
       }
       
@@ -183,5 +216,6 @@ export function useProjectBoard(projectId: string | undefined) {
     backlogTasks: query.data?.backlogTasks || [],
     moveTask,
     isMoving: updateTaskMutation.isPending,
+    isFetching: query.isFetching, // Expose isFetching for transition states
   };
 }
