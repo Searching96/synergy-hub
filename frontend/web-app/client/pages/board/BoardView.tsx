@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { useProject } from "@/context/ProjectContext";
 import { useAuth } from "@/context/AuthContext";
@@ -24,6 +24,7 @@ import { canMoveTask } from "@/lib/rbac";
 
 export default function BoardView() {
   const { projectId } = useParams<{ projectId: string }>();
+  const [searchParams] = useSearchParams();
   const { project, projectKey } = useProject();
   const { user } = useAuth();
   const { error: permissionError, clearError } = usePermissionError();
@@ -260,7 +261,7 @@ export default function BoardView() {
 
       <CreateSprintDialog open={createSprintOpen} onOpenChange={setCreateSprintOpen} />
       <SprintListDialog open={sprintListOpen} onOpenChange={setSprintListOpen} />
-      <IssueDetailModal />
+      {searchParams.get("selectedIssue") && <IssueDetailModal />}
     </div>
   );
 }
