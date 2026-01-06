@@ -14,6 +14,7 @@ import {
 import BoardColumn from "@/components/board/BoardColumn";
 import CreateSprintDialog from "@/components/sprint/CreateSprintDialog";
 import SprintListDialog from "@/components/sprint/SprintListDialog";
+import IssueDetailModal from "@/components/issue/IssueDetailModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -259,6 +260,7 @@ export default function BoardView() {
 
       <CreateSprintDialog open={createSprintOpen} onOpenChange={setCreateSprintOpen} />
       <SprintListDialog open={sprintListOpen} onOpenChange={setSprintListOpen} />
+      <IssueDetailModal />
     </div>
   );
 }
