@@ -124,7 +124,7 @@ public class TaskController {
          * Get subtasks for a specific task
          * GET /api/tasks/{taskId}/subtasks
          */
-        @GetMapping("/{taskId}/subtasks")
+        @GetMapping("/api/tasks/{taskId}/subtasks")
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<List<TaskResponse>>> getSubtasks(
                         @PathVariable @Positive(message = "Task ID must be positive") Integer taskId,
