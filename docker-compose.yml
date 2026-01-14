@@ -8,7 +8,7 @@ services:
       - "127.0.0.1:8080:8080" # Bound to localhost, proxy via your existing Nginx
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - DATABASE_URL="jdbc:mysql://db:3306/synergyhub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+      - DATABASE_URL=jdbc:mysql://db:3306/synergy_hub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       - DATABASE_USERNAME=${DB_USER}
       - DATABASE_PASSWORD=${DB_PASSWORD}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT}
@@ -58,7 +58,7 @@ services:
     depends_on:
       - redis
     environment:
-      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}:${LIVEKIT_API_SECRET}"
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
     restart: unless-stopped
     networks:
       - synergyhub-network
