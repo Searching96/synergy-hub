@@ -195,6 +195,18 @@ public class UserController {
         ));
     }
 
+    @PostMapping("/me/avatar")
+    public ResponseEntity<ApiResponse<UserResponse>> uploadAvatar(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        
+        User user = userRepository.findById(principal.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        
+        UserResponse response = userService.uploadAvatar(user, file);
+        return ResponseEntity.ok(ApiResponse.success("Avatar uploaded successfully", response));
+    }
+
     private String extractToken(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {

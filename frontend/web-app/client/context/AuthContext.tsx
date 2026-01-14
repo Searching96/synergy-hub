@@ -40,6 +40,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initAuth();
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("user", JSON.stringify(user));
+    }
+  }, [user]);
+
   const login = async (email: string, password: string, totpCode?: string): Promise<LoginResponse> => {
     const response = await authService.login(email, password, totpCode);
 

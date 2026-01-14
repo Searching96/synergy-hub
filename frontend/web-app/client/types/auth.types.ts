@@ -10,6 +10,7 @@ export interface User {
   twoFactorEnabled?: boolean;
   createdAt?: string;
   organizationId?: number;
+  imageUrl?: string;
 }
 
 export interface LoginRequest {

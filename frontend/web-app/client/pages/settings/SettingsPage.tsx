@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import SecuritySettingsPage from "@/pages/settings/SecuritySettingsPage";
+import { useRef } from "react";
 import {
   User,
   Mail,
@@ -23,12 +24,13 @@ import {
 } from "lucide-react";
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user, login, logout, setUser } = useAuth();
   const { toast } = useToast();
 
   const [profileData, setProfileData] = useState({
     name: user?.name || "",
     email: user?.email || "",
+    avatar: user?.imageUrl || "",
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -57,13 +59,56 @@ export default function SettingsPage() {
       .slice(0, 2);
   };
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "Image size must be less than 2MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await userService.uploadAvatar(file);
+
+      // Update local user state
+      if (user) {
+        setUser({ ...user, imageUrl: response.data.imageUrl });
+      }
+
+      // Update profile form state
+      setProfileData(prev => ({ ...prev, avatar: response.data.imageUrl }));
+
+      toast({
+        title: "Success",
+        description: "Avatar updated successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to upload avatar",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUpdatingProfile(true);
     try {
       await userService.updateProfile({
         name: profileData.name,
-        email: profileData.email
       });
       toast({
         title: "Success",
@@ -169,16 +214,36 @@ export default function SettingsPage() {
               <form onSubmit={handleProfileUpdate} className="space-y-6">
                 <div className="flex items-center gap-6">
                   <Avatar className="h-20 w-20">
-                    <AvatarFallback className="bg-blue-600 text-white text-xl">
-                      {user?.name ? getInitials(user.name) : "U"}
-                    </AvatarFallback>
+                    {user?.imageUrl ? (
+                      <img src={user.imageUrl} alt={user.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <AvatarFallback className="bg-blue-600 text-white text-xl">
+                        {user?.name ? getInitials(user.name) : "U"}
+                      </AvatarFallback>
+                    )}
                   </Avatar>
                   <div>
                     <h3 className="font-semibold">{user?.name}</h3>
                     <p className="text-sm text-muted-foreground">{user?.email}</p>
-                    <Button variant="outline" size="sm" className="mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleAvatarClick();
+                      }}
+                    >
                       Change Avatar
                     </Button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                    />
                   </div>
                 </div>
 
@@ -202,6 +267,8 @@ export default function SettingsPage() {
                       id="email"
                       type="email"
                       value={profileData.email}
+                      disabled
+                      className="bg-muted"
                       onChange={(e) =>
                         setProfileData({ ...profileData, email: e.target.value })
                       }

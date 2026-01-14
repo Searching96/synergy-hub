@@ -101,6 +101,7 @@ public class SecurityConfig {
                     "/api/auth/**",
                     "/api/public/**",
                     "/api/oauth2/**",
+                    "/login/oauth2/code/**", // Allow OAuth2 callback
                     "/actuator/health/**",
                     "/swagger-ui/**", 
                     "/v3/api-docs/**"
@@ -115,9 +116,7 @@ public class SecurityConfig {
                 .authorizationEndpoint(auth -> auth
                     .baseUri("/api/oauth2/authorize")
                 )
-                .redirectionEndpoint(redir -> redir
-                    .baseUri("/api/oauth2/callback/*")
-                )
+                // Use default redirection endpoint: /login/oauth2/code/*
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(customOAuth2UserService)
                 )

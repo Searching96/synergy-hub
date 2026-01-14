@@ -195,12 +195,12 @@ export default function BacklogView() {
   const isProjectArchived = project?.status === "ARCHIVED";
 
   const members = (project?.members as any[] || [])
-    .filter((member: any) => member?.user?.id && member?.user?.name)
     .map((member: any) => ({
-      id: member.user.id,
-      name: member.user.name,
-      email: member.user.email,
-    }));
+      id: member.userId || member.user?.id,
+      name: member.name || member.user?.name,
+      email: member.email || member.user?.email,
+    }))
+    .filter((member) => member.id && member.name);
 
   const handleDragEnd = async (result: DropResult) => {
     console.log("DnD: handleDragEnd called", result);
