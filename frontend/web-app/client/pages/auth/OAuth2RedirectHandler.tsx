@@ -23,15 +23,25 @@ const OAuth2RedirectHandler = () => {
                 localStorage.setItem("refreshToken", refreshToken);
             }
 
-            // We don't have the user object here, but the AuthContext or next API call will fetch it.
-            // Force a reload or navigate to ensure AuthContext picks up the new token
-            // window.location.href = "/projects"; 
-            // Better to use navigate if possible, but AuthContext might need a trigger.
-            // Let's assume navigating to /projects triggers the protected route check which verifies token.
-
-            // Optionally fetch user details immediately if needed, but for now let's rely on dashboard loader.
-            toast.success("Successfully logged in via SSO");
-            window.location.href = "/projects"; // Hard reload to ensure apps state is clean
+            // Fetch user details immediately to ensure AuthContext initializes correctly
+            // Use dynamic import or direct service call if possible, but simplest is to handle inside the effect
+            import("@/services/user.service").then(({ userService }) => {
+                userService.getCurrentProfile()
+                    .then(response => {
+                        if (response.success && response.data) {
+                            localStorage.setItem("user", JSON.stringify(response.data));
+                            toast.success("Successfully logged in via SSO");
+                            window.location.href = "/projects";
+                        } else {
+                            throw new Error("Failed to load user profile");
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Failed to fetch user profile after SSO", err);
+                        toast.error("Login succeeded but failed to load user data. Please try again.");
+                        navigate("/login");
+                    });
+            });
         } else {
             navigate("/login");
         }

@@ -15,6 +15,11 @@ export const userService = {
   // Use activityService.getProjectActivity(projectId) instead
 
   // Update user profile
+  getCurrentProfile: async () => {
+    const response = await api.get("/users/me");
+    return response.data;
+  },
+
   updateProfile: async (data: { name: string }) => {
     const response = await api.put("/users/me", data);
     return response.data;
