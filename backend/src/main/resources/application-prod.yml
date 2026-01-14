@@ -1,8 +1,4 @@
 spring:
-  config:
-    activate:
-      on-profile: production
-  
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
