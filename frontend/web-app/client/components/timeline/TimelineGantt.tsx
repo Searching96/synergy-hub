@@ -72,16 +72,7 @@ export default function TimelineGantt({
     }
   };
 
-  // Generate date headers
-  const dateHeaders = useMemo(() => {
-    const headers = [];
-    let current = new Date(viewStart);
-    while (current <= viewEnd) {
-      headers.push(new Date(current));
-      current = addDays(current, 1);
-    }
-    return headers;
-  }, [viewStart, viewEnd]);
+
 
   return (
     <div className="space-y-6">
@@ -150,9 +141,11 @@ export default function TimelineGantt({
           <CardContent className="space-y-3 max-h-96 overflow-y-auto">
             {tasks.map((task) => {
               const { offset, width } = getItemPosition(
-                task.dueDate || task.createdAt,
+                task.createdAt,
                 task.dueDate || task.createdAt
               );
+
+              if (width === 0) return null;
 
               return (
                 <div key={task.id} className="space-y-1">
@@ -176,7 +169,7 @@ export default function TimelineGantt({
                       className={`h-full rounded flex items-center px-1.5 ${getStatusColor(task.status)}`}
                       style={{
                         marginLeft: `${offset}%`,
-                        width: Math.max(width, 2),
+                        width: width <= 0 ? 0 : `max(${width}%, 8px)`,
                       }}
                       title={task.title}
                     />

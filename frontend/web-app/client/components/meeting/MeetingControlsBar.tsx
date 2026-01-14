@@ -77,24 +77,7 @@ export default function MeetingControlsBar({
 
         {/* Center - Main Controls */}
         <div className="flex items-center gap-2">
-          {/* More Options */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className={controlButtonClass}>
-                <MoreVertical className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem>
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <PenTool className="h-4 w-4 mr-2" />
-                Whiteboard
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+
 
           {/* Microphone Toggle */}
           <Button
@@ -141,9 +124,9 @@ export default function MeetingControlsBar({
             )}
           >
             {isScreenSharing ? (
-              <MonitorOff className="h-5 w-5" />
-            ) : (
               <MonitorUp className="h-5 w-5" />
+            ) : (
+              <MonitorOff className="h-5 w-5" />
             )}
           </Button>
 

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useProjectSprints, useStartSprint } from "@/hooks/useSprints";
 import {
@@ -22,8 +23,11 @@ export default function SprintListDialog({ open, onOpenChange }: SprintListDialo
   const { data: sprints, isLoading } = useProjectSprints(projectId);
   const startSprint = useStartSprint(projectId);
 
+  const [startingSprintId, setStartingSprintId] = useState<number | null>(null);
+
   const handleStartSprint = async (sprintId: number, sprintName: string) => {
     try {
+      setStartingSprintId(sprintId);
       await startSprint.mutateAsync(sprintId);
       toast.success(`${sprintName} started successfully`);
       onOpenChange(false);
@@ -31,6 +35,8 @@ export default function SprintListDialog({ open, onOpenChange }: SprintListDialo
       const errorMessage = error?.response?.data?.error || error?.response?.data?.message || "Failed to start sprint";
       toast.error(errorMessage);
       console.error(error);
+    } finally {
+      setStartingSprintId(null);
     }
   };
 
@@ -62,58 +68,66 @@ export default function SprintListDialog({ open, onOpenChange }: SprintListDialo
           </div>
         ) : (
           <div className="space-y-3">
-            {sprints.map((sprint) => (
-              <div
-                key={sprint.id}
-                className="border rounded-lg p-4 space-y-3"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1 flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">{sprint.name}</h3>
-                      <Badge className={statusColors[sprint.status]}>
-                        {sprint.status}
-                      </Badge>
+            {sprints.map((sprint) => {
+              const normalizedStatus = sprint.status === "PLANNING" ? "PLANNED" : sprint.status;
+
+              return (
+                <div
+                  key={sprint.id}
+                  className="border rounded-lg p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{sprint.name}</h3>
+                        <Badge className={statusColors[normalizedStatus] || statusColors.PLANNED}>
+                          {normalizedStatus}
+                        </Badge>
+                      </div>
+                      {sprint.goal && (
+                        <p className="text-sm text-muted-foreground flex items-start gap-2">
+                          <Target className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          {sprint.goal}
+                        </p>
+                      )}
                     </div>
-                    {sprint.goal && (
-                      <p className="text-sm text-muted-foreground flex items-start gap-2">
-                        <Target className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                        {sprint.goal}
-                      </p>
+
+                    {(normalizedStatus === "PLANNED") && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleStartSprint(sprint.id, sprint.name)}
+                        disabled={startSprint.isPending || startingSprintId !== null}
+                      >
+                        {startSprint.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Play className="h-4 w-4 mr-1" />
+                            Start
+                          </>
+                        )}
+                      </Button>
                     )}
                   </div>
 
-                  {(sprint.status === "PLANNING" || sprint.status === "PLANNED") && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleStartSprint(sprint.id, sprint.name)}
-                      disabled={startSprint.isPending}
-                    >
-                      {startSprint.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      {sprint.startDate && sprint.endDate ? (
+                        `${new Date(sprint.startDate).toLocaleDateString()} - ${new Date(sprint.endDate).toLocaleDateString()}`
                       ) : (
-                        <>
-                          <Play className="h-4 w-4 mr-1" />
-                          Start
-                        </>
+                        "No dates set"
                       )}
-                    </Button>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    {new Date(sprint.startDate).toLocaleDateString()} - {new Date(sprint.endDate).toLocaleDateString()}
-                  </div>
-                  {sprint.taskCount !== undefined && (
-                    <div>
-                      {sprint.completedTaskCount || 0} / {sprint.taskCount} tasks completed
                     </div>
-                  )}
+                    {sprint.taskCount !== undefined && (
+                      <div>
+                        {sprint.completedTaskCount || 0} / {sprint.taskCount} tasks completed
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </DialogContent>

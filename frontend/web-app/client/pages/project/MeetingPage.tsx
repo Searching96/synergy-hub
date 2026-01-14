@@ -30,37 +30,49 @@ export default function MeetingPage() {
   const currentUserName = currentUser?.name || "Guest";
 
   useEffect(() => {
-    loadMeeting();
-  }, [meetingId]);
+    let cancelled = false;
 
-  const loadMeeting = async () => {
-    if (!meetingId) {
-      setError("Meeting ID is required");
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const meetingData = await meetingService.getMeeting(meetingId);
-
-      if (!meetingData) {
-        setError("Meeting not found");
-      } else if (meetingData.status === "ENDED") {
-        setError("This meeting has ended");
-      } else if (meetingData.status === "CANCELLED") {
-        setError("This meeting has been cancelled");
-      } else {
-        setMeeting(meetingData);
-        setError(null);
+    const loadMeeting = async () => {
+      if (!meetingId) {
+        if (!cancelled) {
+          setError("Meeting ID is required");
+          setIsLoading(false);
+        }
+        return;
       }
-    } catch (err) {
-      setError("Failed to load meeting");
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
+      try {
+        if (!cancelled) setIsLoading(true);
+        const meetingData = await meetingService.getMeeting(meetingId);
+
+        if (!cancelled) {
+          if (!meetingData) {
+            setError("Meeting not found");
+          } else if (meetingData.status === "ENDED") {
+            setError("This meeting has ended");
+          } else if (meetingData.status === "CANCELLED") {
+            setError("This meeting has been cancelled");
+          } else {
+            setMeeting(meetingData);
+            setError(null);
+          }
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError("Failed to load meeting");
+          console.error(err);
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadMeeting();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [meetingId]);
 
   const handleJoinMeeting = async () => {
     if (!meeting) return;
@@ -132,6 +144,8 @@ export default function MeetingPage() {
         meeting={meeting}
         currentUserId={currentUserId}
         onLeaveMeeting={handleLeaveMeeting}
+        initialAudioEnabled={audioEnabled}
+        initialVideoEnabled={videoEnabled}
       />
     );
   }

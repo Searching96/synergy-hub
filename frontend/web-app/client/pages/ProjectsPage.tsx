@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProjects, useCreateProject } from "@/hooks/useProjects";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -34,9 +34,14 @@ export default function ProjectsPage() {
   const [page, setPage] = useState(0);
   const pageSize = 9; // 3x3 grid
 
+  // Reset page when search or tab changes
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, status]);
+
   const { data: response, isLoading, isError } = useProjects({
     search: debouncedSearch || undefined,
-    status: status === "ALL" ? undefined : status, // "ALL" isn't a backend status
+    status: status === "ALL" ? undefined : status,
     page,
     size: pageSize
   });
@@ -82,8 +87,10 @@ export default function ProjectsPage() {
   };
 
   const handleTabChange = (value: string) => {
-    setStatus(value === "active" ? "ACTIVE" : value === "archived" ? "ARCHIVED" : "ALL");
-    setPage(0); // Reset to first page on tab change
+    // Map lowercase tab values to uppercase API status values
+    if (value === "active") setStatus("ACTIVE");
+    else if (value === "archived") setStatus("ARCHIVED");
+    else setStatus("ALL");
   };
 
   if (isLoading) {
@@ -133,10 +140,7 @@ export default function ProjectsPage() {
               placeholder="Search projects..."
               className="pl-8"
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(0); // Reset page on search
-              }}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">

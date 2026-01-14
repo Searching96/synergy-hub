@@ -62,17 +62,19 @@ export default function TimelineList({ sprints, tasks }: TimelineListProps) {
           <h2 className="text-xl font-semibold">Upcoming Sprints</h2>
           {sprints.map((sprint) => (
             <Card key={sprint.id}>
-              <CardContent className="pt-6">
+              <CardHeader>
+                <CardTitle>{sprint.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-lg font-semibold">{sprint.name}</h3>
                         <Badge variant="outline">{sprint.status}</Badge>
                       </div>
                       <p className="text-sm text-gray-600">
-                        {format(new Date(sprint.startDate), 'MMM dd, yyyy')} -{' '}
-                        {format(new Date(sprint.endDate), 'MMM dd, yyyy')}
+                        {sprint.startDate && format(new Date(sprint.startDate), 'MMM dd, yyyy')} -{' '}
+                        {sprint.endDate && format(new Date(sprint.endDate), 'MMM dd, yyyy')}
                       </p>
                     </div>
                   </div>

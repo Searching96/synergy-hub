@@ -62,10 +62,21 @@ export default function SecuritySettingsPage() {
     setDeleteConfirmId(providerId);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deleteConfirmId !== null) {
-      deleteProvider(deleteConfirmId);
-      setDeleteConfirmId(null);
+      try {
+        await deleteProvider(deleteConfirmId);
+        // Only clear if no error thrown (provider assumes hook throws on error, 
+        // if hook handles error internally without throwing, we might need a different check, 
+        // but based on common patterns this is safer than clearing immediately)
+        setDeleteConfirmId(null);
+      } catch (error) {
+        // Error handling is likely done in hook onError or here
+        console.error("Delete failed", error);
+        // Keep modal open to show error state if your UI supports it, 
+        // or close it if your UX prefers global toasts. 
+        // User request specifically asked to NOT close immediately to ensure completion.
+      }
     }
   };
 

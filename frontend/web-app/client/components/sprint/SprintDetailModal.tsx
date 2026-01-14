@@ -60,7 +60,11 @@ export default function SprintDetailModal({ sprintId, onClose }: SprintDetailMod
     const now = new Date();
     const diffTime = end.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+
+    if (diffDays < 0) {
+      return `${Math.abs(diffDays)} days overdue`;
+    }
+    return `${diffDays} days remaining`;
   };
 
   return (
@@ -126,7 +130,7 @@ export default function SprintDetailModal({ sprintId, onClose }: SprintDetailMod
                         <p className="text-sm font-medium">{formatDate(sprint.endDate)}</p>
                         {sprint.status === "ACTIVE" && (
                           <p className="text-xs text-blue-600 mt-2">
-                            {getDaysRemaining(sprint.endDate)} days remaining
+                            {getDaysRemaining(sprint.endDate)}
                           </p>
                         )}
                       </div>
@@ -248,7 +252,7 @@ export default function SprintDetailModal({ sprintId, onClose }: SprintDetailMod
                                 variant="secondary"
                                 className={cn(
                                   "text-xs",
-                                  STATUS_COLORS[task.status as keyof typeof STATUS_COLORS]
+                                  STATUS_COLORS[task.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.TODO
                                 )}
                               >
                                 {task.status}

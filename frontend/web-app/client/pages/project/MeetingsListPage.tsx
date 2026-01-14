@@ -38,20 +38,33 @@ export default function MeetingsListPage() {
   const [description, setDescription] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
+
+    // Initial load
     loadMeetings();
+
+    // Poll for updates every 30 seconds to catch live/ended status changes
+    const intervalId = setInterval(() => {
+      if (!cancelled) loadMeetings(true);
+    }, 30000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
   }, [projectId]);
 
-  const loadMeetings = async () => {
+  const loadMeetings = async (silent = false) => {
     if (!projectId) return;
 
     try {
-      setIsLoading(true);
+      if (!silent) setIsLoading(true);
       const projectMeetings = await meetingService.getProjectMeetings(parseInt(projectId));
       setMeetings(projectMeetings);
     } catch (err) {
       console.error("Failed to load meetings:", err);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 

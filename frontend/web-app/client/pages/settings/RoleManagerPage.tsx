@@ -9,7 +9,7 @@
  * - Header: Breadcrumbs and page title
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRBAC } from "@/hooks/useRBAC";
 import { RoleList } from "@/components/rbac/RoleList";
@@ -47,15 +47,23 @@ export function RoleManagerPage() {
     [roles, selectedRoleId]
   );
 
-  // Auto-select first role if none selected
-  const displayedRole = useMemo(() => {
-    if (selectedRole) return selectedRole;
-    if (roles.length > 0 && !selectedRoleId) {
+  // Use useEffect to auto-select the first role if none is selected
+  useEffect(() => {
+    if (!selectedRoleId && roles.length > 0) {
       setSelectedRoleId(roles[0].id);
-      return roles[0];
     }
-    return null;
-  }, [selectedRole, selectedRoleId, roles]);
+  }, [selectedRoleId, roles]);
+
+  const displayedRole = useMemo(() => {
+    return selectedRole || (roles.length > 0 ? roles[0] : null);
+  }, [selectedRole, roles]);
+
+  // Reset forbidden state when switching roles or logical contexts
+  useEffect(() => {
+    if (selectedRoleId) {
+      setIsForbidden(false);
+    }
+  }, [selectedRoleId]);
 
   // Group permissions by category for current role
   const groupedPermissions = useMemo(
@@ -209,7 +217,7 @@ export function RoleManagerPage() {
             onDeleteRole={handleDeleteRole}
             isLoading={isLoading}
             isCreating={isCreatingRole}
-             canManage={canManageRoles}
+            canManage={canManageRoles}
           />
         </div>
 
@@ -229,7 +237,7 @@ export function RoleManagerPage() {
                 groupedPermissions={groupedPermissions}
                 hasPermission={hasPermission}
                 onTogglePermission={handleTogglePermission}
-                 canManage={canManageRoles}
+                canManage={canManageRoles}
               />
             )}
           </div>

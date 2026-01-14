@@ -14,12 +14,13 @@ export default function ParticipantVideoTile({
   isLocalUser = false,
   className,
 }: ParticipantVideoTileProps) {
-  const initials = participant.userName
+  const initials = (participant.userName || "?")
     .split(" ")
     .map((n) => n[0])
+    .filter(Boolean)
     .join("")
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2) || "??";
 
   return (
     <div
@@ -33,8 +34,12 @@ export default function ParticipantVideoTile({
       {/* Video Stream or Avatar */}
       {participant.isVideoEnabled ? (
         <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-          {/* Video element would go here - for now show placeholder */}
           <video
+            ref={(el) => {
+              if (el && participant.videoTrack) {
+                participant.videoTrack.attach(el);
+              }
+            }}
             className="w-full h-full object-cover"
             autoPlay
             playsInline

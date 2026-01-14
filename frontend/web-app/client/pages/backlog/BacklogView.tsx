@@ -70,7 +70,24 @@ export default function BacklogView() {
   const queryClient = useQueryClient();
 
   const [createSprintOpen, setCreateSprintOpen] = useState(false);
-  const [isSprintCollapsed, setIsSprintCollapsed] = useState(false);
+  const [isSprintCollapsed, setIsSprintCollapsed] = useState(() => {
+    try {
+      if (typeof window !== "undefined") {
+        return localStorage.getItem("sprintCollapsed") === "true";
+      }
+    } catch {
+      // localStorage unavailable or quota exceeded
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("sprintCollapsed", isSprintCollapsed.toString());
+    } catch {
+      // Silent fail - not critical
+    }
+  }, [isSprintCollapsed]);
   const [startModalOpen, setStartModalOpen] = useState(false);
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [completeDestination, setCompleteDestination] = useState<"backlog" | "new">("backlog");
@@ -83,6 +100,11 @@ export default function BacklogView() {
   const [selectedEpicId, setSelectedEpicId] = useState<string | undefined>();
   const [showIssueDetail, setShowIssueDetail] = useState(false);
   const [selectedIssueId, setSelectedIssueId] = useState<number | undefined>();
+
+  const selectedTask = useMemo(
+    () => tasks?.find((t) => t.id === selectedIssueId),
+    [tasks, selectedIssueId]
+  );
 
   // Epic selection dialog state
   const [epicSelectOpen, setEpicSelectOpen] = useState(false);
@@ -244,7 +266,6 @@ export default function BacklogView() {
 
   const handleUpdateAssignee = async (taskId: number, assigneeId: number | null) => {
     try {
-      if (assigneeId === null) return;
       await taskService.updateTaskAssignee(taskId, assigneeId);
       queryClient.invalidateQueries({ queryKey: ["backlog", projectId] });
       queryClient.invalidateQueries({ queryKey: ["board", projectId] });
@@ -325,8 +346,13 @@ export default function BacklogView() {
     }
   };
 
+  const [draftCounter, setDraftCounter] = useState(0);
+
   const addDraftIssue = () => {
-    const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `draft-${Date.now()}`;
+    const id = typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `draft-${Date.now()}-${draftCounter}`;
+    setDraftCounter((prev) => prev + 1);
     setDraftIssues((prev) => [...prev, { id, type: "STORY", title: "" }]);
   };
 
@@ -728,15 +754,15 @@ export default function BacklogView() {
         </div>
 
         {/* Issue Detail Panel - Right Column (Collapsible) */}
-        {showIssueDetail && selectedIssueId && (
+        {showIssueDetail && selectedIssueId && selectedTask && (
           <IssueDetailPanel
             taskId={selectedIssueId}
             projectId={parseInt(projectId || "0")}
             issueKey={`${projectKey}-${selectedIssueId}`}
-            issueType={(tasks?.find(t => t.id === selectedIssueId)?.type) || "TASK"}
-            title={(tasks?.find(t => t.id === selectedIssueId)?.title) || "No Title"}
-            status={(tasks?.find(t => t.id === selectedIssueId)?.status) || "TO_DO"}
-            description={(tasks?.find(t => t.id === selectedIssueId)?.description) || ""}
+            issueType={selectedTask.type || "TASK"}
+            title={selectedTask.title || "No Title"}
+            status={selectedTask.status || "TO_DO"}
+            description={selectedTask.description || ""}
             onClose={() => {
               setShowIssueDetail(false);
               setSelectedIssueId(undefined);

@@ -38,10 +38,18 @@ export default function CreateSprintDialog({ open, onOpenChange }: CreateSprintD
       const start = new Date(date);
       const end = new Date(start);
       end.setDate(end.getDate() + 14);
+
+      const prevStart = new Date(prev.startDate);
+      const prevEnd = prev.endDate ? new Date(prev.endDate) : null;
+
+      // Auto-update if end date is empty OR if it matches the default 2-week duration from previous start date
+      const isDefaultDuration = prevEnd && prevStart &&
+        prevEnd.getTime() === prevStart.getTime() + 14 * 24 * 60 * 60 * 1000;
+
       return {
         ...prev,
         startDate: date,
-        endDate: prev.endDate || end.toISOString().split("T")[0],
+        endDate: !prev.endDate || isDefaultDuration ? end.toISOString().split("T")[0] : prev.endDate,
       };
     });
   };
@@ -82,7 +90,17 @@ export default function CreateSprintDialog({ open, onOpenChange }: CreateSprintD
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen && !createSprint.isPending) {
+        setFormData({
+          name: "",
+          goal: "",
+          startDate: new Date().toISOString().split("T")[0],
+          endDate: "",
+        });
+      }
+      onOpenChange(isOpen);
+    }}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Create New Sprint</DialogTitle>

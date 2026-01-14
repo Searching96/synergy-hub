@@ -114,7 +114,7 @@ export default function BacklogTaskRow({
           )}
         >
           {/* Hover actions for missing epic - moved left to avoid overlapping assignee */}
-          {!task.epicName && (
+          {!(task.epicTitle as string || task.epic?.title || task.epicName) && (
             <div className="absolute right-40 top-1/2 -translate-y-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 p-1 rounded-md shadow-sm z-10 border">
               <Button
                 size="sm"
@@ -171,10 +171,17 @@ export default function BacklogTaskRow({
             <span className="text-sm font-medium truncate">{task.title}</span>
             <div className="flex items-center gap-1 flex-wrap">
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border">
-                {task.epicName || "No epic"}
+                {(task.epicTitle as string) || task.epic?.title || task.epicName || "No epic"}
               </span>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
-                To Do
+              <span className={cn(
+                "text-[11px] px-2 py-0.5 rounded-full border",
+                task.status === "DONE" && "bg-green-100 text-green-700 border-green-200",
+                task.status === "IN_PROGRESS" && "bg-blue-100 text-blue-700 border-blue-200",
+                task.status === "TO_DO" && "bg-gray-100 text-gray-700 border-gray-200",
+                task.status === "IN_REVIEW" && "bg-purple-100 text-purple-700 border-purple-200",
+                task.status === "BLOCKED" && "bg-red-100 text-red-700 border-red-200"
+              )}>
+                {task.status.replace("_", " ")}
               </span>
             </div>
           </div>

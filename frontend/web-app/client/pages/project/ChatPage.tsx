@@ -28,17 +28,17 @@ export default function ChatPage() {
         return prev;
       }
 
-      // 2. Look for an optimistic message from this user with the same content
-      // and a temporary ID (Date.now() based IDs are much larger than backend IDs)
-      // This is a heuristic until we have client-side UUIDs
+      // 2. Look for optimistic message
       if (message.userId === currentUserId) {
-        // Use slice().reverse() to find the last occurrence without findLastIndex
-        const reversedIdx = [...prev].reverse().findIndex(
-          (m) => m.userId === currentUserId && m.id > 1000000000000 && m.message === message.message
+        // Find optimistic message within 5 seconds based on content match
+        // Or check for a specific temporary ID flag if we had one
+        const optimisticIdx = prev.findIndex(
+          (m) => (m as any)._isOptimistic &&
+            m.message === message.message &&
+            Math.abs(new Date(m.timestamp).getTime() - new Date(message.timestamp).getTime()) < 10000
         );
 
-        if (reversedIdx !== -1) {
-          const optimisticIdx = prev.length - 1 - reversedIdx;
+        if (optimisticIdx !== -1) {
           const newMessages = [...prev];
           newMessages[optimisticIdx] = message;
           return newMessages;
@@ -56,22 +56,7 @@ export default function ChatPage() {
     enabled: !!projectId,
   });
 
-  useEffect(() => {
-    if (projectId) {
-      loadMessages();
-
-      // Polling fallback: Only poll if WebSocket is not connected
-      const intervalId = setInterval(() => {
-        if (!isConnected) {
-          loadMessages(true); // silent load
-        }
-      }, 5000); // Slower polling when WS is available
-
-      return () => clearInterval(intervalId);
-    }
-  }, [projectId, isConnected]);
-
-  const loadMessages = async (silent = false) => {
+  const loadMessages = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true);
     try {
       const projectMessages = await chatService.getProjectMessages(parseInt(projectId!));
@@ -88,13 +73,34 @@ export default function ChatPage() {
     } finally {
       if (!silent) setIsLoading(false);
     }
-  };
+  }, [projectId, toast]);
+
+  useEffect(() => {
+    if (projectId) {
+      loadMessages();
+
+      // Polling fallback: Only poll if WebSocket is not connected
+      const intervalId = setInterval(() => {
+        if (!isConnected) {
+          loadMessages(true); // silent load
+        }
+      }, 5000); // Slower polling when WS is available
+
+      return () => clearInterval(intervalId);
+    }
+  }, [projectId, isConnected, loadMessages]);
 
   const handleSendMessage = async (message: string, replyToId?: number) => {
     if (!project || !currentUser) return;
 
     // 1. Optimistic Update
-    const tempId = Date.now(); // Large temporary ID
+    // Use a string-based temp ID cast to any to satisfy the number type constraint temporarily if needed, 
+    // or just use a very large number that won't collide. 
+    // UUIDs are better, but types say number. Let's stick to large number + flag for now as types might be strict.
+    // Actually, user suggested UUID. I'll cast it to any to bypass strict number check or stick to user advice.
+    // The user's advice: "const tempId = `temp-${crypto.randomUUID()}`;"
+    const tempId = `temp-${Date.now()}-${Math.random()}` as any;
+
     const optimisticMessage: ChatMessage = {
       id: tempId,
       projectId: parseInt(projectId!),
@@ -107,7 +113,8 @@ export default function ChatPage() {
       message: message,
       timestamp: new Date().toISOString(),
       reactions: [],
-      attachments: []
+      attachments: [],
+      ...{ _isOptimistic: true }
     };
 
     setMessages((prev) => [...prev, optimisticMessage]);
@@ -124,10 +131,8 @@ export default function ChatPage() {
       setMessages((prev) => {
         // Check if the WebSocket already handled this message
         if (prev.some((msg) => msg.id === newMessage.id)) {
-          // If real message exists, just remove our temp one
           return prev.filter((msg) => msg.id !== tempId);
         }
-        // Otherwise, replace the temp one with the real one
         return prev.map((msg) => (msg.id === tempId ? newMessage : msg));
       });
     } catch (error) {

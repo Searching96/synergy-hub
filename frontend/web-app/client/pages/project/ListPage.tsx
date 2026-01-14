@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useQuery } from "@tanstack/react-query";
@@ -43,9 +43,12 @@ export default function ListPage() {
   const filtered = useMemo(() => {
     let result = tasks;
 
-    // Filter by query
-    if (query) {
-      const q = query.toLowerCase();
+    // Filter by query - use debouncedQuery to match server state or just skip if server handles it.
+    // Since server handles 'q', we might generally skip this unless we want instant local filtering on top of server results?
+    // User issue #8 says: "Client-Side Filtering Ignores Server Query... You send debouncedQuery to server but filter with query."
+    // Fix: Use debouncedQuery here too.
+    if (debouncedQuery) {
+      const q = debouncedQuery.toLowerCase();
       result = result.filter(
         (t) =>
           t.title?.toLowerCase().includes(q) ||
@@ -69,7 +72,15 @@ export default function ListPage() {
     });
 
     return result;
-  }, [tasks, query, filterStatus, sortBy]);
+  }, [tasks, debouncedQuery, filterStatus, sortBy]); // Changed query to debouncedQuery
+
+  // Fix 9: Select All State Doesn't Update When Filter Changes
+  useEffect(() => {
+    // Check if all currently visible items are selected
+    // Only if there are items to select
+    const match = filtered.length > 0 && filtered.every(t => selected[t.id]);
+    setSelectAll(match);
+  }, [filtered, selected]);
 
   const toggleSelectAll = (checked: boolean) => {
     setSelectAll(checked);

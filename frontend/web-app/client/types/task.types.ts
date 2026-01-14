@@ -49,6 +49,7 @@ export interface Task {
   subtasks?: Task[];
   parentTask?: { id: number; title: string; type: TaskType } | null;
   epic?: { id: number; title: string } | null;
+  epicTitle?: string | null; // Match backend response
   attachments?: Attachment[];
   [key: string]: unknown;
 }

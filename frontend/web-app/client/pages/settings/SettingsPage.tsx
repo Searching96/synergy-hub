@@ -61,7 +61,10 @@ export default function SettingsPage() {
     e.preventDefault();
     setIsUpdatingProfile(true);
     try {
-      await userService.updateProfile({ name: profileData.name });
+      await userService.updateProfile({
+        name: profileData.name,
+        email: profileData.email
+      });
       toast({
         title: "Success",
         description: "Profile updated successfully",

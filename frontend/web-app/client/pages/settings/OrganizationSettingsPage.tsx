@@ -38,20 +38,6 @@ export default function OrganizationSettingsPage() {
   // Get organization ID from user context
   const organizationId = user?.organizationId;
 
-  // Redirect if user doesn't have an organization
-  if (!organizationId) {
-    return (
-      <div className="p-6">
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            <strong>No Organization:</strong> You are not associated with any organization.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
   const {
     organization,
     isLoading,
@@ -85,7 +71,9 @@ export default function OrganizationSettingsPage() {
         contactEmail: organization.contactEmail || "",
       });
     }
-  }, [organization, reset]);
+    // Remove 'reset' from dependencies to prevent infinite loop
+    // 'organization' changes should be sufficient trigger
+  }, [organization]);
 
   // Handle 403 Forbidden errors
   useEffect(() => {
@@ -93,6 +81,20 @@ export default function OrganizationSettingsPage() {
       setAccessDenied(true);
     }
   }, [error]);
+
+  // Redirect if user doesn't have an organization
+  if (!organizationId) {
+    return (
+      <div className="p-6">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>No Organization:</strong> You are not associated with any organization.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   const onSubmit = (data: OrganizationFormData) => {
     updateOrganization({

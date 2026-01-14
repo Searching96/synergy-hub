@@ -50,9 +50,22 @@ export default function SprintHistoryModal({ projectId, onClose }: SprintHistory
     return `${diffDays} days`;
   };
 
+  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
+
+  // Reset history open state when projectId changes (new session)
+  // useEffect(() => setIsHistoryOpen(true), [projectId]); 
+
   return (
     <>
-      <Dialog open={!!projectId && !selectedSprintId} onOpenChange={(open) => !open && onClose()}>
+      <Dialog
+        open={!!projectId && isHistoryOpen && !selectedSprintId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsHistoryOpen(false);
+            onClose();
+          }
+        }}
+      >
         <DialogContent className="max-w-4xl max-h-[90vh] p-0 gap-0 flex flex-col">
           <DialogHeader className="px-6 py-4 border-b">
             <DialogTitle className="text-2xl font-bold">Sprint History</DialogTitle>
@@ -77,9 +90,12 @@ export default function SprintHistoryModal({ projectId, onClose }: SprintHistory
             ) : (
               <div className="space-y-4">
                 {sprints.map((sprint: any) => {
-                  const completionRate = sprint.completedTaskCount && sprint.taskCount
-                    ? Math.round((sprint.completedTaskCount / sprint.taskCount) * 100)
-                    : 0;
+                  const completionRate =
+                    typeof sprint.completedTaskCount === 'number' &&
+                      typeof sprint.taskCount === 'number' &&
+                      sprint.taskCount > 0
+                      ? Math.round((sprint.completedTaskCount / sprint.taskCount) * 100)
+                      : 0;
 
                   return (
                     <Card key={sprint.id} className="p-4 hover:shadow-md transition-shadow">
@@ -126,7 +142,7 @@ export default function SprintHistoryModal({ projectId, onClose }: SprintHistory
                                 <TrendingUp className={cn(
                                   "h-3 w-3",
                                   completionRate >= 80 ? "text-green-600" :
-                                  completionRate >= 50 ? "text-yellow-600" : "text-red-600"
+                                    completionRate >= 50 ? "text-yellow-600" : "text-red-600"
                                 )} />
                                 {completionRate}%
                               </p>
@@ -140,7 +156,7 @@ export default function SprintHistoryModal({ projectId, onClose }: SprintHistory
                                 className={cn(
                                   "h-2 rounded-full",
                                   completionRate >= 80 ? "bg-green-600" :
-                                  completionRate >= 50 ? "bg-yellow-600" : "bg-red-600"
+                                    completionRate >= 50 ? "bg-yellow-600" : "bg-red-600"
                                 )}
                                 style={{ width: `${completionRate}%` }}
                               />
@@ -171,7 +187,10 @@ export default function SprintHistoryModal({ projectId, onClose }: SprintHistory
       {selectedSprintId && (
         <SprintDetailModal
           sprintId={selectedSprintId}
-          onClose={() => setSelectedSprintId(null)}
+          onClose={() => {
+            setSelectedSprintId(null);
+            setIsHistoryOpen(true);
+          }}
         />
       )}
     </>

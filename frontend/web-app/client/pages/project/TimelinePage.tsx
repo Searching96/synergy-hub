@@ -77,6 +77,19 @@ export default function TimelinePage() {
     }));
   };
 
+  // Optimize: Group tasks by epic first to avoid O(n*m) filtering
+  const tasksByEpic = useMemo(() => {
+    const map = new Map<number, typeof allTasks>();
+    allTasks.forEach(task => {
+      // Handle API inconsistency where task object shape might vary or epicId missing
+      const eId = (task as any).epicId;
+      if (!eId) return;
+      if (!map.has(eId)) map.set(eId, []);
+      map.get(eId)!.push(task);
+    });
+    return map;
+  }, [allTasks]);
+
   // Group tasks by Epic and Filter
   const timelineData = useMemo(() => {
     if (!epics) return [];
@@ -84,7 +97,7 @@ export default function TimelinePage() {
     let filteredEpics = epics;
 
     return filteredEpics.map((epic) => {
-      const children = allTasks.filter((task) => task.epicId === epic.id);
+      const children = tasksByEpic.get(epic.id) || [];
 
       // Filter logic
       const query = searchQuery.toLowerCase();
@@ -105,7 +118,7 @@ export default function TimelinePage() {
         collapsed: !!collapsedEpics[epic.id],
       };
     }).filter(Boolean) as any[]; // Remove nulls
-  }, [epics, allTasks, collapsedEpics, searchQuery]);
+  }, [epics, tasksByEpic, collapsedEpics, searchQuery]);
 
   // Determine timeline range
   const { startDate, endDate, totalDays } = useMemo(() => {
@@ -125,7 +138,10 @@ export default function TimelinePage() {
   };
 
   const getWidth = (startStr: string | undefined | null, endStr: string | undefined | null, defaultDurationDays = 14) => {
-    const start = startStr ? new Date(startStr) : new Date(); // Default to today if missing
+    // If no start date, return 0 width (or handle hidden)
+    if (!startStr) return 0;
+
+    const start = new Date(startStr);
     let end = endStr ? new Date(endStr) : undefined;
 
     if (!end) {

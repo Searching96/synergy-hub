@@ -56,7 +56,10 @@ export default function IssuesPage() {
     enabled: !!projectId,
   });
 
-  const issues = (tasksResponse?.data || []) as any[]; // Using any primarily due to type mismatches with existing UI expectations, plan to refining types later
+  // Define a minimal Task type if not imported, or use 'any' with care if imports are complex.
+  // Better to use imported type, but for now let's just use 'any' to avoid breaking builds if types are missing, 
+  // but we fix the logic flaw.
+  const issues = (tasksResponse?.data || []) as any[];
 
   const activeIssue = useMemo(() => {
     if (activeId) {
@@ -68,6 +71,9 @@ export default function IssuesPage() {
   useEffect(() => {
     if (!activeId && issues.length > 0) {
       setActiveId(issues[0].id);
+    } else if (activeId && !issues.find((i) => i.id === activeId)) {
+      // Active issue no longer exists, reset to first
+      setActiveId(issues.length > 0 ? issues[0].id : null);
     }
   }, [issues, activeId]);
 

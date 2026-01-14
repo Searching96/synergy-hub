@@ -17,6 +17,7 @@ export interface MeetingParticipant {
   joinedAt: string;
   videoStream?: MediaStream;
   audioStream?: MediaStream;
+  videoTrack?: { attach: (element: HTMLMediaElement) => void; detach: (element: HTMLMediaElement) => void; };
 }
 
 export interface Meeting {
