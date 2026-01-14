@@ -101,4 +101,13 @@ public class OrganizationController {
         organizationService.requestJoinOrganization(request.getOrganizationEmail(), currentUser.getUser(), ipAddress);
         return ResponseEntity.ok(ApiResponse.success("Join request sent successfully", null));
     }
+
+    @PostMapping("/{id}/invite-code")
+    public ResponseEntity<ApiResponse<String>> generateInviteCode(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        String inviteCode = organizationService.generateInviteCode(id, currentUser.getUser());
+        return ResponseEntity.ok(ApiResponse.success("Invite code generated successfully", inviteCode));
+    }
 }
