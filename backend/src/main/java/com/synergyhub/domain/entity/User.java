@@ -59,6 +59,23 @@ public class User {
     @Column(name = "email_verified")
     private Boolean emailVerified;
 
+    // --- OAuth2 Provider Fields ---
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider")
+    @lombok.Builder.Default
+    private com.synergyhub.domain.enums.AuthProvider provider = com.synergyhub.domain.enums.AuthProvider.LOCAL;
+
+    @Column(name = "provider_id")
+    private String providerId;
+
+    @Column(name = "image_url")
+    private String imageUrl;
+
+    // Setter for password (maps to passwordHash)
+    public void setPassword(String password) {
+        this.passwordHash = password;
+    }
+
     // --- Multi-Org Memberships ---
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @lombok.Builder.Default

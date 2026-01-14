@@ -38,6 +38,13 @@ public class UserPrincipal implements UserDetails {
             List.of() // authorities will be context-driven
         );
     }
+
+    // OAuth2 support: create with attributes
+    public static UserPrincipal create(User user, java.util.Map<String, Object> attributes) {
+        UserPrincipal principal = create(user);
+        // Attributes are available via OAuth2User interface if needed
+        return principal;
+    }
     
     @Override
     public String getUsername() {

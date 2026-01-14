@@ -2,19 +2,18 @@ package com.synergyhub.security.oauth2;
 
 import com.synergyhub.domain.entity.User;
 import com.synergyhub.domain.enums.AuthProvider;
-import com.synergyhub.domain.enums.RoleType;
 import com.synergyhub.repository.UserRepository;
-import com.synergyhub.security.UserPrincipal;
-import com.synergyhub.service.organization.OrganizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,7 +23,6 @@ import java.util.UUID;
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
-    private final OrganizationService organizationService;
 
     @Override
     @Transactional
@@ -34,15 +32,12 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         try {
             return processOAuth2User(userRequest, oAuth2User);
         } catch (Exception ex) {
-            // Throwing an instance of OAuth2AuthenticationException will trigger the OAuth2AuthenticationFailureHandler
             throw new OAuth2AuthenticationException(ex.getMessage());
         }
     }
 
     private OAuth2User processOAuth2User(OAuth2UserRequest oAuth2UserRequest, OAuth2User oAuth2User) {
         String registrationId = oAuth2UserRequest.getClientRegistration().getRegistrationId();
-        // Google uses "sub", GitHub uses "id". We need a unified way or just check attributes.
-        // Usually email is the best identifier for enterprise apps.
         String email = oAuth2User.getAttribute("email");
         
         if (email == null || email.isEmpty()) {
@@ -53,18 +48,21 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         User user;
         if (userOptional.isPresent()) {
             user = userOptional.get();
-            if (!user.getProvider().equals(AuthProvider.valueOf(registrationId.toUpperCase()))) {
-                // If user registered with local/other provider, we might want to link accounts or throw error.
-                // For simplicity here, we update the provider to allow social login or logging
-                log.info("Updating existing user provider to {}", registrationId);
-                user.setProvider(AuthProvider.valueOf(registrationId.toUpperCase()));
-            }
-            user = updateExistingUser(user, oAuth2User);
+            user = updateExistingUser(user, oAuth2User, registrationId);
         } else {
             user = registerNewUser(oAuth2UserRequest, oAuth2User);
         }
 
-        return UserPrincipal.create(user, oAuth2User.getAttributes());
+        // Return OAuth2User (DefaultOAuth2User) instead of UserPrincipal
+        // The SuccessHandler will fetch the User from DB using the email
+        String userNameAttributeName = oAuth2UserRequest.getClientRegistration()
+                .getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
+        
+        return new DefaultOAuth2User(
+                Collections.emptyList(),
+                oAuth2User.getAttributes(),
+                userNameAttributeName
+        );
     }
 
     private User registerNewUser(OAuth2UserRequest oAuth2UserRequest, OAuth2User oAuth2User) {
@@ -72,32 +70,33 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 oAuth2UserRequest.getClientRegistration().getRegistrationId().toUpperCase());
         String name = oAuth2User.getAttribute("name");
         String email = oAuth2User.getAttribute("email");
-        String imageUrl = oAuth2User.getAttribute("picture"); // Google specific, might differ for GitHub (avatar_url)
+        String imageUrl = oAuth2User.getAttribute("picture");
 
-        if (name == null) name = email.split("@")[0]; // Fallback
+        if (name == null) name = email.split("@")[0];
         if (imageUrl == null && oAuth2User.getAttribute("avatar_url") != null) {
             imageUrl = oAuth2User.getAttribute("avatar_url");
         }
 
         User user = new User();
         user.setProvider(provider);
-        user.setProviderId(oAuth2User.getName()); // Subject/ID
+        user.setProviderId(oAuth2User.getName());
         user.setName(name);
         user.setEmail(email);
         user.setImageUrl(imageUrl);
-        user.setEmailVerified(true); // OAuth2 emails are trusted
+        user.setEmailVerified(true);
         user.setPassword(UUID.randomUUID().toString()); // Dummy password
 
-        User savedUser = userRepository.save(user);
-        
-        // Add to default organization if needed? 
-        // Or leave them org-less until they join one. 
-        // For now, let's leave them org-less but ensure they have basic setup if we have a default org mechanism.
-        
-        return savedUser;
+        return userRepository.save(user);
     }
 
-    private User updateExistingUser(User existingUser, OAuth2User oAuth2User) {
+    private User updateExistingUser(User existingUser, OAuth2User oAuth2User, String registrationId) {
+        AuthProvider provider = AuthProvider.valueOf(registrationId.toUpperCase());
+        
+        if (!existingUser.getProvider().equals(provider)) {
+            log.info("Updating existing user provider to {}", registrationId);
+            existingUser.setProvider(provider);
+        }
+        
         String name = oAuth2User.getAttribute("name");
         String imageUrl = oAuth2User.getAttribute("picture");
         if (imageUrl == null && oAuth2User.getAttribute("avatar_url") != null) {
@@ -114,7 +113,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             changed = true;
         }
 
-        if (changed) {
+        if (changed || !existingUser.getProvider().equals(provider)) {
             return userRepository.save(existingUser);
         }
         return existingUser;
