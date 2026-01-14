@@ -57,19 +57,13 @@ public class CorsConfig {
             "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
         ));
         
-        // ✅ Explicit headers (not "*")
-        configuration.setAllowedHeaders(Arrays.asList(
-            "Authorization",
-            "Content-Type",
-            "Accept",
-            "Origin",
-            "X-Requested-With"
-        ));
+        // ✅ Allow all headers to prevent preflight errors
+        configuration.setAllowedHeaders(Arrays.asList("*"));
         
-        // ✅ Expose only necessary headers
         configuration.setExposedHeaders(Arrays.asList(
             "Authorization",
-            "Content-Disposition"
+            "Content-Disposition",
+            "X-Auth-Error"
         ));
         
         // ✅ Credentials allowed (validated to not use "*")
