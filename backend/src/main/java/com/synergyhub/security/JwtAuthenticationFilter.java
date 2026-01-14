@@ -37,26 +37,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             final String jwt;
             final String userEmail;
 
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                filterChain.doFilter(request, response);
-                return;
-            }
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                jwt = authHeader.substring(7);
+                userEmail = tokenProvider.getEmailFromToken(jwt);
+                // Note: No orgId extraction from token in current implementation
+                // Organization context should be set elsewhere if needed
 
-            jwt = authHeader.substring(7);
-            userEmail = tokenProvider.getEmailFromToken(jwt);
-            // Note: No orgId extraction from token in current implementation
-            // Organization context should be set elsewhere if needed
-
-            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = this.customUserDetailsService.loadUserByUsername(userEmail);
-                if (tokenProvider.validateToken(jwt)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    UserDetails userDetails = this.customUserDetailsService.loadUserByUsername(userEmail);
+                    if (tokenProvider.validateToken(jwt)) {
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    }
                 }
             }
         } catch (ExpiredJwtException ex) {
@@ -80,13 +77,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             log.error("Unexpected error during JWT authentication from IP: {} - Error: {}", 
                     request.getRemoteAddr(), ex.getMessage(), ex);
             response.setHeader("X-Auth-Error", "INTERNAL_ERROR");
+        }
+
+        // Continue chain exactly once
+        try {
+            filterChain.doFilter(request, response);
         } finally {
-            // Continue chain
-            try {
-                filterChain.doFilter(request, response);
-            } finally {
-                OrganizationContext.clear(); // Clean up thread local
-            }
+            OrganizationContext.clear(); // Clean up thread local
         }
     }
 
