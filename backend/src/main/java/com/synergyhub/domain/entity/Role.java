@@ -41,8 +41,4 @@ public class Role {
     )
     @Builder.Default
     private Set<Permission> permissions = new HashSet<>();
-    
-    @ManyToMany(mappedBy = "roles")
-    @Builder.Default
-    private Set<User> users = new HashSet<>();
 }
