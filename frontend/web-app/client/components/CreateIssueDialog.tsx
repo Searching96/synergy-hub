@@ -24,13 +24,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Info, 
-  Eye, 
-  MoreHorizontal, 
-  Bold, 
-  Italic, 
-  List, 
+import {
+  Info,
+  Eye,
+  MoreHorizontal,
+  Bold,
+  Italic,
+  List,
   Link as LinkIcon,
   Sparkles,
   Zap,
@@ -74,8 +74,8 @@ export default function CreateIssueDialog({ open, onOpenChange }: CreateIssueDia
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [createAnother, setCreateAnother] = useState(false);
 
-  const projects = projectsResponse?.data || [];
-  
+  const projects = projectsResponse?.data?.content || [];
+
   // Load members for selected project
   const { data: membersResponse } = useQuery({
     queryKey: ["project-members", formData.projectId],
@@ -83,7 +83,7 @@ export default function CreateIssueDialog({ open, onOpenChange }: CreateIssueDia
     enabled: !!formData.projectId,
   });
   const members = membersResponse?.data?.filter((m) => m && m.userId) || [];
-  
+
   // Filter out archived projects
   const activeProjects = projects.filter(project => project.status !== "ARCHIVED");
 
@@ -138,7 +138,7 @@ export default function CreateIssueDialog({ open, onOpenChange }: CreateIssueDia
             title: "Success",
             description: "Issue created successfully",
           });
-          
+
           // Either close or reset for another creation
           if (createAnother) {
             setFormData({ ...INITIAL_FORM_STATE, projectId: formData.projectId });
@@ -222,11 +222,11 @@ export default function CreateIssueDialog({ open, onOpenChange }: CreateIssueDia
               <Select
                 value={formData.type}
                 onValueChange={(value) => {
-                  setFormData({ 
-                    ...formData, 
+                  setFormData({
+                    ...formData,
                     type: value,
                     parentTaskId: null,
-                    epicId: null 
+                    epicId: null
                   });
                 }}
               >

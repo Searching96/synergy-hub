@@ -12,19 +12,21 @@ import type { ApiResponse } from "@/types/auth.types";
 import type { Task } from "@/types/task.types";
 import type { Project } from "@/types/project.types";
 
+import type { PaginatedResponse } from "@/types/project.types";
+
 export default function YourWork() {
   const { data: issuesData, isLoading: loadingIssues } = useQuery<ApiResponse<Task[]>>({
     queryKey: ["my-issues"],
     queryFn: userService.getMyIssues,
   });
 
-  const { data: projectsData, isLoading: loadingProjects } = useQuery<ApiResponse<Project[]>>({
+  const { data: projectsData, isLoading: loadingProjects } = useQuery<ApiResponse<PaginatedResponse<Project>>>({
     queryKey: ["my-projects"],
     queryFn: userService.getMyProjects,
   });
 
   const issues = useMemo<Task[]>(() => issuesData?.data || [], [issuesData]);
-  const projects = useMemo<Project[]>(() => projectsData?.data || [], [projectsData]);
+  const projects = useMemo<Project[]>(() => projectsData?.data?.content || [], [projectsData]);
 
   const renderIssues = () => {
     if (loadingIssues) {

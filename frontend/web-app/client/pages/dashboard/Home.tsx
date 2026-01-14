@@ -35,8 +35,8 @@ export default function DashboardHome() {
     );
   }
 
-  // Filter out archived projects
-  const projects: Project[] = (response?.data || []).filter((project: Project) => project.status !== "ARCHIVED");
+  // Filter out archived projects from paginated content
+  const projects: Project[] = (response?.data?.content || []).filter((project: Project) => project.status !== "ARCHIVED");
 
   return (
     <div className="p-6">
@@ -110,9 +110,8 @@ export default function DashboardHome() {
                         <div
                           className="bg-blue-600 h-2 rounded-full transition-all"
                           style={{
-                            width: `${
-                              (project.completedTaskCount / project.taskCount) * 100
-                            }%`,
+                            width: `${(project.completedTaskCount / project.taskCount) * 100
+                              }%`,
                           }}
                         />
                       </div>

@@ -42,6 +42,24 @@ public class GlobalExceptionHandler {
          return new ResponseEntity<>(ApiResponse.error("ALREADY_MEMBER", ex.getMessage()), HttpStatus.CONFLICT);
     }
 
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<ApiResponse<Void>> handleEmailAlreadyExistsException(EmailAlreadyExistsException ex) {
+        log.warn("Email already exists: {}", ex.getMessage());
+        return new ResponseEntity<>(ApiResponse.error("EMAIL_EXISTS", ex.getMessage()), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBadCredentialsException(org.springframework.security.authentication.BadCredentialsException ex) {
+        log.warn("Bad credentials: {}", ex.getMessage());
+        return new ResponseEntity<>(ApiResponse.error("BAD_CREDENTIALS", "Invalid email or password"), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(org.springframework.security.authentication.DisabledException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDisabledException(org.springframework.security.authentication.DisabledException ex) {
+        log.warn("Account disabled: {}", ex.getMessage());
+        return new ResponseEntity<>(ApiResponse.error("ACCOUNT_DISABLED", "Account is disabled or email not verified"), HttpStatus.UNAUTHORIZED);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();

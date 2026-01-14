@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter 
+  DialogFooter
 } from "@/components/ui/dialog";
 import { useProjects } from "@/hooks/useProjects";
 import { useTask, useCreateTask } from "@/hooks/useTasks";
@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function IssueModal() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
-  
+
   const issueParam = searchParams.get("issue");
   const isCreate = searchParams.get("create") === "true";
   const open = isCreate || !!issueParam;
@@ -38,7 +38,7 @@ export default function IssueModal() {
   const { mutateAsync: createTask, isPending: isCreating } = useCreateTask();
   const { mutateAsync: updateTask, isPending: isUpdating } = useUpdateTask();
 
-  const projects = useMemo(() => projectsResponse?.data || [], [projectsResponse]);
+  const projects = useMemo(() => projectsResponse?.data?.content || [], [projectsResponse]);
 
   const [formValues, setFormValues] = useState<IssueFormValues>({
     projectId: "",
@@ -84,8 +84,8 @@ export default function IssueModal() {
   const members = useMemo(() => {
     if (!membersResponse) return [];
     const memberData = membersResponse.data || membersResponse;
-    return Array.isArray(memberData) 
-      ? memberData.filter((m): m is typeof memberData[0] => m !== undefined && m !== null) 
+    return Array.isArray(memberData)
+      ? memberData.filter((m): m is typeof memberData[0] => m !== undefined && m !== null)
       : [];
   }, [membersResponse]);
 
@@ -165,9 +165,9 @@ export default function IssueModal() {
 
       handleClose();
     } catch (err: any) {
-      const message = 
-        err?.response?.data?.message || 
-        err?.response?.data?.error || 
+      const message =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
         "Failed to save issue";
       toast({
         title: "Error",
@@ -186,7 +186,7 @@ export default function IssueModal() {
             {taskId ? "Edit issue" : "Create issue"}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            {taskId 
+            {taskId
               ? "Edit the issue details below"
               : "Fill out the form below to create a new issue in your project"
             }

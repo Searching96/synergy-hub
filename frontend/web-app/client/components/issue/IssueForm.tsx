@@ -15,13 +15,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Info, 
-  Eye, 
-  MoreHorizontal, 
-  Bold, 
-  Italic, 
-  List, 
+import {
+  Info,
+  Eye,
+  MoreHorizontal,
+  Bold,
+  Italic,
+  List,
   Link as LinkIcon,
   Sparkles,
   Zap,
@@ -39,6 +39,8 @@ export interface IssueFormValues {
   description: string;
   type: "BUG" | "STORY" | "TASK" | "EPIC" | "SUBTASK";
   status?: "TO_DO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE" | "BLOCKED";
+  priority?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  estimatedHours?: string;
   startDate?: string;
   dueDate?: string;
   assigneeId?: number | null;
@@ -91,6 +93,8 @@ const INITIAL_FORM_STATE: IssueFormValues = {
   description: "",
   type: "TASK",
   status: "TO_DO",
+  priority: "MEDIUM",
+  estimatedHours: "",
   startDate: "",
   dueDate: "",
   assigneeId: null,
@@ -119,7 +123,7 @@ export default function IssueForm({
   const [labelInput, setLabelInput] = useState("");
   const [linkedIssueInput, setLinkedIssueInput] = useState("");
 
-  const projects = projectsResponse?.data || [];
+  const projects = projectsResponse?.data?.content || [];
 
   // Load members for selected project
   const { data: membersResponse } = useQuery({
@@ -560,9 +564,8 @@ export default function IssueForm({
                 key={color.value}
                 type="button"
                 onClick={() => setFormData({ ...formData, issueColor: color.value })}
-                className={`h-10 w-10 rounded border-2 ${
-                  formData.issueColor === color.value ? "border-gray-900" : "border-gray-300"
-                } bg-${color.value}-500 hover:border-gray-900 transition`}
+                className={`h-10 w-10 rounded border-2 ${formData.issueColor === color.value ? "border-gray-900" : "border-gray-300"
+                  } bg-${color.value}-500 hover:border-gray-900 transition`}
                 title={color.name}
               />
             ))}
