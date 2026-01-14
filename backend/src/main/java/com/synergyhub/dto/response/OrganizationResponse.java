@@ -18,6 +18,9 @@ public class OrganizationResponse {
     private Long id;
     private String name;
     private String address;
+    private String contactEmail; // Also adding this as it was in service but missing here
     private LocalDateTime createdAt;
     private Long userCount;
+    private String inviteCode;
+    private LocalDateTime inviteCodeExpiresAt;
 }

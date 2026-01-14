@@ -360,8 +360,11 @@ public class OrganizationService {
                 .id(organization.getId())
                 .name(organization.getName())
                 .address(organization.getAddress())
+                .contactEmail(organization.getContactEmail())
                 .createdAt(organization.getCreatedAt())
                 .userCount((long) organization.getMemberships().size())
+                .inviteCode(organization.getInviteCode())
+                .inviteCodeExpiresAt(organization.getInviteCodeExpiresAt())
                 .build();
     }
 
