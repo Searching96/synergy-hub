@@ -231,19 +231,28 @@ public class AttachmentService {
             return 10 * 1024 * 1024; // Default 10MB
         }
 
-        String[] parts = sizeStr.toUpperCase().replaceAll("[\\s,]", "").split("(?=B)");
-        if (parts.length == 0) return 10 * 1024 * 1024;
+        String normalized = sizeStr.toUpperCase().trim();
+        StringBuilder numberPart = new StringBuilder();
+        StringBuilder unitPart = new StringBuilder();
 
-        long size = Long.parseLong(parts[0]);
-        String unit = parts.length > 1 ? parts[1] : "B";
+        for (char c : normalized.toCharArray()) {
+            if (Character.isDigit(c)) {
+                numberPart.append(c);
+            } else {
+                unitPart.append(c);
+            }
+        }
 
-        return switch (unit) {
-            case "B" -> size;
-            case "KB" -> size * 1024;
-            case "MB" -> size * 1024 * 1024;
-            case "GB" -> size * 1024 * 1024 * 1024;
-            default -> 10 * 1024 * 1024;
-        };
+        if (numberPart.length() == 0) return 10 * 1024 * 1024;
+
+        long size = Long.parseLong(numberPart.toString());
+        String unit = unitPart.toString().trim();
+
+        if (unit.startsWith("G")) return size * 1024 * 1024 * 1024;
+        if (unit.startsWith("M")) return size * 1024 * 1024;
+        if (unit.startsWith("K")) return size * 1024;
+
+        return size;
     }
 
     /**
