@@ -628,11 +628,7 @@ export default function BacklogView() {
                       backlogTasks.map((task, index) => (
                         <div
                           key={task.id}
-                          onClick={() => {
-                            setSelectedIssueId(task.id);
-                            setShowIssueDetail(true);
-                          }}
-                          className="cursor-pointer"
+                          className=""
                         >
                           <BacklogTaskRow
                             task={task}
@@ -642,6 +638,10 @@ export default function BacklogView() {
                             onUpdateStoryPoints={handleUpdateStoryPoints}
                             onUpdateAssignee={handleUpdateAssignee}
                             isProjectArchived={isProjectArchived}
+                            onClick={() => {
+                              setSelectedIssueId(task.id);
+                              setShowIssueDetail(true);
+                            }}
                           />
                         </div>
                       ))
@@ -674,10 +674,10 @@ export default function BacklogView() {
         {showIssueDetail && selectedIssueId && (
           <IssueDetailPanel
             issueKey={`${projectKey}-${selectedIssueId}`}
-            issueType="TASK"
-            title="Sample Task Title"
-            status="To Do"
-            description="This is a sample task description"
+            issueType={(tasks?.find(t => t.id === selectedIssueId)?.type) || "TASK"}
+            title={(tasks?.find(t => t.id === selectedIssueId)?.title) || "No Title"}
+            status={(tasks?.find(t => t.id === selectedIssueId)?.status) || "TO_DO"}
+            description={(tasks?.find(t => t.id === selectedIssueId)?.description) || ""}
             onClose={() => {
               setShowIssueDetail(false);
               setSelectedIssueId(undefined);

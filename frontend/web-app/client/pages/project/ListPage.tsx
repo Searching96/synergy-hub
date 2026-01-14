@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useQuery } from "@tanstack/react-query";
 import { taskService } from "@/services/task.service";
 import { useProject } from "@/context/ProjectContext";
@@ -24,12 +25,13 @@ export default function ListPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { project } = useProject();
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 300);
   const [selected, setSelected] = useState<Record<number, boolean>>({});
   const [selectAll, setSelectAll] = useState(false);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["tasks", projectId, { q: query }],
-    queryFn: () => taskService.getProjectTasks(projectId!, query ? { q: query } : {}),
+    queryKey: ["tasks", projectId, { q: debouncedQuery }],
+    queryFn: () => taskService.getProjectTasks(projectId!, debouncedQuery ? { q: debouncedQuery } : {}),
     enabled: !!projectId,
   });
 

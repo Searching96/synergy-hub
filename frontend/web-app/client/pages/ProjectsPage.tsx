@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProjects, useCreateProject } from "@/hooks/useProjects";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,14 +29,13 @@ export default function ProjectsPage() {
 
   // State for filtering and pagination
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [status, setStatus] = useState("ACTIVE");
   const [page, setPage] = useState(0);
   const pageSize = 9; // 3x3 grid
 
-  // Debounced search could be added here, but for simplicity we pass search directly
-  // In a real app, wrap search in useDebounce
   const { data: response, isLoading, isError } = useProjects({
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     status: status === "ALL" ? undefined : status, // "ALL" isn't a backend status
     page,
     size: pageSize

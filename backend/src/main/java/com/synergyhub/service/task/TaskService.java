@@ -89,13 +89,23 @@ public class TaskService {
                 throw new BadRequestException("Subtask must belong to the same project as the parent task");
             }
 
-            // Validation 2: Parent cannot be a subtask itself (Prevent infinite nesting for
-            // MVP)
+            // Validation 2: Parent cannot be a subtask itself (Prevent infinite nesting for MVP)
             if (parentTask.getParentTask() != null) {
                 throw new BadRequestException("Cannot create a subtask of a subtask");
             }
 
             task.setParentTask(parentTask);
+        }
+
+        if (request.getStartDate() != null) {
+            task.setStartDate(request.getStartDate().atStartOfDay());
+        }
+        if (request.getDueDate() != null) {
+            task.setDueDate(request.getDueDate().atTime(23, 59, 59));
+        }
+        task.setEstimatedHours(request.getEstimatedHours());
+        if (request.getLabels() != null) {
+            task.setLabels(new java.util.ArrayList<>(request.getLabels()));
         }
 
         Task savedTask = taskRepository.save(task);
@@ -212,6 +222,15 @@ public class TaskService {
         }
         if (request.getDueDate() != null) {
             task.setDueDate(request.getDueDate().atTime(23, 59, 59));
+        }
+        if (request.getStartDate() != null) {
+            task.setStartDate(request.getStartDate().atStartOfDay());
+        }
+        if (request.getEstimatedHours() != null) {
+            task.setEstimatedHours(request.getEstimatedHours());
+        }
+        if (request.getLabels() != null) {
+            task.setLabels(new java.util.ArrayList<>(request.getLabels()));
         }
 
         if (request.getAssigneeId() != null) {
@@ -351,7 +370,7 @@ public class TaskService {
                 Sprint sprint = sprintRepository.findById(sprintId)
                     .orElseThrow(() -> new SprintNotFoundException(sprintId));
 
-            if (!sprint.getProject().getId().equals(task.getProject().getId())) {
+            if (!java.util.Objects.equals(sprint.getProject().getId(), task.getProject().getId())) {
                 throw new BadRequestException("Sprint does not belong to task's project");
             }
 

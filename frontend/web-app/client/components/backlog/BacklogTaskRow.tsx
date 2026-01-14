@@ -1,13 +1,13 @@
 import { Draggable } from "@hello-pangea/dnd";
 import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { 
-  CheckSquare, 
-  Bug, 
-  Lightbulb, 
-  AlertCircle, 
-  ArrowUp, 
-  ArrowDown, 
+import {
+  CheckSquare,
+  Bug,
+  Lightbulb,
+  AlertCircle,
+  ArrowUp,
+  ArrowDown,
   Minus,
   UserRound,
   MoreHorizontal,
@@ -42,6 +42,7 @@ interface BacklogTaskRowProps {
   onUpdateStoryPoints: (taskId: number, storyPoints: number | null) => void;
   onUpdateAssignee: (taskId: number, assigneeId: number | null) => void;
   isProjectArchived?: boolean;
+  onClick?: () => void;
 }
 
 const typeIcons = {
@@ -66,6 +67,7 @@ export default function BacklogTaskRow({
   onUpdateStoryPoints,
   onUpdateAssignee,
   isProjectArchived,
+  ...props
 }: BacklogTaskRowProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const TypeIcon = typeIcons[task.type as keyof typeof typeIcons] || CheckSquare;
@@ -82,6 +84,13 @@ export default function BacklogTaskRow({
     if (target.tagName === 'INPUT' || target.closest('button') || target.closest('[role="combobox"]')) {
       return;
     }
+
+    // If external onClick is provided, use it and skip default behavior
+    if (props.onClick) {
+      props.onClick();
+      return;
+    }
+
     const next = new URLSearchParams(searchParams);
     next.delete("create");
     next.set("issue", `${projectKey}-${task.id}`);
@@ -125,7 +134,7 @@ export default function BacklogTaskRow({
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>Story point estimate</DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
-                      {[1,2,3,5,8,13].map((sp) => (
+                      {[1, 2, 3, 5, 8, 13].map((sp) => (
                         <DropdownMenuItem key={sp}>{sp}</DropdownMenuItem>
                       ))}
                     </DropdownMenuSubContent>

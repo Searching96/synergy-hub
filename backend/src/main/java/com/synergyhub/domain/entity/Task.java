@@ -113,6 +113,18 @@ public class Task {
     @Column(name = "due_date")
     private LocalDateTime dueDate;
 
+    @Column(name = "start_date")
+    private LocalDateTime startDate;
+
+    @Column(name = "estimated_hours")
+    private String estimatedHours;
+
+    @ElementCollection
+    @CollectionTable(name = "task_labels", joinColumns = @JoinColumn(name = "task_id"))
+    @Column(name = "label")
+    @Builder.Default
+    private List<String> labels = new ArrayList<>();
+
     @Column(name = "archived", nullable = false)
     @Builder.Default
     private Boolean archived = false;
