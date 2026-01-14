@@ -151,6 +151,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         user.setEmail(resolvedEmail);
         user.setImageUrl(imageUrl);
         user.setEmailVerified(true);
+        user.setTwoFactorEnabled(false);
         user.setPassword(UUID.randomUUID().toString()); // Dummy password
 
         return userRepository.save(user);
