@@ -39,7 +39,7 @@ public class ScheduledTasksConfig {
 
         List<Organization> organizations = organizationRepository.findAll();
         for (Organization org : organizations) {
-            OrganizationContext.setOrganizationId(org.getId());
+            OrganizationContext.setcurrentOrgId(org.getId());
             try {
                 // Assuming the repository respects the OrganizationContext via AOP or Filter
                 passwordResetTokenRepository.deleteExpiredTokens(now);
@@ -59,7 +59,7 @@ public class ScheduledTasksConfig {
         
         List<Organization> organizations = organizationRepository.findAll();
         for (Organization org : organizations) {
-            OrganizationContext.setOrganizationId(org.getId());
+            OrganizationContext.setcurrentOrgId(org.getId());
             try {
                 emailVerificationRepository.deleteExpiredVerifications(now);
             } catch (Exception e) {
