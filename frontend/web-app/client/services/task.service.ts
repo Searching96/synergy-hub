@@ -11,7 +11,29 @@ import type {
 } from "@/types/task.types";
 
 export const taskService = {
-  // ... (previous methods)
+  // Create a new task
+  async createTask(data: CreateTaskRequest): Promise<ApiResponse<Task>> {
+    const response = await api.post<ApiResponse<Task>>("/tasks", data);
+    return response.data;
+  },
+
+  // Update an existing task
+  async updateTask(taskId: number | string, data: UpdateTaskRequest): Promise<ApiResponse<Task>> {
+    const response = await api.put<ApiResponse<Task>>(`/tasks/${taskId}`, data);
+    return response.data;
+  },
+
+  // Delete a task
+  async deleteTask(taskId: number | string): Promise<ApiResponse<void>> {
+    const response = await api.delete<ApiResponse<void>>(`/tasks/${taskId}`);
+    return response.data;
+  },
+
+  // Get single task by ID
+  async getTask(taskId: number | string): Promise<ApiResponse<Task>> {
+    const response = await api.get<ApiResponse<Task>>(`/tasks/${taskId}`);
+    return response.data;
+  },
 
   // Get project tasks
   async getProjectTasks(

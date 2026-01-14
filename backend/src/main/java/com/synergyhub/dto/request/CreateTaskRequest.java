@@ -30,16 +30,27 @@ public class CreateTaskRequest {
 
     @NotNull(message = "Priority is required")
     private TaskPriority priority;
+    
+    // Default to TO_DO if not provided
+    private com.synergyhub.domain.enums.TaskStatus status;
 
     private TaskType type;
 
     private Long assigneeId;
+    
+    private Long reporterId;
 
     private Long parentTaskId;
 
     @Min(value = 1, message = "Story points must be at least 1")
     @Max(value = 100, message = "Story points must not exceed 100")
     private Integer storyPoints;
+    
+    private String estimatedHours;
 
-    private LocalDateTime dueDate;
+    private java.time.LocalDate dueDate;
+    
+    private java.time.LocalDate startDate;
+    
+    private java.util.List<String> labels;
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useProject } from "@/context/ProjectContext";
 import { taskService } from "@/services/task.service";
@@ -20,14 +20,14 @@ import {
   ChevronRight,
   BookOpen,
   CheckSquare,
-  Link as LinkIcon,
   Loader2,
 } from "lucide-react";
 import { format, differenceInDays, addMonths, startOfMonth } from "date-fns";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 
 export default function TimelinePage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { project } = useProject();
   const [collapsedEpics, setCollapsedEpics] = useState<Record<string, boolean>>({});
 
@@ -89,11 +89,6 @@ export default function TimelinePage() {
       const matchingChildren = children.filter(child => child.title.toLowerCase().includes(query));
 
       const hasMatchingChildren = matchingChildren.length > 0;
-
-      // If search is active:
-      // Show epic if it matches OR if it has matching children.
-      // If epic matches, show ALL children? Or just matching?
-      // Usual logic: If epic matches, show all. If epic doesn't match but child does, show epic + matching kids.
 
       if (searchQuery && !epicMatches && !hasMatchingChildren) {
         return null; // Hide epic entirely
@@ -170,18 +165,18 @@ export default function TimelinePage() {
           <h1 className="text-3xl font-bold">Timeline</h1>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
-          <Button variant="ghost" size="sm" className="gap-2">
+          <Button variant="ghost" size="sm" className="gap-2" onClick={() => toast({ title: "Feedback", description: "Coming soon!" })}>
             <MessageSquare className="h-4 w-4" />
             Give feedback
           </Button>
           <Button variant="outline" size="sm" className="gap-2" onClick={() => {
             navigator.clipboard.writeText(window.location.href);
-            toast.success("Link copied to clipboard");
+            toast({ title: "Success", description: "Link copied to clipboard" });
           }}>
             <Share2 className="h-4 w-4" />
             Share
           </Button>
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => toast({ title: "Export", description: "Coming soon!" })}>
             <Download className="h-4 w-4" />
             Export
           </Button>
@@ -209,7 +204,7 @@ export default function TimelinePage() {
           </Avatar>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => toast({ title: "Settings", description: "Coming soon!" })}>
             <SlidersHorizontal className="h-4 w-4" />
             View settings
           </Button>
@@ -247,7 +242,7 @@ export default function TimelinePage() {
                 {/* Children Rows */}
                 {!epic.collapsed && (
                   <div className="space-y-0 pb-1">
-                    {epic.children.map((child) => (
+                    {epic.children.map((child: any) => (
                       <div key={child.id} className="flex items-center gap-3 pl-10 pr-4 py-2 hover:bg-gray-50 border-t border-dashed border-gray-100">
                         {child.type === "STORY" ? (
                           <BookOpen className="h-3 w-3 text-emerald-600 shrink-0" />
@@ -269,7 +264,12 @@ export default function TimelinePage() {
             ))}
           </div>
           <div className="px-4 py-3 border-t mt-auto bg-gray-50">
-            <Button variant="ghost" size="sm" className="gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+              onClick={() => setSearchParams({ create: "true", type: "EPIC" })}
+            >
               + Create Epic
             </Button>
           </div>
@@ -292,7 +292,7 @@ export default function TimelinePage() {
             />
 
             {/* Sprints (Background or Top) */}
-            {sprints.map((sprint, idx) => (
+            {sprints.map((sprint: any, idx: number) => (
               <div
                 key={sprint.id}
                 className="absolute h-6 bg-blue-100 rounded-sm text-[10px] text-blue-700 px-1 truncate border border-blue-200 opacity-50 z-0"
@@ -321,7 +321,7 @@ export default function TimelinePage() {
                   </div>
 
                   {/* Children Bars */}
-                  {!epic.collapsed && epic.children.map((child) => (
+                  {!epic.collapsed && epic.children.map((child: any) => (
                     <div key={child.id} className="h-[37px] relative mb-0"> {/* Matches Child Row height approx */}
                       <Bar
                         left={`${getPosition(child.createdAt || undefined, new Date())}%`}

@@ -45,7 +45,7 @@ export default function IssueModal() {
     title: "",
     description: "",
     priority: "MEDIUM",
-    type: "TASK",
+    type: (searchParams.get("type") as IssueFormValues["type"]) || "TASK",
     status: "TO_DO",
     estimatedHours: "",
     dueDate: "",

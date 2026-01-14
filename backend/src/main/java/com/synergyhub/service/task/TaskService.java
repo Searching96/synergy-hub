@@ -47,11 +47,11 @@ public class TaskService {
                 .description(request.getDescription())
                 .project(project)
                 .reporter(currentUser)
-                .status(TaskStatus.TO_DO)
+                .status(request.getStatus() != null ? request.getStatus() : TaskStatus.TO_DO)
                 .priority(request.getPriority())
                 .type(request.getType() != null ? request.getType() : TaskType.TASK)
                 .storyPoints(request.getStoryPoints())
-                .dueDate(request.getDueDate())
+                .dueDate(request.getDueDate() != null ? request.getDueDate().atTime(23, 59, 59) : null)
                 .build();
 
         // Assign to sprint if provided
@@ -211,7 +211,7 @@ public class TaskService {
             task.setStoryPoints(request.getStoryPoints());
         }
         if (request.getDueDate() != null) {
-            task.setDueDate(request.getDueDate());
+            task.setDueDate(request.getDueDate().atTime(23, 59, 59));
         }
 
         if (request.getAssigneeId() != null) {

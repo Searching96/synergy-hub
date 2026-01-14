@@ -294,6 +294,8 @@ export default function BacklogView() {
         sprintId: null,
         parentTaskId: null,
         assigneeId: null,
+        status: "TO_DO",
+        labels: []
       });
       removeDraftIssue(draft.id);
     } catch {

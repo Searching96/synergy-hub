@@ -65,12 +65,16 @@ export interface CreateTaskRequest {
   parentTaskId?: number | null;
   assigneeId?: number | null;
   reporterId?: number | null;
+  status?: string;
+  labels?: string[];
+  startDate?: string | null;
+  estimatedHours?: string | null;
 }
 
 export interface UpdateTaskRequest extends Partial<CreateTaskRequest> {
   status?: string;
   position?: number;
-  estimatedHours?: number | null;
+  estimatedHours?: string | null;
   actualHours?: number | null;
 }
 

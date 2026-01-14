@@ -37,8 +37,14 @@ public class UpdateTaskRequest {
     @Max(value = 100, message = "Story points must not exceed 100")
     private Integer storyPoints;
 
-    private LocalDateTime dueDate;
+    private java.time.LocalDate dueDate;
+    
+    private java.time.LocalDate startDate;
+    
+    private String estimatedHours;
     
     // Position for drag-and-drop ordering (ignored by backend for now)
     private Integer position;
+    
+    private java.util.List<String> labels;
 }
