@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface SsoProviderRepository extends JpaRepository<SsoProvider, Integer> {
+public interface SsoProviderRepository extends JpaRepository<SsoProvider, Long> {
     
     List<SsoProvider> findByOrganizationAndEnabledTrue(Organization organization);
     

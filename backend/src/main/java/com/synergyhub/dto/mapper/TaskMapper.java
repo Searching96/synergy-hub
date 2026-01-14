@@ -25,6 +25,9 @@ public interface TaskMapper {
     @Mapping(target = "parentTaskTitle", source = "parentTask.title")
     @Mapping(target = "isSubtask", expression = "java(task.getParentTask() != null)")
     
+    @Mapping(target = "epicId", source = "epic.id")
+    @Mapping(target = "epicTitle", source = "epic.title")
+    
     // ✅ People (using nested mapping)
     @Mapping(target = "reporter", source = "reporter", qualifiedByName = "userToSummary")
     @Mapping(target = "assignee", source = "assignee", qualifiedByName = "userToSummary")

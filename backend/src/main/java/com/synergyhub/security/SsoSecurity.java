@@ -33,7 +33,7 @@ public class SsoSecurity {
      * @param user Authenticated user
      * @throws UnauthorizedOrganizationAccessException if user lacks required role
      */
-    public void requireSsoManagementAccess(Integer organizationId, User user) {
+    public void requireSsoManagementAccess(Long organizationId, User user) {
         Set<String> roles = user.getRoles().stream()
                 .map(r -> r.getName())
                 .collect(java.util.stream.Collectors.toSet());
@@ -70,8 +70,9 @@ public class SsoSecurity {
      * @param user Authenticated user
      * @throws UnauthorizedOrganizationAccessException if user lacks required role
      */
-    public void requireSsoViewAccess(Integer organizationId, User user) {
+    public void requireSsoViewAccess(Long organizationId, User user) {
         // Same as management access for now (only admins can view SSO config)
         requireSsoManagementAccess(organizationId, user);
     }
 }
+

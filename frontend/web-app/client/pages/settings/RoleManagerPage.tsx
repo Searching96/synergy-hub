@@ -10,6 +10,7 @@
  */
 
 import { useState, useMemo } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { useRBAC } from "@/hooks/useRBAC";
 import { RoleList } from "@/components/rbac/RoleList";
 import { PermissionMatrix } from "@/components/rbac/PermissionMatrix";
@@ -17,6 +18,11 @@ import { toast } from "sonner";
 import axios from "axios";
 
 export function RoleManagerPage() {
+  const { user } = useAuth();
+  const canManageRoles = (user?.roles ?? []).some(
+    (role) => role === "ORG_ADMIN" || role === "GLOBAL_ADMIN"
+  );
+
   const {
     roles,
     permissions,
@@ -69,6 +75,10 @@ export function RoleManagerPage() {
     description: string;
     permissionIds: number[];
   }) => {
+    if (!canManageRoles) {
+      toast.error("You have view-only access. Contact an admin to manage roles.");
+      return;
+    }
     try {
       createRole(roleData);
     } catch (error) {
@@ -85,6 +95,10 @@ export function RoleManagerPage() {
 
   // Handle delete role
   const handleDeleteRole = (roleId: number) => {
+    if (!canManageRoles) {
+      toast.error("You have view-only access. Contact an admin to manage roles.");
+      return;
+    }
     try {
       deleteRole(roleId);
       if (selectedRoleId === roleId) {
@@ -104,6 +118,10 @@ export function RoleManagerPage() {
 
   // Handle toggle permission
   const handleTogglePermission = (permissionId: number) => {
+    if (!canManageRoles) {
+      toast.error("You have view-only access. Contact an admin to manage roles.");
+      return;
+    }
     if (!displayedRole) return;
 
     try {
@@ -171,6 +189,11 @@ export function RoleManagerPage() {
               Manage roles and assign permissions for your organization
             </p>
           </div>
+          {!canManageRoles && (
+            <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-900">
+              View only — admin access required to edit
+            </span>
+          )}
         </div>
       </div>
 
@@ -186,6 +209,7 @@ export function RoleManagerPage() {
             onDeleteRole={handleDeleteRole}
             isLoading={isLoading}
             isCreating={isCreatingRole}
+             canManage={canManageRoles}
           />
         </div>
 
@@ -205,6 +229,7 @@ export function RoleManagerPage() {
                 groupedPermissions={groupedPermissions}
                 hasPermission={hasPermission}
                 onTogglePermission={handleTogglePermission}
+                 canManage={canManageRoles}
               />
             )}
           </div>

@@ -42,7 +42,7 @@ public class CreateProjectRequest {
     @AllArgsConstructor
     public static class MemberWithRole {
         @NotNull(message = "User ID is required")
-        private Integer userId;
+        private Long userId;
 
             @NotNull(message = "Role is required")
             private ProjectRole role;

@@ -6,7 +6,7 @@ public class TaskAssignmentException extends BadRequestException {
         super(message);
     }
 
-    public TaskAssignmentException(Integer taskId, Integer userId) {
+    public TaskAssignmentException(Long taskId, Long userId) {
         super(String.format("Cannot assign task %d to user %d", taskId, userId));
     }
 }

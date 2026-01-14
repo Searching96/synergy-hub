@@ -1,128 +1,150 @@
 package com.synergyhub.domain.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-
-import java.time.LocalDateTime;
-import java.util.HashSet;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "users", indexes = {
-    @Index(name = "idx_email", columnList = "email"),
-    @Index(name = "idx_organization", columnList = "organization_id")
-})
+@Table(name = "users")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-// 1. Exclude sensitive data from logs
-// 2. Exclude relationships to prevent LazyInitException and StackOverflowError
-@ToString(exclude = {"passwordHash", "organization", "roles", "sessions"})
+@lombok.Builder
 public class User {
-    
+    // Legacy compatibility: getUserId()
+    public Long getUserId() {
+        return this.id;
+    }
+
+    // Legacy compatibility: setOrganization (sets current context)
+    public void setOrganization(Organization org) {
+        this.currentContextOrganization = org;
+    }
+
+    // Legacy compatibility: getRoles() (aggregates all roles from memberships)
+    public java.util.Set<Role> getRoles() {
+        java.util.Set<Role> roles = new java.util.HashSet<>();
+        if (this.memberships != null) {
+            for (UserOrganization membership : this.memberships) {
+                if (membership.getRole() != null) {
+                    roles.add(membership.getRole());
+                }
+            }
+        }
+        return roles;
+    }
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
-    private Integer id;
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "organization_id", nullable = false)
-    @JsonIgnore // Prevent serialization of the entire parent Org object
-    @NotNull
-    private Organization organization;
-    
-    @Column(nullable = false, length = 100)
-    @NotBlank
+    private Long id;
+
+    @Column(nullable = false)
     private String name;
-    
-    @Column(nullable = false, unique = true, length = 100)
-    @Email
+
+    @Column(nullable = false, unique = true)
     private String email;
-    
-    // --- SECURITY FIX APPLIED HERE ---
-    @JsonIgnore
-    @Column(name = "password_hash", nullable = false, length = 255)
+
+    @Column(name = "password_hash", nullable = false)
     private String passwordHash;
-    
-    @Column(name = "two_factor_enabled", nullable = false)
-    @Builder.Default
-    private Boolean twoFactorEnabled = false;
-    
-    @Column(name = "account_locked", nullable = false)
-    @Builder.Default
+
+    @Column(name = "two_factor_enabled")
+    private Boolean twoFactorEnabled;
+
+    @Column(name = "email_verified")
+    private Boolean emailVerified;
+
+    // --- Multi-Org Memberships ---
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @lombok.Builder.Default
+    private List<UserOrganization> memberships = new ArrayList<>();
+
+    // --- Current Session Context (not persisted) ---
+    @Transient
+    private Organization currentContextOrganization;
+
+    // --- Account Lock & Login Tracking ---
+    @Column(name = "account_locked")
+    @lombok.Builder.Default
     private Boolean accountLocked = false;
-    
+
     @Column(name = "lock_until")
-    private LocalDateTime lockUntil;
-    
-    @Column(name = "email_verified", nullable = false)
-    @Builder.Default
-    private Boolean emailVerified = false;
-    
-    @Column(name = "last_login")
-    private LocalDateTime lastLogin;
-    
-    @Column(name = "failed_login_attempts", nullable = false)
-    @Builder.Default
-    private Integer failedLoginAttempts = 0;
-    
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-    
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "user_roles",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id")
-    )
-    @Builder.Default
-    @JsonIgnore // Usually better to expose roles via a specific DTO field, not the raw entity list
-    private Set<Role> roles = new HashSet<>();
-    
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    @JsonIgnore // Critical: Prevent serializing all historical sessions when fetching a user
-    private Set<UserSession> sessions = new HashSet<>();
-    
-    // Helper methods remain unchanged
-    public boolean isAccountNonLocked() {
-        if (!accountLocked) {
-            return true;
-        }
-        
-        if (lockUntil != null && LocalDateTime.now().isAfter(lockUntil)) {
-            // Auto-unlock if lock period has expired
-            accountLocked = false;
-            lockUntil = null;
-            failedLoginAttempts = 0;
-            return true;
-        }
-        
-        return false;
+    private java.time.LocalDateTime lockUntil;
+
+    @Column(name = "failed_login_attempts")
+    @lombok.Builder.Default
+    private Integer failedLoginAttempts = 0; // keep as Integer, not an ID
+
+    // --- Methods for AccountLockService compatibility ---
+    public Boolean getAccountLocked() {
+        return accountLocked != null && accountLocked;
     }
-    
+    public void setAccountLocked(Boolean locked) {
+        this.accountLocked = locked;
+    }
+    public java.time.LocalDateTime getLockUntil() {
+        return lockUntil;
+    }
+    public void setLockUntil(java.time.LocalDateTime until) {
+        this.lockUntil = until;
+    }
+    public Integer getFailedLoginAttempts() {
+        return failedLoginAttempts != null ? failedLoginAttempts : 0;
+    }
+    public void setFailedLoginAttempts(Integer attempts) {
+        this.failedLoginAttempts = attempts;
+    }
     public void incrementFailedAttempts() {
-        this.failedLoginAttempts++;
+        this.failedLoginAttempts = getFailedLoginAttempts() + 1;
     }
-    
     public void resetFailedAttempts() {
         this.failedLoginAttempts = 0;
     }
-    
-    public void lock(int durationMinutes) {
+    public void lock(int minutes) {
         this.accountLocked = true;
-        this.lockUntil = LocalDateTime.now().plusMinutes(durationMinutes);
+        this.lockUntil = java.time.LocalDateTime.now().plusMinutes(minutes);
     }
 
-    public boolean isActive() {
-        return isAccountNonLocked() && emailVerified;
+    // --- Multi-Org Helpers ---
+    /**
+     * Add a membership for this user in an organization with a role.
+     */
+    public void addMembership(Organization org, Role role) {
+        UserOrganization membership = new UserOrganization(this, org, role);
+        this.memberships.add(membership);
+        // Optionally: org.getMemberships().add(membership); // if bidirectional
+    }
+
+    /**
+     * Returns the organization for the current context, or the only org if just one, or null.
+     */
+    public Organization getOrganization() {
+        if (this.currentContextOrganization != null) {
+            return this.currentContextOrganization;
+        }
+        if (this.memberships != null && !this.memberships.isEmpty()) {
+            // Try to find marked primary
+            for (UserOrganization membership : this.memberships) {
+                if (Boolean.TRUE.equals(membership.getIsPrimary())) {
+                    return membership.getOrganization();
+                }
+            }
+            // Fallback to first one
+            return this.memberships.get(0).getOrganization();
+        }
+        return null;
+    }
+
+    // Compatibility Helper for legacy code expecting 'getId()'
+    public Long getId() {
+        return this.id;
+    }
+    public void setId(Long id) {
+        this.id = id;
     }
 }

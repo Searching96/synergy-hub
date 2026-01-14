@@ -2,7 +2,7 @@ package com.synergyhub.exception;
 
 public class SprintNotFoundException extends ResourceNotFoundException {
 
-    public SprintNotFoundException(Integer sprintId) {
+    public SprintNotFoundException(Long sprintId) {
         super("Sprint", "id", sprintId);
     }
 

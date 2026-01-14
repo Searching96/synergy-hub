@@ -19,7 +19,7 @@ public class Booking {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "booking_id")
-    private Integer id;
+    private Long id;
     
     @NotNull(message = "Resource is required")
     @ManyToOne(fetch = FetchType.LAZY)

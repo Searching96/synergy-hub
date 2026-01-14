@@ -31,7 +31,7 @@ public class TimelineService {
     
     @PreAuthorize("@projectSecurity.hasProjectAccess(#projectId, #currentUser)")
     @Transactional(readOnly = true)
-    public TimelineViewResponse getProjectTimeline(Integer projectId, User currentUser, Integer monthsAhead) {
+    public TimelineViewResponse getProjectTimeline(Long projectId, User currentUser, Integer monthsAhead) {
         log.info("Getting timeline for project: {} for user: {}", projectId, currentUser.getId());
         
         Project project = projectRepository.findById(projectId)

@@ -10,10 +10,10 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 public class ActivityLogResponse {
-    private Integer id;
+    private Long id;
     
     // Actor information (can be null for system events)
-    private Integer actorId;
+    private Long actorId;
     private String actorName;
     private String actorEmail;
     
@@ -24,7 +24,7 @@ public class ActivityLogResponse {
     // Context
     private String ipAddress;
     private String userAgent;
-    private Integer projectId;
+    private Long projectId;
     
     // Timestamp
     private LocalDateTime timestamp;

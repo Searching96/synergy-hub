@@ -15,7 +15,7 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 public class TaskResponse {
-    private Integer id;
+    private Long id;
     private String title;
     private String description;
     private TaskStatus status;
@@ -23,17 +23,21 @@ public class TaskResponse {
     private TaskType type;
     
     // Project context
-    private Integer projectId;
+    private Long projectId;
     private String projectName;
     
     // Sprint context (optional)
-    private Integer sprintId;
+    private Long sprintId;
     private String sprintName;
     
     // Hierarchy (for subtasks)
-    private Integer parentTaskId;
+    private Long parentTaskId;
     private String parentTaskTitle;
     private boolean isSubtask;
+    
+    // Hierarchy (for epics)
+    private Long epicId;
+    private String epicTitle;
     
     // People
     private UserSummary reporter;
@@ -58,7 +62,7 @@ public class TaskResponse {
     @Data
     @Builder
     public static class UserSummary {
-        private Integer id;
+        private Long id;
         private String name;
         private String email;
     }

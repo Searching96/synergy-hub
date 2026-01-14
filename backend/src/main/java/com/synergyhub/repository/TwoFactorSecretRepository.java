@@ -8,11 +8,11 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface TwoFactorSecretRepository extends JpaRepository<TwoFactorSecret, Integer> {
+public interface TwoFactorSecretRepository extends JpaRepository<TwoFactorSecret, Long> {
     
     Optional<TwoFactorSecret> findByUser(User user);
     
-    Optional<TwoFactorSecret> findByUserId(Integer userId);
+    Optional<TwoFactorSecret> findByUserId(Long userId);
     
     void deleteByUser(User user);
 }

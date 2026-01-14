@@ -2,6 +2,7 @@ import { useParams } from "react-router-dom";
 import { useProject } from "@/context/ProjectContext";
 import ActivityStream from "@/components/activity/ActivityStream";
 import { AlertCircle } from "lucide-react";
+import { ProjectBreadcrumb } from "@/components/project/ProjectBreadcrumb";
 
 export default function ActivityPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -19,15 +20,20 @@ export default function ActivityPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-1">Activity Stream</h1>
-        <p className="text-muted-foreground">
-          View all recent activity and changes in {project?.name || "this project"}
-        </p>
+    <div className="p-6">
+      <div className="mb-4">
+        <ProjectBreadcrumb current="Activity" />
       </div>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-1">Activity Stream</h1>
+          <p className="text-muted-foreground">
+            View all recent activity and changes in {project?.name || "this project"}
+          </p>
+        </div>
 
-      <ActivityStream projectId={parseInt(projectId)} showTitle={false} height="calc(100vh - 250px)" />
+        <ActivityStream projectId={parseInt(projectId)} showTitle={false} height="calc(100vh - 250px)" />
+      </div>
     </div>
   );
 }

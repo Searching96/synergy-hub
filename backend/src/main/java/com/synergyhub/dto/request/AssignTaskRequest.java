@@ -8,5 +8,5 @@ import lombok.*;
 @AllArgsConstructor
 public class AssignTaskRequest {
 
-    private Integer assigneeId;  // null to unassign
+    private Long assigneeId;  // null to unassign
 }

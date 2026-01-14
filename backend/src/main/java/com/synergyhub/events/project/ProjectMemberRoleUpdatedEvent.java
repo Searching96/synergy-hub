@@ -7,10 +7,10 @@ import lombok.Getter;
 
 @Getter
 public class ProjectMemberRoleUpdatedEvent extends ProjectEvent {
-    private final Integer userId;
+    private final Long userId;
     private final ProjectRole newRole;
     
-    public ProjectMemberRoleUpdatedEvent(Project project, Integer userId, 
+    public ProjectMemberRoleUpdatedEvent(Project project, Long userId, 
                                          ProjectRole newRole, User actor, String ipAddress) {
         super(project, actor, ipAddress);
         this.userId = userId;

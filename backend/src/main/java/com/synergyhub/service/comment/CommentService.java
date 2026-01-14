@@ -29,7 +29,7 @@ public class CommentService {
 
     @PreAuthorize("@projectSecurity.hasTaskAccess(#taskId, #currentUser)")
     @Transactional
-    public CommentResponse addComment(Integer taskId, String content, User currentUser) {
+    public CommentResponse addComment(Long taskId, String content, User currentUser) {
         log.info("Adding comment to task: {} by user: {}", taskId, currentUser.getId());
 
         Task task = taskRepository.findById(taskId)
@@ -47,7 +47,7 @@ public class CommentService {
 
     @PreAuthorize("@projectSecurity.hasTaskAccess(#taskId, #currentUser)")
     @Transactional(readOnly = true)
-    public List<CommentResponse> getTaskComments(Integer taskId, User currentUser, int page, int size) {
+    public List<CommentResponse> getTaskComments(Long taskId, User currentUser, int page, int size) {
         log.info("Fetching comments for task: {} (page: {}, size: {})", taskId, page, size);
         
         // Quick check to ensure task exists (security check handles the access)
@@ -58,5 +58,37 @@ public class CommentService {
         Pageable pageable = PageRequest.of(page, size);
         List<Comment> comments = commentRepository.findByTaskIdOrderByCreatedAtAsc(taskId, pageable);
         return commentMapper.toResponseList(comments);
+    }
+
+    @Transactional
+    public CommentResponse updateComment(Long commentId, String content, User currentUser) {
+        log.info("Updating comment: {} by user: {}", commentId, currentUser.getId());
+
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new RuntimeException("Comment not found"));
+
+        // Only the comment author can edit
+        if (!comment.getUser().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("You can only edit your own comments");
+        }
+
+        comment.setContent(content);
+        Comment savedComment = commentRepository.save(comment);
+        return commentMapper.toResponse(savedComment);
+    }
+
+    @Transactional
+    public void deleteComment(Long commentId, User currentUser) {
+        log.info("Deleting comment: {} by user: {}", commentId, currentUser.getId());
+
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new RuntimeException("Comment not found"));
+
+        // Only the comment author can delete
+        if (!comment.getUser().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("You can only delete your own comments");
+        }
+
+        commentRepository.delete(comment);
     }
 }

@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class PermissionResponse {
     
-    private Integer id;
+    private Long id;
     private String name;
     private String description;
 }

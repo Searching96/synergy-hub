@@ -23,10 +23,12 @@
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
+    "@stomp/stompjs": "^7.2.1",
     "axios": "^1.13.2",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "playwright": "^1.57.0",
+    "sockjs-client": "^1.6.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -69,6 +71,7 @@
     "@types/node": "^24.2.1",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
+    "@types/sockjs-client": "^1.5.4",
     "@types/three": "^0.176.0",
     "@vitejs/plugin-react-swc": "^4.0.0",
     "autoprefixer": "^10.4.21",
@@ -102,7 +105,10 @@
     "typescript": "^5.9.2",
     "vaul": "^1.1.2",
     "vite": "^7.1.2",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "livekit-client": "^2.1.2",
+    "@livekit/components-react": "^2.0.0",
+    "@livekit/components-styles": "^1.0.9"
   },
   "packageManager": "pnpm@10.14.0+sha512.ad27a79641b49c3e481a16a805baa71817a04bbe06a38d17e60e2eaee83f6a146c6a688125f5792e48dd5ba30e7da52a5cda4c3992b9ccf333f9ce223af84748"
 }

@@ -25,7 +25,7 @@ public class SsoProvider {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "provider_id")
-    private Integer id;
+    private Long id;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "org_id", nullable = false)

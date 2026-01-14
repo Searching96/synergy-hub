@@ -8,46 +8,26 @@ import {
   MessageSquare,
   Video,
   Settings,
-  ChevronLeft 
+  ChevronLeft,
+  List,
+  ListChecks,
+  Plus
 } from "lucide-react";
 import { useProject } from "@/context/ProjectContext";
 
-const projectNavItems = [
-  {
-    title: "Board",
-    href: "/board",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Backlog",
-    href: "/backlog",
-    icon: ListTodo,
-  },
-  {
-    title: "Timeline",
-    href: "/timeline",
-    icon: Calendar,
-  },
-  {
-    title: "Activity",
-    href: "/activity",
-    icon: Activity,
-  },
-  {
-    title: "Chat",
-    href: "/chat",
-    icon: MessageSquare,
-  },
-  {
-    title: "Meetings",
-    href: "/meetings",
-    icon: Video,
-  },
-  {
-    title: "Settings",
-    href: "/settings",
-    icon: Settings,
-  },
+const planningNavItems = [
+  { title: "Timeline", href: "/timeline", icon: Calendar },
+  { title: "Backlog", href: "/backlog", icon: ListTodo },
+  { title: "Board", href: "/board", icon: LayoutDashboard },
+  { title: "List", href: "/list", icon: List },
+  { title: "Issues All", href: "/issues", icon: ListChecks },
+];
+
+const otherNavItems = [
+  { title: "Activity", href: "/activity", icon: Activity },
+  { title: "Chat", href: "/chat", icon: MessageSquare },
+  { title: "Meetings", href: "/meetings", icon: Video },
+  { title: "Settings", href: "/settings", icon: Settings },
 ];
 
 export default function ProjectSidebar() {
@@ -59,14 +39,7 @@ export default function ProjectSidebar() {
     <aside className="fixed left-0 top-14 z-30 hidden h-[calc(100vh-3.5rem)] w-64 border-r bg-background lg:block">
       <div className="flex h-full flex-col">
         {/* Project Header */}
-        <div className="border-b p-4">
-          <Link
-            to="/projects"
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            All Projects
-          </Link>
+        <div className="p-4">
           
           {isLoading ? (
             <div className="h-6 w-3/4 bg-muted animate-pulse rounded" />
@@ -82,31 +55,68 @@ export default function ProjectSidebar() {
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 space-y-1 p-3 overflow-y-auto">
-          {projectNavItems.map((item) => {
-            const href = `/projects/${projectId}${item.href}`;
-            const isActive = location.pathname === href;
-            const Icon = item.icon;
-            const isDisabled = project?.status === "ARCHIVED" && item.href === "/settings";
-
-            return (
-              <Link
-                key={item.href}
-                to={isDisabled ? "#" : href}
-                onClick={(e) => isDisabled && e.preventDefault()}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                  isDisabled && "opacity-50 cursor-not-allowed hover:bg-transparent hover:text-muted-foreground"
-                )}
+        <nav className="flex-1 space-y-6 p-3 overflow-y-auto">
+          {/* Planning Group */}
+          <div>
+            <div className="px-3 pb-2 text-[10px] font-semibold tracking-wider text-muted-foreground">PLANNING</div>
+            <div className="space-y-1">
+              {planningNavItems.map((item) => {
+                const href = `/projects/${projectId}${item.href}`;
+                const isActive = location.pathname === href;
+                const Icon = item.icon as any;
+                return (
+                  <Link
+                    key={item.href}
+                    to={href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.title}
+                  </Link>
+                );
+              })}
+              <button
+                type="button"
+                className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
               >
-                <Icon className="h-4 w-4" />
-                {item.title}
-              </Link>
-            );
-          })}
+                <Plus className="h-4 w-4" />
+                Add view
+              </button>
+            </div>
+          </div>
+
+          {/* Other Links */}
+          <div className="space-y-1">
+            {otherNavItems.map((item) => {
+              const href = `/projects/${projectId}${item.href}`;
+              const isActive = location.pathname === href;
+              const Icon = item.icon as any;
+              const isDisabled = project?.status === "ARCHIVED" && item.href === "/settings";
+
+              return (
+                <Link
+                  key={item.href}
+                  to={isDisabled ? "#" : href}
+                  onClick={(e) => isDisabled && e.preventDefault()}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    isDisabled && "opacity-50 cursor-not-allowed hover:bg-transparent hover:text-muted-foreground"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.title}
+                </Link>
+              );
+            })}
+          </div>
         </nav>
 
         {/* Project Stats */}

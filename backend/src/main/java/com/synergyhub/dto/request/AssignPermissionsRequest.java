@@ -14,5 +14,5 @@ import lombok.NoArgsConstructor;
 public class AssignPermissionsRequest {
     
     @Builder.Default
-    private java.util.Set<Integer> permissionIds = java.util.Set.of();
+    private java.util.Set<Long> permissionIds = java.util.Set.of();
 }

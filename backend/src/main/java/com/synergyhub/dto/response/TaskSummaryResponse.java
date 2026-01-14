@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 public class TaskSummaryResponse {
-    private Integer id;
+    private Long id;
     private String title;
     private TaskStatus status;
     private TaskPriority priority;
@@ -24,10 +24,10 @@ public class TaskSummaryResponse {
     private Integer storyPoints;
     private boolean archived;
 
-    private Integer assigneeId;
+    private Long assigneeId;
     private String assigneeName;
     
-    private Integer reporterId;
+    private Long reporterId;
     private String reporterName;
     
     private boolean isOverdue;

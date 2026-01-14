@@ -1,0 +1,156 @@
+@startuml SynergyHub_UseCaseDiagram
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+title SynergyHub - Complete Use Case Diagram
+
+' ===== ACTORS =====
+actor "Guest User" as Guest
+actor "Registered User" as User
+actor "Project Member" as Member
+actor "Project Admin" as ProjectAdmin
+actor "Organization Admin" as OrgAdmin
+
+' Actor Hierarchy
+Guest <|-- User
+User <|-- Member
+Member <|-- ProjectAdmin
+ProjectAdmin <|-- OrgAdmin
+
+' ===== EXTERNAL SYSTEMS =====
+actor "Email Service" as EmailService
+actor "WebRTC Server" as WebRTC
+actor "WebSocket Server" as WebSocket
+
+rectangle "SynergyHub" {
+
+  ' ===== USE CASE PACKAGES =====
+
+  ' ----- GROUP 1: AUTHENTICATION & USER MANAGEMENT -----
+  package "Identity & Access Management" {
+      usecase "UC-1.1 Login" as UC1_1
+      usecase "UC-1.2 Register" as UC1_2
+      usecase "UC-1.3 Logout" as UC1_3
+      usecase "UC-1.4 Reset Password" as UC1_4
+      usecase "UC-1.5 Manage Account Settings" as UC1_5
+      usecase "UC-1.6 Setup 2FA" as UC1_6
+      usecase "UC-1.7 Verify Email" as UC1_7
+  }
+
+  ' ----- GROUP 2: PROJECT MANAGEMENT -----
+  package "Project Management" {
+      usecase "UC-2.1 View Projects" as UC2_1
+      usecase "UC-2.2 Manage Project Lifecycle" as UC2_2
+      usecase "UC-2.3 Manage Project Members" as UC2_3
+      usecase "UC-2.4 View Project Dashboard" as UC2_4
+  }
+
+  ' ----- GROUP 3: SPRINT MANAGEMENT -----
+  package "Sprint Management" {
+      usecase "UC-3.1 View Sprints" as UC3_1
+      usecase "UC-3.2 Manage Sprint Configuration" as UC3_2
+      usecase "UC-3.3 Manage Sprint Execution" as UC3_3
+  }
+
+  ' ----- GROUP 4: ISSUE/TASK MANAGEMENT -----
+  package "Issue & Task Management" {
+      usecase "UC-4.1 View Backlog" as UC4_1
+      usecase "UC-4.2 View Issue Details" as UC4_2
+      usecase "UC-4.3 View Board (Kanban)" as UC4_3
+      usecase "UC-4.4 Manage Issue Lifecycle" as UC4_4
+      usecase "UC-4.5 Manage Issue Assignment" as UC4_5
+      usecase "UC-4.6 Manage Issue Details" as UC4_6
+  }
+
+  ' ----- GROUP 5: COMMUNICATION -----
+  package "Collaboration & Communication" {
+      usecase "UC-5.1 View Project Chat" as UC5_1
+      usecase "UC-5.2 Manage Messages" as UC5_2
+      usecase "UC-5.3 Interact with Messages" as UC5_3
+      usecase "UC-5.4 Manage Meetings" as UC5_4
+      usecase "UC-5.5 Manage Meeting Media" as UC5_5
+  }
+
+  ' ----- GROUP 6: TIMELINE & ACTIVITY -----
+  package "Timeline & Activity Tracking" {
+      usecase "UC-6.1 View Timeline (Gantt)" as UC6_1
+      usecase "UC-6.2 View Activity Stream" as UC6_2
+      usecase "UC-6.3 Filter Timeline" as UC6_3
+  }
+
+  ' ----- GROUP 7: SETTINGS & RBAC -----
+  package "Administration & Settings" {
+      usecase "UC-7.1 Update Organization" as UC7_1
+      usecase "UC-7.2 Manage Roles & Permissions" as UC7_2
+      usecase "UC-7.3 Configure SSO" as UC7_3
+      usecase "UC-7.4 Update Notifications" as UC7_4
+  }
+
+}
+
+' ===== ACTOR ASSOCIATIONS =====
+
+' Guest User
+Guest -- UC1_1
+Guest -- UC1_2
+Guest -- UC1_4
+
+' Registered User (inherits Guest)
+User -- UC1_3
+User -- UC1_5
+User -- UC1_6
+User -- UC1_7
+User -- UC2_1
+User -- UC7_4
+
+' Project Member (inherits User)
+Member -- UC2_4
+Member -- UC3_1
+Member -- UC4_1
+Member -- UC4_2
+Member -- UC4_3
+Member -- UC4_5
+Member -- UC4_6
+Member -- UC5_1
+Member -- UC5_2
+Member -- UC5_3
+Member -- UC5_4
+Member -- UC5_5
+Member -- UC6_1
+Member -- UC6_2
+Member -- UC6_3
+
+' Project Admin (inherits Member)
+ProjectAdmin -- UC2_2
+ProjectAdmin -- UC2_3
+ProjectAdmin -- UC3_2
+ProjectAdmin -- UC3_3
+ProjectAdmin -- UC4_4
+
+' Organization Admin (inherits Project Admin)
+OrgAdmin -- UC7_1
+OrgAdmin -- UC7_2
+OrgAdmin -- UC7_3
+
+' ===== EXTERNAL SYSTEM ASSOCIATIONS =====
+UC1_2 -- EmailService
+UC1_4 -- EmailService
+UC1_7 -- EmailService
+UC5_1 -- WebSocket
+UC5_2 -- WebSocket
+UC5_4 -- WebRTC
+UC5_5 -- WebRTC
+
+' ===== INCLUDE RELATIONSHIPS =====
+UC4_4 ..> UC4_5 : <<include>>
+UC4_5 ..> UC4_2 : <<include>>
+UC3_3 ..> UC3_1 : <<include>>
+UC2_2 ..> UC2_1 : <<include>>
+
+' ===== EXTEND RELATIONSHIPS =====
+UC1_1 <.. UC1_6 : <<extend>>
+UC4_2 <.. UC4_6 : <<extend>>
+UC5_4 <.. UC5_5 : <<extend>>
+
+@enduml

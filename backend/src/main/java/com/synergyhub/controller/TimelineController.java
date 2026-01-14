@@ -26,7 +26,7 @@ public class TimelineController {
     @GetMapping("/{projectId}/timeline")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<TimelineViewResponse>> getProjectTimeline(
-            @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
+            @PathVariable @Positive(message = "Project ID must be positive") Long projectId,
             @RequestParam(name = "months", defaultValue = "6") Integer monthsAhead,
             UserContext userContext,
             HttpServletRequest httpRequest) {

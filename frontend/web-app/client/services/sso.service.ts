@@ -21,10 +21,10 @@ export const ssoService = {
   /**
    * Fetch all SSO providers for an organization
    */
-  getSsoProviders: async (): Promise<SsoProviderResponse[]> => {
-    const orgId = getOrgId();
+  getSsoProviders: async (orgId?: number): Promise<SsoProviderResponse[]> => {
+    const resolvedOrgId = orgId ?? getOrgId();
     const response = await api.get<ApiResponse<SsoProviderResponse[]>>(
-      `/organizations/${orgId}/sso/providers`
+      `/organizations/${resolvedOrgId}/sso/providers`
     );
     return response.data.data;
   },

@@ -104,7 +104,7 @@ public class DefaultBackupCodeService implements BackupCodeService {
     }
 
     private User getUser(String userId) {
-        return userRepository.findById(Integer.parseInt(userId))
+        return userRepository.findById(Long.parseLong(userId))
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
     }
 

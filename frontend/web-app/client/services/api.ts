@@ -33,13 +33,35 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Request Interceptor: Attach JWT token
+// Request Interceptor: Attach JWT token and organization ID
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Add X-Organization-ID header if organization ID is available
+    // First check localStorage for separate organizationId item (used by SSO service)
+    const orgIdFromLocalStorage = localStorage.getItem("organizationId");
+    if (orgIdFromLocalStorage) {
+      config.headers["X-Organization-ID"] = orgIdFromLocalStorage;
+    } else {
+      // Fall back to checking user object in localStorage
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          if (user.organizationId) {
+            config.headers["X-Organization-ID"] = user.organizationId.toString();
+          }
+        } catch (error) {
+          // Silently fail - organization context will be missing
+          console.debug("Failed to parse user object for organization ID");
+        }
+      }
+    }
+    
     return config;
   },
   (error) => Promise.reject(error)

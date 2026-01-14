@@ -51,7 +51,7 @@ const authService = {
       if (!refreshToken) return false;
 
       const response = await api.post<LoginResponse>("/auth/refresh", { refreshToken });
-      
+
       if (response.data.success && response.data.data.accessToken) {
         localStorage.setItem("token", response.data.data.accessToken);
         if (response.data.data.refreshToken) {
@@ -69,11 +69,18 @@ const authService = {
   /**
    * Logout user
    */
-  logout(): void {
-    localStorage.removeItem("token");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("user");
-    window.location.href = "/login";
+  async logout(): Promise<void> {
+    try {
+      await api.post("/users/logout");
+    } catch (error) {
+      console.warn("Logout failed on server:", error);
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("organizationId");
+      window.location.href = "/login";
+    }
   },
 
   /**
@@ -122,7 +129,15 @@ const authService = {
    * Verify email with token
    */
   async verifyEmail(email: string, token: string): Promise<ApiResponse<unknown>> {
-    const response = await api.post<ApiResponse<unknown>>("/auth/verify-email", { email, token });
+    const response = await api.post<ApiResponse<unknown>>("/auth/verify-email", { token });
+    return response.data;
+  },
+
+  /**
+   * Resend verification email
+   */
+  async resendVerificationEmail(email: string): Promise<ApiResponse<unknown>> {
+    const response = await api.post<ApiResponse<unknown>>("/auth/resend-verification", { email });
     return response.data;
   },
 };

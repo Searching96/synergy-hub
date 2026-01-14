@@ -64,7 +64,7 @@ public class TaskController {
         @GetMapping("/api/tasks/{taskId}") // ✅ Full path
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<TaskResponse>> getTaskById(
-                        @PathVariable @Positive(message = "Task ID must be positive") Integer taskId,
+                        @PathVariable @Positive(message = "Task ID must be positive") Long taskId,
                         @AuthenticationPrincipal UserPrincipal currentUser) {
 
                 log.info("Getting task: {} for user: {}", taskId, currentUser.getId());
@@ -85,7 +85,7 @@ public class TaskController {
         @GetMapping("/api/projects/{projectId}/tasks") // ✅ Correct path
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<List<TaskResponse>>> getTasksByProject(
-                        @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
+                        @PathVariable @Positive(message = "Project ID must be positive") Long projectId,
                         @AuthenticationPrincipal UserPrincipal currentUser) {
 
                 log.info("Getting tasks for project: {}", projectId);
@@ -106,7 +106,7 @@ public class TaskController {
         @GetMapping("/api/sprints/{sprintId}/tasks") // ✅ Correct path
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<List<TaskResponse>>> getTasksBySprint(
-                        @PathVariable @Positive(message = "Sprint ID must be positive") Integer sprintId,
+                        @PathVariable @Positive(message = "Sprint ID must be positive") Long sprintId,
                         @AuthenticationPrincipal UserPrincipal currentUser) {
 
                 log.info("Getting tasks for sprint: {}", sprintId);
@@ -127,7 +127,7 @@ public class TaskController {
         @GetMapping("/api/tasks/{taskId}/subtasks")
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<List<TaskResponse>>> getSubtasks(
-                        @PathVariable @Positive(message = "Task ID must be positive") Integer taskId,
+                        @PathVariable @Positive(message = "Task ID must be positive") Long taskId,
                         UserContext userContext) {
 
                 User currentUser = new User();
@@ -145,7 +145,7 @@ public class TaskController {
         @GetMapping("/api/projects/{projectId}/backlog") // ✅ Correct path
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<List<TaskResponse>>> getBacklogTasks(
-                        @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
+                        @PathVariable @Positive(message = "Project ID must be positive") Long projectId,
                         @AuthenticationPrincipal UserPrincipal currentUser) {
 
                 log.info("Getting backlog tasks for project: {}", projectId);
@@ -186,7 +186,7 @@ public class TaskController {
         @PutMapping("/api/tasks/{taskId}") // ✅ Full path
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<TaskResponse>> updateTask(
-                        @PathVariable @Positive(message = "Task ID must be positive") Integer taskId,
+                        @PathVariable @Positive(message = "Task ID must be positive") Long taskId,
                         @Valid @RequestBody UpdateTaskRequest request,
                         @AuthenticationPrincipal UserPrincipal currentUser,
                         HttpServletRequest httpRequest) {
@@ -209,7 +209,7 @@ public class TaskController {
         @PutMapping("/api/tasks/{taskId}/assignee")
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<TaskResponse>> updateTaskAssignee(
-                        @PathVariable @Positive(message = "Task ID must be positive") Integer taskId,
+                        @PathVariable @Positive(message = "Task ID must be positive") Long taskId,
                         @Valid @RequestBody AssignTaskRequest request,
                         @AuthenticationPrincipal UserPrincipal currentUser,
                         HttpServletRequest httpRequest) {
@@ -240,8 +240,8 @@ public class TaskController {
         @PostMapping("/api/tasks/{taskId}/move-to-sprint/{sprintId}") // ✅ Full path
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<TaskResponse>> moveTaskToSprint(
-                        @PathVariable @Positive(message = "Task ID must be positive") Integer taskId,
-                        @PathVariable @Positive(message = "Sprint ID must be positive") Integer sprintId,
+                        @PathVariable @Positive(message = "Task ID must be positive") Long taskId,
+                        @PathVariable @Positive(message = "Sprint ID must be positive") Long sprintId,
                         @AuthenticationPrincipal UserPrincipal currentUser,
                         HttpServletRequest httpRequest) {
 
@@ -263,7 +263,7 @@ public class TaskController {
         @PostMapping("/api/tasks/{taskId}/move-to-backlog") // ✅ Full path
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<TaskResponse>> moveTaskToBacklog(
-                        @PathVariable @Positive(message = "Task ID must be positive") Integer taskId,
+                        @PathVariable @Positive(message = "Task ID must be positive") Long taskId,
                         @AuthenticationPrincipal UserPrincipal currentUser,
                         HttpServletRequest httpRequest) {
 
@@ -285,7 +285,7 @@ public class TaskController {
         @DeleteMapping("/api/tasks/{taskId}") // ✅ Full path
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<Void>> deleteTask(
-                        @PathVariable @Positive(message = "Task ID must be positive") Integer taskId,
+                        @PathVariable @Positive(message = "Task ID must be positive") Long taskId,
                         @AuthenticationPrincipal UserPrincipal currentUser,
                         HttpServletRequest httpRequest) {
 
@@ -304,7 +304,7 @@ public class TaskController {
         @PutMapping("/api/tasks/{taskId}/archive")
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<Void>> archiveTask(
-                        @PathVariable @Positive(message = "Task ID must be positive") Integer taskId,
+                        @PathVariable @Positive(message = "Task ID must be positive") Long taskId,
                         @AuthenticationPrincipal UserPrincipal currentUser,
                         HttpServletRequest httpRequest) {
 
@@ -322,7 +322,7 @@ public class TaskController {
         @PutMapping("/api/tasks/{taskId}/unarchive")
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<Void>> unarchiveTask(
-                        @PathVariable @Positive(message = "Task ID must be positive") Integer taskId,
+                        @PathVariable @Positive(message = "Task ID must be positive") Long taskId,
                         @AuthenticationPrincipal UserPrincipal currentUser,
                         HttpServletRequest httpRequest) {
 
@@ -335,5 +335,41 @@ public class TaskController {
 
                 return ResponseEntity.ok(
                                 ApiResponse.success("Task unarchived successfully", null));
+        }
+
+        /**
+         * Get all epics for a project
+         * GET /api/projects/{projectId}/epics
+         */
+        @GetMapping("/api/projects/{projectId}/epics")
+        @PreAuthorize("isAuthenticated()")
+        public ResponseEntity<ApiResponse<List<TaskResponse>>> getProjectEpics(
+                        @PathVariable @Positive(message = "Project ID must be positive") Long projectId,
+                        @AuthenticationPrincipal UserPrincipal currentUser) {
+
+                User user = userRepository.findByEmailWithRolesAndPermissions(currentUser.getEmail())
+                                .orElseThrow();
+
+                List<TaskResponse> epics = taskService.getProjectEpics(projectId, user);
+
+                return ResponseEntity.ok(ApiResponse.success(epics));
+        }
+
+        /**
+         * Get all issues belonging to an epic
+         * GET /api/tasks/{epicId}/epic-children
+         */
+        @GetMapping("/api/tasks/{epicId}/epic-children")
+        @PreAuthorize("isAuthenticated()")
+        public ResponseEntity<ApiResponse<List<TaskResponse>>> getEpicChildren(
+                        @PathVariable @Positive(message = "Epic ID must be positive") Long epicId,
+                        @AuthenticationPrincipal UserPrincipal currentUser) {
+
+                User user = userRepository.findByEmailWithRolesAndPermissions(currentUser.getEmail())
+                                .orElseThrow();
+
+                List<TaskResponse> children = taskService.getEpicChildren(epicId, user);
+
+                return ResponseEntity.ok(ApiResponse.success(children));
         }
 }

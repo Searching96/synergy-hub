@@ -24,7 +24,7 @@ public class PermissionAssignmentService {
      * Assign permissions to a role.
      * Replaces all existing permissions with the provided set.
      */
-    public void assignPermissionsToRole(Role role, Set<Integer> permissionIds) {
+    public void assignPermissionsToRole(Role role, Set<Long> permissionIds) {
         log.debug("Assigning {} permissions to role ID: {}", permissionIds.size(), role.getId());
         
         // Fetch all permission entities by IDs
@@ -43,7 +43,7 @@ public class PermissionAssignmentService {
     /**
      * Add a single permission to a role.
      */
-    public void addPermissionToRole(Role role, Integer permissionId) {
+    public void addPermissionToRole(Role role, Long permissionId) {
         log.debug("Adding permission {} to role ID: {}", permissionId, role.getId());
         
         Permission permission = permissionRepository.findById(permissionId)
@@ -58,7 +58,7 @@ public class PermissionAssignmentService {
     /**
      * Remove a single permission from a role.
      */
-    public void removePermissionFromRole(Role role, Integer permissionId) {
+    public void removePermissionFromRole(Role role, Long permissionId) {
         log.debug("Removing permission {} from role ID: {}", permissionId, role.getId());
         
         Permission permission = permissionRepository.findById(permissionId)

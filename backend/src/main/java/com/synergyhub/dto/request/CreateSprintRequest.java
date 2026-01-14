@@ -22,7 +22,7 @@ public class CreateSprintRequest {
     private String goal;
 
     @NotNull(message = "Project ID is required")
-    private Integer projectId;
+    private Long projectId;
 
     @NotNull(message = "Start date is required")
     @FutureOrPresent(message = "Start date must be in the present or future")

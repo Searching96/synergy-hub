@@ -11,17 +11,16 @@ import java.util.Set;
 @Table(name = "permissions", indexes = {
     @Index(name = "idx_permission_name", columnList = "name")
 })
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Permission {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "perm_id")
-    private Integer id;
+    private Long id;
     
     @NotBlank
     @Column(nullable = false, unique = true, length = 100)

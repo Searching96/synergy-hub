@@ -43,7 +43,7 @@ public class RoleController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<RoleResponse>> createRole(
-            @PathVariable @Positive(message = "Organization ID must be positive") Integer organizationId,
+            @PathVariable @Positive(message = "Organization ID must be positive") Long organizationId,
             @Valid @RequestBody CreateRoleRequest request,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) {
@@ -66,10 +66,10 @@ public class RoleController {
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<RoleResponse>>> getAllRoles(
-            @PathVariable @Positive(message = "Organization ID must be positive") Integer organizationId) {
+            @PathVariable @Positive(message = "Organization ID must be positive") Long organizationId) {
         
         log.info("Fetching all roles in organization: {}", organizationId);
-        List<RoleResponse> responses = roleManagementFacade.getAllRoles();
+        List<RoleResponse> responses = roleManagementFacade.getAllRoles(organizationId);
         
         return ResponseEntity.ok(ApiResponse.success("Roles retrieved successfully", responses));
     }
@@ -81,8 +81,8 @@ public class RoleController {
     @GetMapping("/{roleId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<RoleResponse>> getRole(
-            @PathVariable @Positive(message = "Organization ID must be positive") Integer organizationId,
-            @PathVariable @Positive(message = "Role ID must be positive") Integer roleId) {
+            @PathVariable @Positive(message = "Organization ID must be positive") Long organizationId,
+            @PathVariable @Positive(message = "Role ID must be positive") Long roleId) {
         
         log.info("Fetching role: {} in organization: {}", roleId, organizationId);
         RoleResponse response = roleManagementFacade.getRole(roleId);
@@ -97,8 +97,8 @@ public class RoleController {
     @PutMapping("/{roleId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<RoleResponse>> updateRole(
-            @PathVariable @Positive(message = "Organization ID must be positive") Integer organizationId,
-            @PathVariable @Positive(message = "Role ID must be positive") Integer roleId,
+            @PathVariable @Positive(message = "Organization ID must be positive") Long organizationId,
+            @PathVariable @Positive(message = "Role ID must be positive") Long roleId,
             @Valid @RequestBody UpdateRoleRequest request,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) {
@@ -119,8 +119,8 @@ public class RoleController {
     @DeleteMapping("/{roleId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> deleteRole(
-            @PathVariable @Positive(message = "Organization ID must be positive") Integer organizationId,
-            @PathVariable @Positive(message = "Role ID must be positive") Integer roleId,
+            @PathVariable @Positive(message = "Organization ID must be positive") Long organizationId,
+            @PathVariable @Positive(message = "Role ID must be positive") Long roleId,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) {
         
@@ -140,8 +140,8 @@ public class RoleController {
     @PostMapping("/{roleId}/permissions")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<RoleResponse>> assignPermissionsToRole(
-            @PathVariable @Positive(message = "Organization ID must be positive") Integer organizationId,
-            @PathVariable @Positive(message = "Role ID must be positive") Integer roleId,
+            @PathVariable @Positive(message = "Organization ID must be positive") Long organizationId,
+            @PathVariable @Positive(message = "Role ID must be positive") Long roleId,
             @Valid @RequestBody AssignPermissionsRequest request,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) {

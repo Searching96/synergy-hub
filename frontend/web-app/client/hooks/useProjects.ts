@@ -1,13 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { projectService } from "@/services/project.service";
 import { useToast } from "@/hooks/use-toast";
-import type { Project, CreateProjectDto, UpdateProjectDto } from "@/types/project.types";
+import type {
+  Project,
+  CreateProjectDto,
+  UpdateProjectDto,
+  ProjectFilter,
+  PaginatedResponse
+} from "@/types/project.types";
 import type { ApiResponse } from "@/types/auth.types";
 
-export function useProjects() {
-  return useQuery<ApiResponse<Project[]>>({
-    queryKey: ["projects"],
-    queryFn: projectService.getProjects,
+export function useProjects(filter?: ProjectFilter) {
+  return useQuery<ApiResponse<PaginatedResponse<Project>>>({
+    queryKey: ["projects", filter],
+    queryFn: () => projectService.getProjects(filter),
   });
 }
 

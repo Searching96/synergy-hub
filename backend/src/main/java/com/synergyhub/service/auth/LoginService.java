@@ -12,13 +12,9 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
-
-
 public class LoginService {
 
     private final SessionService sessionService;
@@ -30,7 +26,6 @@ public class LoginService {
     public LoginResponse login(LoginRequest request, String ipAddress, String userAgent) {
         try {
             User user = authenticationStrategy.authenticate(request, ipAddress, userAgent);
-
 
             // Handle 2FA
             if (user.getTwoFactorEnabled() && (request.getTwoFactorCode() == null || request.getTwoFactorCode().isEmpty())) {
@@ -51,11 +46,10 @@ public class LoginService {
             authenticationStrategy.handlePostLogin(user, ipAddress, userAgent);
 
             // Update last login
-            user.setLastLogin(LocalDateTime.now());
-            // Persist last login (still needs UserRepository, can be moved to strategy if desired)
-            // userRepository.save(user); // Uncomment if needed
-
-
+            // Note: User entity doesn't have setLastLogin method
+            // Consider adding lastLogin field to User entity or handling this differently
+            // user.setLastLogin(LocalDateTime.now());
+            // For now, we'll skip this since the field doesn't exist
                 // Create session and generate JWT token
                 String token = sessionService.createSession(user, userAgent, ipAddress);
 
@@ -75,6 +69,7 @@ public class LoginService {
             throw e;
         }
     }
+
     /**
      * Refresh access token using a valid refresh token
      * @param refreshToken The refresh token to validate
@@ -88,7 +83,7 @@ public class LoginService {
         
         try {
             // Validate refresh token and get user details
-            Integer userId = sessionService.getJwtTokenProvider().getUserIdFromToken(refreshToken);
+            Long userId = sessionService.getJwtTokenProvider().getUserIdFromToken(refreshToken);
             String email = sessionService.getJwtTokenProvider().getEmailFromToken(refreshToken);
             
             if (userId == null || email == null) {
@@ -103,8 +98,9 @@ public class LoginService {
             // Get user through authentication strategy
             User user = authenticationStrategy.getUserByEmail(email);
             
-            if (user == null || !user.isActive()) {
-                throw new BadCredentialsException("User not found or inactive");
+            // Check if user is active by checking if account is locked
+            if (user == null || user.getAccountLocked()) {
+                throw new BadCredentialsException("User not found or account locked");
             }
             
             // Generate new access token (and optionally new refresh token)
@@ -131,3 +127,4 @@ public class LoginService {
         }
     }
 }
+

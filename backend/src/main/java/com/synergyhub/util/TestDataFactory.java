@@ -9,10 +9,10 @@ import java.util.HashSet;
 public class TestDataFactory {
 
     public static Organization createOrganization() {
-        return createOrganization(1, "Test Organization");
+        return createOrganization(1L, "Test Organization");
     }
 
-    public static Organization createOrganization(Integer id, String name) {
+    public static Organization createOrganization(Long id, String name) {
         return Organization.builder()
                 .id(id)
                 .name(name)
@@ -21,24 +21,23 @@ public class TestDataFactory {
     }
 
     public static User createUser() {
-        return createUser(1, "test@example.com", "Test User");
+        return createUser(1L, "test@example.com", "Test User");
     }
 
-    public static User createUser(Integer id, String email, String name) {
+    public static User createUser(Long id, String email, String name) {
         Organization org = createOrganization();
-
-        return User.builder()
+        User user = User.builder()
                 .id(id)
                 .email(email)
                 .name(name)
                 .passwordHash("$2a$10$encodedPassword")
-                .organization(org)
                 .emailVerified(true)
                 .twoFactorEnabled(false)
                 .accountLocked(false)
                 .failedLoginAttempts(0)
-                .roles(new HashSet<>())
                 .build();
+        user.addMembership(org, null);
+        return user;
     }
 
     public static User createUnverifiedUser() {
@@ -55,10 +54,10 @@ public class TestDataFactory {
     }
 
     public static Role createRole(String name) {
-        return createRole(1, name);
+        return createRole(1L, name);
     }
 
-    public static Role createRole(Integer id, String name) {
+    public static Role createRole(Long id, String name) {
         return Role.builder()
                 .id(id)
                 .name(name)
@@ -70,7 +69,9 @@ public class TestDataFactory {
     public static User createUserWithRole(String roleName) {
         User user = createUser();
         Role role = createRole(roleName);
-        user.getRoles().add(role);
+        // Add membership with role
+        Organization org = user.getMemberships().get(0).getOrganization();
+        user.addMembership(org, role);
         return user;
     }
 }

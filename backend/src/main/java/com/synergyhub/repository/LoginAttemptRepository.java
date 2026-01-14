@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
-public interface LoginAttemptRepository extends JpaRepository<LoginAttempt, Integer> {
+public interface LoginAttemptRepository extends JpaRepository<LoginAttempt, Long> {
     
     @Query("SELECT la FROM LoginAttempt la WHERE la.email = :email AND la.attemptedAt > :since ORDER BY la.attemptedAt DESC")
     List<LoginAttempt> findRecentAttemptsByEmail(@Param("email") String email, @Param("since") LocalDateTime since);

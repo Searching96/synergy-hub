@@ -17,6 +17,7 @@ interface RoleListProps {
   onDeleteRole?: (roleId: number) => void;
   isLoading?: boolean;
   isCreating?: boolean;
+  canManage?: boolean;
 }
 
 export function RoleList({
@@ -27,6 +28,7 @@ export function RoleList({
   onDeleteRole,
   isLoading = false,
   isCreating = false,
+  canManage = true,
 }: RoleListProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [deleteConfirmRoleId, setDeleteConfirmRoleId] = useState<number | null>(
@@ -34,13 +36,20 @@ export function RoleList({
   );
 
   const handleDeleteClick = (e: React.MouseEvent, roleId: number) => {
+    if (!canManage) return;
     e.stopPropagation();
     setDeleteConfirmRoleId(roleId);
   };
 
   const handleConfirmDelete = (roleId: number) => {
+    if (!canManage) return;
     onDeleteRole?.(roleId);
     setDeleteConfirmRoleId(null);
+  };
+
+  const handleCreateClick = () => {
+    if (!canManage) return;
+    setShowCreateDialog(true);
   };
 
   return (
@@ -95,7 +104,7 @@ export function RoleList({
                   </div>
 
                   {/* Delete Button - Only for non-system roles */}
-                  {!role.isSystemRole && onDeleteRole && (
+                  {!role.isSystemRole && onDeleteRole && canManage && (
                     <button
                       onClick={(e) => handleDeleteClick(e, role.id)}
                       className="shrink-0 p-1 hover:bg-red-50 rounded transition-colors text-gray-400 hover:text-red-600"
@@ -126,13 +135,13 @@ export function RoleList({
       {/* Create Role Button */}
       <div className="p-4 border-t border-gray-200">
         <button
-          onClick={() => setShowCreateDialog(true)}
+          onClick={handleCreateClick}
           className={cn(
             "w-full px-4 py-2 rounded-lg font-medium transition-colors",
             "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800",
-            isCreating && "opacity-50 cursor-not-allowed"
+            (isCreating || !canManage) && "opacity-50 cursor-not-allowed"
           )}
-          disabled={isCreating}
+          disabled={isCreating || !canManage}
         >
           {isCreating ? "Creating..." : "Create Role"}
         </button>
@@ -140,20 +149,22 @@ export function RoleList({
 
       {/* Create Role Dialog */}
       <CreateRoleDialog
-        open={showCreateDialog}
+        open={showCreateDialog && canManage}
         onOpenChange={setShowCreateDialog}
         onCreateRole={(roleData) => {
-          onCreateRole({
-            name: roleData.name,
-            description: roleData.description,
-            permissionIds: roleData.permissionIds ?? [],
-          });
+          if (canManage) {
+            onCreateRole({
+              name: roleData.name,
+              description: roleData.description,
+              permissionIds: roleData.permissionIds ?? [],
+            });
+          }
           setShowCreateDialog(false);
         }}
       />
 
       {/* Delete Confirmation Dialog */}
-      {deleteConfirmRoleId !== null && (
+      {deleteConfirmRoleId !== null && canManage && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg max-w-sm w-full">
             <div className="p-6">

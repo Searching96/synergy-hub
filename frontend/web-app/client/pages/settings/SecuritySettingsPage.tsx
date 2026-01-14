@@ -31,6 +31,8 @@ export default function SecuritySettingsPage() {
     isErrorProviders,
     errorProviders,
     hasAccess,
+    isOrgMissing,
+    refetchProviders,
     register,
     isRegistering,
     toggle,
@@ -70,6 +72,8 @@ export default function SecuritySettingsPage() {
   // Handle API errors gracefully
   const isUnauthorized =
     axios.isAxiosError(errorProviders) && errorProviders.response?.status === 403;
+  const hasProvidersError =
+    isErrorProviders && !isUnauthorized && !isLoadingProviders && !isOrgMissing;
 
   return (
     <div className="space-y-6">
@@ -111,8 +115,23 @@ export default function SecuritySettingsPage() {
         </Card>
       )}
 
+      {/* Missing organization */}
+      {isOrgMissing && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center h-40 gap-2 text-center">
+              <AlertCircle className="h-6 w-6 text-yellow-600" />
+              <div className="font-semibold">No organization selected</div>
+              <p className="text-sm text-muted-foreground max-w-md">
+                Select or create an organization first, then return here to manage SSO providers.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Loading State */}
-      {isLoadingProviders && (
+      {isLoadingProviders && !isOrgMissing && (
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-center h-40">
@@ -122,8 +141,34 @@ export default function SecuritySettingsPage() {
         </Card>
       )}
 
+      {/* Error State (non-403) */}
+      {hasProvidersError && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-red-900">Unable to load SSO providers</h3>
+                  <p className="text-sm text-red-800">
+                    {axios.isAxiosError(errorProviders)
+                      ? errorProviders.response?.data?.message || errorProviders.message
+                      : "An unexpected error occurred while loading SSO providers."}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <Button size="sm" onClick={() => refetchProviders()} className="gap-2">
+                  Retry
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Providers List */}
-      {!isLoadingProviders && (
+      {!isLoadingProviders && !isOrgMissing && !hasProvidersError && (
         <Card>
           <CardHeader>
             <CardTitle>Active SSO Providers</CardTitle>

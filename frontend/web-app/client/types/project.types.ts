@@ -57,3 +57,21 @@ export interface UpdateProjectDto {
   description?: string;
   endDate?: string;
 }
+
+export interface PaginatedResponse<T> {
+  content: T[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+
+export interface ProjectFilter {
+  search?: string;
+  status?: string;
+  page?: number;
+  size?: number;
+}

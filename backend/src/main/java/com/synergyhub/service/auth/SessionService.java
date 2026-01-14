@@ -59,7 +59,7 @@ public class SessionService {
      * List all active sessions for a user by User ID
      */
     @Transactional(readOnly = true)
-    public List<UserSessionResponse> listActiveSessions(Integer userId, String currentTokenId) {
+    public List<UserSessionResponse> listActiveSessions(Long userId, String currentTokenId) {
         User user = getUserById(userId);
         List<UserSession> sessions = userSessionRepository.findActiveSessionsByUser(user, LocalDateTime.now());
         
@@ -82,7 +82,7 @@ public class SessionService {
      */
     @Transactional
     @CacheEvict(value = "sessionRevocation", key = "#tokenId")
-    public void revokeSession(String tokenId, Integer userId) {
+    public void revokeSession(String tokenId, Long userId) {
         // 1. Fetch the session
         UserSession session = userSessionRepository.findByTokenId(tokenId)
                 .orElseThrow(() -> new ResourceNotFoundException("Session", "tokenId", tokenId));
@@ -102,7 +102,7 @@ public class SessionService {
      */
     @Transactional
     @CacheEvict(value = "sessionRevocation", allEntries = true)
-    public void revokeAllSessions(Integer userId) {
+    public void revokeAllSessions(Long userId) {
         User user = getUserById(userId);
         userSessionRepository.revokeAllUserSessions(user);
     }
@@ -120,7 +120,7 @@ public class SessionService {
     }
 
     // Helper to fetch user or throw exception
-    private User getUserById(Integer userId) {
+    private User getUserById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
     }

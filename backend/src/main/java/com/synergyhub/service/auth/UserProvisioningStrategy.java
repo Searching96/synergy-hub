@@ -10,5 +10,5 @@ import com.synergyhub.dto.request.RegisterRequest;
  */
 public interface UserProvisioningStrategy {
     Organization determineOrganization(RegisterRequest request);
-    Role determineDefaultRole(RegisterRequest request);
+    Role determineDefaultRole(RegisterRequest request, Organization organization);
 }

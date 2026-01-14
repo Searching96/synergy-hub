@@ -1,39 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { taskService } from "@/services/task.service";
 
-export interface BacklogTask {
-  id: number;
-  title: string;
-  description?: string;
-  status: string;
-  priority: string;
-  type: string;
-  projectId: number;
-  sprintId?: number | null;
-  sprintName?: string | null;
-  assignee?: {
-    id: number;
-    name: string;
-    email: string;
-  } | null;
-  reporter?: {
-    id: number;
-    name: string;
-    email: string;
-  };
-  storyPoints?: number | null;
-  dueDate?: string;
-  createdAt: string;
-  updatedAt: string;
-  overdue: boolean;
-  archived: boolean;
-}
+import type { BacklogTask } from "@/types/task.types";
 
 export function useBacklogTasks(projectId: string | undefined) {
   return useQuery({
     queryKey: ["backlog", projectId],
     queryFn: async () => {
       if (!projectId) throw new Error("Project ID is required");
+
       const response = await taskService.getProjectTasks(projectId, {});
       return response.data as BacklogTask[];
     },
@@ -53,7 +28,7 @@ export function useMoveTaskToSprint(projectId: string | undefined) {
       sprintId: number | null;
     }) => {
       // If sprintId is null or 0, move to backlog, otherwise move to sprint
-      const response = sprintId 
+      const response = sprintId
         ? await taskService.moveTaskToSprint(taskId, sprintId)
         : await taskService.moveTaskToBacklog(taskId);
       return response.data;
@@ -67,8 +42,8 @@ export function useMoveTaskToSprint(projectId: string | undefined) {
 
       // Optimistically update
       if (previousData) {
-        const newData = previousData.map(task => 
-          task.id === taskId 
+        const newData = previousData.map(task =>
+          task.id === taskId
             ? { ...task, sprintId }
             : task
         );

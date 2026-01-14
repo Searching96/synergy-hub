@@ -31,7 +31,7 @@ public class AuditLogQueryService {
      * Get activity logs for a specific user.
      */
     @Transactional(readOnly = true)
-    public List<ActivityLogResponse> getUserActivityLogs(Integer userId, int page, int size) {
+    public List<ActivityLogResponse> getUserActivityLogs(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"));
         var logs = auditLogRepository.findByUserId(userId, pageable);
         return activityLogMapper.toResponseList(logs);
@@ -41,7 +41,7 @@ public class AuditLogQueryService {
      * Get activity logs for a specific project.
      */
     @Transactional(readOnly = true)
-    public List<ActivityLogResponse> getProjectActivityLogs(Integer projectId, int page, int size) {
+    public List<ActivityLogResponse> getProjectActivityLogs(Long projectId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"));
         var logs = auditLogRepository.findByProjectId(projectId, pageable);
         return activityLogMapper.toResponseList(logs);
@@ -61,7 +61,7 @@ public class AuditLogQueryService {
      * Get recent activity for a user (last 24 hours).
      */
     @Transactional(readOnly = true)
-    public List<ActivityLogResponse> getRecentUserActivity(Integer userId) {
+    public List<ActivityLogResponse> getRecentUserActivity(Long userId) {
         LocalDateTime since = LocalDateTime.now().minusHours(24);
         var logs = auditLogRepository.findByUserIdAndTimestampAfter(userId, since);
         return activityLogMapper.toResponseList(logs);

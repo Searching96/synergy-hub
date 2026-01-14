@@ -22,8 +22,8 @@ public class EmailVerification {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "verification_id")
-    private Integer id;
+        @Column(name = "verification_id")
+        private Long id;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

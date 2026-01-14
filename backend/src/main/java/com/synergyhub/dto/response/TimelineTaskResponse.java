@@ -15,7 +15,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TimelineTaskResponse {
-    private Integer id;
+    private Long id;
     private String title;
     private TaskStatus status;
     private TaskType type;
@@ -31,8 +31,8 @@ public class TimelineTaskResponse {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate createdAt;
     
-    private Integer sprintId;
+    private Long sprintId;
     private String sprintName;
-    private Integer assigneeId;
+    private Long assigneeId;
     private String assigneeName;
 }

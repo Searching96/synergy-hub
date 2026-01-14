@@ -55,9 +55,9 @@ public class SsoConfigurationService {
      * Security: Only ORG_ADMIN or GLOBAL_ADMIN
      * Event: SsoProviderRegisteredEvent (for auditing)
      */
-    @Transactional
+        @Transactional
     public SsoProviderResponse registerSsoProvider(
-            Integer organizationId,
+            Long organizationId,
             RegisterSsoProviderRequest request,
             User actor,
             String ipAddress) {
@@ -108,8 +108,8 @@ public class SsoConfigurationService {
      *
      * Security: Only ORG_ADMIN or GLOBAL_ADMIN
      */
-    @Transactional(readOnly = true)
-    public List<SsoProviderResponse> getSsoProviders(Integer organizationId, User actor) {
+        @Transactional(readOnly = true)
+    public List<SsoProviderResponse> getSsoProviders(Long organizationId, User actor) {
         log.debug("Fetching SSO providers for organization {}", organizationId);
         
         // SECURITY GUARD: Check access first
@@ -131,8 +131,8 @@ public class SsoConfigurationService {
      *
      * Security: Only ORG_ADMIN or GLOBAL_ADMIN
      */
-    @Transactional(readOnly = true)
-    public SsoProviderResponse getSsoProvider(Integer organizationId, Integer providerId, User actor) {
+        @Transactional(readOnly = true)
+    public SsoProviderResponse getSsoProvider(Long organizationId, Long providerId, User actor) {
         log.debug("Fetching SSO provider {} for organization {}", providerId, organizationId);
         
         // SECURITY GUARD: Check access first
@@ -158,10 +158,10 @@ public class SsoConfigurationService {
      * Security: Only ORG_ADMIN or GLOBAL_ADMIN
      * Event: SsoProviderUpdatedEvent (for auditing)
      */
-    @Transactional
+        @Transactional
     public SsoProviderResponse updateSsoProvider(
-            Integer organizationId,
-            Integer providerId,
+            Long organizationId,
+            Long providerId,
             UpdateSsoProviderRequest request,
             User actor,
             String ipAddress) {
@@ -225,10 +225,10 @@ public class SsoConfigurationService {
      * Security: Only ORG_ADMIN or GLOBAL_ADMIN
      * Event: SsoProviderSecretRotatedEvent (marked CRITICAL for compliance)
      */
-    @Transactional
+        @Transactional
     public SsoProviderResponse rotateSsoSecret(
-            Integer organizationId,
-            Integer providerId,
+            Long organizationId,
+            Long providerId,
             RotateSsoSecretRequest request,
             User actor,
             String ipAddress) {
@@ -268,10 +268,10 @@ public class SsoConfigurationService {
      * Security: Only ORG_ADMIN or GLOBAL_ADMIN
      * Event: SsoProviderStateChangedEvent (for auditing)
      */
-    @Transactional
+        @Transactional
     public SsoProviderResponse enableSsoProvider(
-            Integer organizationId,
-            Integer providerId,
+            Long organizationId,
+            Long providerId,
             User actor,
             String ipAddress) {
         
@@ -286,10 +286,10 @@ public class SsoConfigurationService {
      * Security: Only ORG_ADMIN or GLOBAL_ADMIN
      * Event: SsoProviderStateChangedEvent (for auditing)
      */
-    @Transactional
+        @Transactional
     public SsoProviderResponse disableSsoProvider(
-            Integer organizationId,
-            Integer providerId,
+            Long organizationId,
+            Long providerId,
             User actor,
             String ipAddress) {
         
@@ -298,9 +298,9 @@ public class SsoConfigurationService {
         return changeProviderState(organizationId, providerId, false, actor, ipAddress);
     }
 
-    private SsoProviderResponse changeProviderState(
-            Integer organizationId,
-            Integer providerId,
+        private SsoProviderResponse changeProviderState(
+            Long organizationId,
+            Long providerId,
             Boolean enabled,
             User actor,
             String ipAddress) {
@@ -343,10 +343,10 @@ public class SsoConfigurationService {
      * Security: Only ORG_ADMIN or GLOBAL_ADMIN
      * Event: SsoProviderDeletedEvent (for auditing)
      */
-    @Transactional
+        @Transactional
     public void deleteSsoProvider(
-            Integer organizationId,
-            Integer providerId,
+            Long organizationId,
+            Long providerId,
             User actor,
             String ipAddress) {
         

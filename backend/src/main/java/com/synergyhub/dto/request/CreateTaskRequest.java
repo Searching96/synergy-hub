@@ -24,18 +24,18 @@ public class CreateTaskRequest {
     private String description;
 
     @NotNull(message = "Project ID is required")
-    private Integer projectId;
+    private Long projectId;
 
-    private Integer sprintId;
+    private Long sprintId;
 
     @NotNull(message = "Priority is required")
     private TaskPriority priority;
 
     private TaskType type;
 
-    private Integer assigneeId;
+    private Long assigneeId;
 
-    private Integer parentTaskId;
+    private Long parentTaskId;
 
     @Min(value = 1, message = "Story points must be at least 1")
     @Max(value = 100, message = "Story points must not exceed 100")

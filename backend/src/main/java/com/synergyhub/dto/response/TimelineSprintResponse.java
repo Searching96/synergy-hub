@@ -13,7 +13,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TimelineSprintResponse {
-    private Integer id;
+    private Long id;
     private String name;
     private String status;
     

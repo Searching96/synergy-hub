@@ -26,7 +26,7 @@ public class Project {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "project_id")
-    private Integer id;
+    private Long id;
     
     @NotNull(message = "Organization is required")
     @ManyToOne(fetch = FetchType.LAZY)

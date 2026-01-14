@@ -22,7 +22,7 @@ public class LoginAttempt {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "attempt_id")
-    private Integer id;
+    private Long id;
     
     @Column(nullable = false, length = 100)
     @Email

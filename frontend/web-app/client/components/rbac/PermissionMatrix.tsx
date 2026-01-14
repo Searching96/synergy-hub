@@ -17,6 +17,7 @@ interface PermissionMatrixProps {
   groupedPermissions: Array<[string, Permission[]]>;
   hasPermission: (roleId: number, permissionId: number) => boolean;
   onTogglePermission: (permissionId: number) => void;
+  canManage?: boolean;
 }
 
 export function PermissionMatrix({
@@ -27,6 +28,7 @@ export function PermissionMatrix({
   groupedPermissions,
   hasPermission,
   onTogglePermission,
+  canManage = true,
 }: PermissionMatrixProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(
     groupedPermissions[0]?.[0] || null
@@ -64,13 +66,20 @@ export function PermissionMatrix({
             <h2 className="text-lg font-semibold text-gray-900">{role.name}</h2>
             <p className="text-sm text-gray-600 mt-1">{role.description}</p>
           </div>
-          {role.isSystemRole && (
-            <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1">
-              <span className="text-xs font-medium text-amber-900">
-                System Role
+          <div className="flex items-center gap-2">
+            {!canManage && (
+              <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-900">
+                View only
               </span>
-            </span>
-          )}
+            )}
+            {role.isSystemRole && (
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1">
+                <span className="text-xs font-medium text-amber-900">
+                  System Role
+                </span>
+              </span>
+            )}
+          </div>
         </div>
         <p className="text-xs text-gray-500 mt-3">
           {role.permissions.length} permission{role.permissions.length !== 1 ? "s" : ""} assigned
@@ -124,10 +133,10 @@ export function PermissionMatrix({
                       permission={permission}
                       role={role}
                       isChecked={hasPermission(role.id, permission.id)}
-                      isDisabled={role.isSystemRole}
+                      isDisabled={role.isSystemRole || !canManage}
                       isLoading={isUpdating}
                       onToggle={() => {
-                        if (!role.isSystemRole) {
+                        if (!role.isSystemRole && canManage) {
                           onTogglePermission(permission.id);
                         }
                       }}
@@ -147,6 +156,14 @@ export function PermissionMatrix({
             <span className="font-medium">System Role:</span> This role is
             protected and cannot be modified. Contact your system administrator
             if you need to change its permissions.
+          </p>
+        </div>
+      )}
+
+      {!canManage && (
+        <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
+          <p className="text-sm text-blue-900">
+            You have view-only access. Ask an organization admin to grant you editing rights.
           </p>
         </div>
       )}

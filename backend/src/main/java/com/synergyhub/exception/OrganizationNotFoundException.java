@@ -2,7 +2,7 @@ package com.synergyhub.exception;
 
 public class OrganizationNotFoundException extends RuntimeException {
 
-    public OrganizationNotFoundException(Integer organizationId) {
+    public OrganizationNotFoundException(Long organizationId) {
         super("Organization with ID " + organizationId + " not found");
     }
 

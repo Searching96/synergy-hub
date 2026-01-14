@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface UserSessionRepository extends JpaRepository<UserSession, Integer> {
+public interface UserSessionRepository extends JpaRepository<UserSession, Long> {
     
     Optional<UserSession> findByTokenId(String tokenId);
     

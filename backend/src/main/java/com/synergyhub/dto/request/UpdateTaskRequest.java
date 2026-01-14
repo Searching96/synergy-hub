@@ -29,9 +29,9 @@ public class UpdateTaskRequest {
 
     private TaskType type;
 
-    private Integer assigneeId;
+    private Long assigneeId;
 
-    private Integer sprintId;
+    private Long sprintId;
 
     @Min(value = 1, message = "Story points must be at least 1")
     @Max(value = 100, message = "Story points must not exceed 100")

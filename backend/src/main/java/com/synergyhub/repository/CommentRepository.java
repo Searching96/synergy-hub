@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface CommentRepository extends JpaRepository<Comment, Integer> {
+public interface CommentRepository extends JpaRepository<Comment, Long> {
     // Fetch comments for a task, ordered by oldest first (chat style) - paginated
-    List<Comment> findByTaskIdOrderByCreatedAtAsc(Integer taskId, Pageable pageable);
+    List<Comment> findByTaskIdOrderByCreatedAtAsc(Long taskId, Pageable pageable);
 }

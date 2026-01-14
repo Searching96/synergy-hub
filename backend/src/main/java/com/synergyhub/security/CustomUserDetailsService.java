@@ -26,10 +26,17 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
     
     @Transactional(readOnly = true)
-    public UserDetails loadUserById(Integer id) {
-        User user = userRepository.findByIdWithRolesAndPermissions(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
-        
-        return UserPrincipal.create(user);
+    public UserDetails loadUserById(Long id) {
+        // Check if organization context is set
+        if (OrganizationContext.hasCurrentOrgId()) {
+            Long orgId = OrganizationContext.getcurrentOrgId();
+            User user = userRepository.findByIdWithRolesAndPermissionsInOrganization(id, orgId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
+            return UserPrincipal.create(user);
+        } else {
+            User user = userRepository.findByIdWithRolesAndPermissions(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
+            return UserPrincipal.create(user);
+        }
     }
 }

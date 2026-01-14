@@ -4,8 +4,9 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, Users, Loader2 } from "lucide-react";
+import { MessageSquare, Users } from "lucide-react"; // Removed Loader2
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton"; // Added Skeleton
 import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { Separator } from "@/components/ui/separator";
@@ -130,8 +131,28 @@ export function ProjectChatRoom({
       {/* Messages Area */}
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div className="space-y-4 p-4">
+            <div className="flex items-start gap-3">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-[200px]" />
+                <Skeleton className="h-10 w-[300px]" />
+              </div>
+            </div>
+            <div className="flex items-start gap-3 flex-row-reverse">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-[150px] ml-auto" />
+                <Skeleton className="h-12 w-[250px]" />
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-[180px]" />
+                <Skeleton className="h-8 w-[280px]" />
+              </div>
+            </div>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">

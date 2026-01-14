@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Trash2, UserPlus, Loader2, Mail, Archive } from "lucide-react";
+import { ProjectBreadcrumb } from "@/components/project/ProjectBreadcrumb";
 
 export default function ProjectSettingsPage() {
   const { project } = useProject();
@@ -173,15 +174,19 @@ export default function ProjectSettingsPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Project Settings</h1>
-        <p className="text-muted-foreground mt-1">
-          Configure settings for {project?.name}
-        </p>
+    <div className="p-6">
+      <div className="mb-4">
+        <ProjectBreadcrumb current="Settings" />
       </div>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Project Settings</h1>
+          <p className="text-muted-foreground mt-1">
+            Configure settings for {project?.name}
+          </p>
+        </div>
 
-      {/* Details Section */}
+        {/* Details Section */}
       <Card>
         <CardHeader>
           <CardTitle>Project Details</CardTitle>
@@ -451,6 +456,7 @@ export default function ProjectSettingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 }

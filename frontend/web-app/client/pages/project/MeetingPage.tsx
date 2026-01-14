@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { AlertCircle, Video, Loader2 } from "lucide-react";
-import { mockGetMeeting, mockJoinMeeting, mockLeaveMeeting } from "@/lib/mockMeeting";
+import { meetingService } from "@/services/meeting.service";
+import authService from "@/services/auth.service";
 import type { Meeting } from "@/types/meeting.types";
 
 export default function MeetingPage() {
@@ -24,9 +25,9 @@ export default function MeetingPage() {
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(true);
 
-  // TODO: Get from auth context
-  const currentUserId = 1;
-  const currentUserName = "John Doe";
+  const currentUser = authService.getCurrentUser();
+  const currentUserId = currentUser?.id || 0;
+  const currentUserName = currentUser?.name || "Guest";
 
   useEffect(() => {
     loadMeeting();
@@ -41,8 +42,8 @@ export default function MeetingPage() {
 
     try {
       setIsLoading(true);
-      const meetingData = await mockGetMeeting(meetingId);
-      
+      const meetingData = await meetingService.getMeeting(meetingId);
+
       if (!meetingData) {
         setError("Meeting not found");
       } else if (meetingData.status === "ENDED") {
@@ -66,13 +67,7 @@ export default function MeetingPage() {
 
     try {
       setIsJoining(true);
-      const updatedMeeting = await mockJoinMeeting(
-        meeting.id,
-        currentUserId,
-        currentUserName,
-        audioEnabled,
-        videoEnabled
-      );
+      const updatedMeeting = await meetingService.joinMeeting(meeting.id);
       setMeeting(updatedMeeting);
       setHasJoined(true);
     } catch (err) {
@@ -87,7 +82,7 @@ export default function MeetingPage() {
     if (!meeting) return;
 
     try {
-      await mockLeaveMeeting(meeting.id, currentUserId);
+      // await meetingService.leaveMeeting(meeting.id); // Not implemented yet
       navigate(`/projects/${projectId}/meetings`);
     } catch (err) {
       console.error("Failed to leave meeting:", err);

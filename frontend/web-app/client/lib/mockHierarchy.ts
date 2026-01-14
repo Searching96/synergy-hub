@@ -63,73 +63,13 @@ export const parentToSubtasksMap: Record<number, number[]> = {
 
 /**
  * Enrich a task with hierarchy information
+ * 
+ * NOTE: This function is deprecated. The backend now returns epic and parentTask
+ * relationships directly in the Task entity. This function now just returns
+ * the task as-is for backward compatibility.
  */
 export function enrichTaskWithHierarchy(task: Task): Task {
-  const enriched = { ...task };
-
-  // Add epic information
-  if (task.type !== "EPIC" && task.type !== "SUBTASK") {
-    const parentIssue = mockParentIssues.find(p => p.id === task.id);
-    if (parentIssue?.epicId) {
-      const epic = mockEpics.find(e => e.id === parentIssue.epicId);
-      if (epic) {
-        enriched.epicId = epic.id;
-        enriched.epic = { id: epic.id, title: epic.title };
-      }
-    }
-  }
-
-  // Add parent task information for subtasks
-  if (task.type === "SUBTASK") {
-    const subtask = mockSubtasks.find(s => s.id === task.id);
-    if (subtask?.parentTaskId) {
-      const parent = mockParentIssues.find(p => p.id === subtask.parentTaskId);
-      if (parent) {
-        enriched.parentTaskId = parent.id;
-        enriched.parentTask = { id: parent.id, title: parent.title, type: parent.type };
-      }
-    }
-  }
-
-  // Add subtasks for parent issues
-  if (task.type === "STORY" || task.type === "TASK" || task.type === "BUG") {
-    const subtaskIds = parentToSubtasksMap[task.id] || [];
-    if (subtaskIds.length > 0) {
-      enriched.subtasks = mockSubtasks
-        .filter(s => subtaskIds.includes(s.id))
-        .map(s => ({
-          ...s,
-          projectId: task.projectId,
-          title: s.title,
-          description: null,
-          status: "TO_DO" as any,
-          priority: "MEDIUM" as any,
-          type: s.type,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }));
-    }
-  }
-
-  // Add child issues for epics
-  if (task.type === "EPIC") {
-    const childIds = epicToIssuesMap[task.id] || [];
-    // Note: In real implementation, would fetch full child issues
-    enriched.subtasks = childIds.map(id => {
-      const parent = mockParentIssues.find(p => p.id === id);
-      return parent ? {
-        ...parent,
-        projectId: task.projectId,
-        description: null,
-        status: "TO_DO" as any,
-        priority: "MEDIUM" as any,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      } as Task : null;
-    }).filter(Boolean) as Task[];
-  }
-
-  return enriched;
+  return task;
 }
 
 /**

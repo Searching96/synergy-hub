@@ -38,7 +38,7 @@ public class BoardService {
      */
     @PreAuthorize("@projectSecurity.hasProjectAccess(#projectId, #currentUser)")
     @Transactional(readOnly = true)
-    public BoardViewResponse getProjectBoard(Integer projectId, User currentUser) {
+    public BoardViewResponse getProjectBoard(Long projectId, User currentUser) {
         log.info("Fetching board view for project: {}", projectId);
 
         if (!projectRepository.existsById(projectId)) {

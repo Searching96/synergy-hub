@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { userService } from "@/services/user.service";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,7 @@ import {
 export default function SettingsPage() {
   const { user, logout } = useAuth();
   const { toast } = useToast();
-  
+
   const [profileData, setProfileData] = useState({
     name: user?.name || "",
     email: user?.email || "",
@@ -35,6 +36,9 @@ export default function SettingsPage() {
     newPassword: "",
     confirmPassword: "",
   });
+
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotifications: true,
@@ -53,17 +57,29 @@ export default function SettingsPage() {
       .slice(0, 2);
   };
 
-  const handleProfileUpdate = (e: React.FormEvent) => {
+  const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Success",
-      description: "Profile updated successfully",
-    });
+    setIsUpdatingProfile(true);
+    try {
+      await userService.updateProfile({ name: profileData.name });
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update profile",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingProfile(false);
+    }
   };
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast({
         title: "Error",
@@ -73,16 +89,32 @@ export default function SettingsPage() {
       return;
     }
 
-    toast({
-      title: "Success",
-      description: "Password changed successfully",
-    });
-    
-    setPasswordData({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    });
+    setIsChangingPassword(true);
+    try {
+      await userService.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+
+      toast({
+        title: "Success",
+        description: "Password changed successfully",
+      });
+
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to change password",
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleNotificationUpdate = () => {
@@ -93,7 +125,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-8 max-w-[1200px] mx-auto">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Settings</h1>
         <p className="text-muted-foreground">
@@ -175,9 +207,15 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
+                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isUpdatingProfile}>
+                    {isUpdatingProfile ? (
+                      <span className="flex items-center gap-2">Update...</span>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
                   </Button>
                 </div>
               </form>
@@ -262,9 +300,15 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                    <Lock className="h-4 w-4 mr-2" />
-                    Update Password
+                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isChangingPassword}>
+                    {isChangingPassword ? (
+                      <span>Updating...</span>
+                    ) : (
+                      <>
+                        <Lock className="h-4 w-4 mr-2" />
+                        Update Password
+                      </>
+                    )}
                   </Button>
                 </div>
               </form>

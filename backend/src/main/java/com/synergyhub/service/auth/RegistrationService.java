@@ -66,24 +66,33 @@ public class RegistrationService {
             throw ex;
         }
 
-        // Use strategy for organization and role
-        Organization organization = userProvisioningStrategy.determineOrganization(request);
-        Role defaultRole = userProvisioningStrategy.determineDefaultRole(request);
 
-        // Create user
+
+        Organization organization = null;
+        Role defaultRole = null;
+        boolean wantsToCreateOrg = request.getNewOrganizationName() != null && !request.getNewOrganizationName().isBlank();
+        boolean wantsToJoinOrg = request.getOrganizationId() != null || (request.getInvitationToken() != null && !request.getInvitationToken().isBlank());
+        if (wantsToCreateOrg || wantsToJoinOrg) {
+            organization = userProvisioningStrategy.determineOrganization(request);
+            defaultRole = userProvisioningStrategy.determineDefaultRole(request, organization);
+        }
+
+        // Create user (organization and roles may be null/empty)
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
                 .passwordHash(userValidationService.encodePassword(request.getPassword()))
-                .organization(organization)
                 .emailVerified(!emailVerificationEnabled)
                 .twoFactorEnabled(false)
                 .accountLocked(false)
                 .failedLoginAttempts(0)
-                .roles(new HashSet<>())
                 .build();
-
-        user.getRoles().add(defaultRole);
+        // Add membership if organization and defaultRole are present
+        if (organization != null && defaultRole != null) {
+            user.addMembership(organization, defaultRole);
+        } else if (organization != null) {
+            user.addMembership(organization, null);
+        }
 
         User savedUser = userRepository.save(user);
         log.info("User created successfully: {}", savedUser.getEmail());
@@ -137,13 +146,14 @@ public class RegistrationService {
         }
 
         User user = verification.getUser();
-        user.setEmailVerified(true);
-        userRepository.save(user);
+        String email = user.getEmail();
+        String name = user.getName();
 
-        verification.setVerified(true);
-        emailVerificationRepository.save(verification);
+        // Flip flags using bulk updates only to avoid flushing user/roles
+        userRepository.markEmailVerified(user.getId());
+        emailVerificationRepository.markVerified(verification.getId());
 
-        log.info("Email verified successfully for user: {}", user.getEmail());
+        log.info("Email verified successfully for user: {}", email);
 
         // ✅ Publish email verified event
         eventPublisher.publishEvent(new EmailVerifiedEvent(user, ipAddress));

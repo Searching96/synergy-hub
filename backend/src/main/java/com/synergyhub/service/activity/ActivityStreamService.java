@@ -29,7 +29,7 @@ public class ActivityStreamService {
 
     @PreAuthorize("@projectSecurity.hasProjectAccess(#projectId, #currentUser)")
     @Transactional(readOnly = true)
-    public List<ActivityLogResponse> getProjectActivity(Integer projectId, User currentUser, int page, int size) {
+    public List<ActivityLogResponse> getProjectActivity(Long projectId, User currentUser, int page, int size) {
         log.info("Fetching activity stream for project: {}", projectId);
 
         if (!projectRepository.existsById(projectId)) {

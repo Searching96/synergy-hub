@@ -2,7 +2,7 @@ package com.synergyhub.exception;
 
 public class PermissionNotFoundException extends RuntimeException {
 
-    public PermissionNotFoundException(Integer permissionId) {
+    public PermissionNotFoundException(Long permissionId) {
         super("Permission with ID " + permissionId + " not found");
     }
 

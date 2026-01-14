@@ -33,7 +33,7 @@ public class ActivityStreamController {
     @GetMapping("/{projectId}/activity")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<ActivityLogResponse>>> getProjectActivity(
-            @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
+            @PathVariable @Positive(message = "Project ID must be positive") Long projectId,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
             UserContext userContext) {

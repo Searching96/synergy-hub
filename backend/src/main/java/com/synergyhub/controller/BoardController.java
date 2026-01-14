@@ -30,7 +30,7 @@ public class BoardController {
     @GetMapping("/{projectId}/board")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<BoardViewResponse>> getProjectBoard(
-            @PathVariable @Positive(message = "Project ID must be positive") Integer projectId,
+            @PathVariable @Positive(message = "Project ID must be positive") Long projectId,
             UserContext userContext,
             HttpServletRequest httpRequest) {
 

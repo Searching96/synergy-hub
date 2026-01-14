@@ -23,7 +23,7 @@ public class ChatMessage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "message_id")
-    private Integer id;
+    private Long id;
     
     @NotNull(message = "Channel is required")
     @ManyToOne(fetch = FetchType.LAZY)

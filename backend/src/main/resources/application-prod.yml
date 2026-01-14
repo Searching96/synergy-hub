@@ -20,10 +20,7 @@ logging:
 
 app:
   cors:
-    allowed-origins:
-      - https://synergyhub.com
-      - https://app.synergyhub.com
-      - https://www.synergyhub.com
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://synergyhub.vn,http://localhost:3000}
 
 # Disable Swagger in production
 springdoc:

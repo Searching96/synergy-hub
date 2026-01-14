@@ -14,7 +14,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TimelineViewResponse {
-    private Integer projectId;
+    private Long projectId;
     private String projectName;
     
     @JsonFormat(pattern = "yyyy-MM-dd")
