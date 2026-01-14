@@ -6,7 +6,7 @@ public class SprintAlreadyActiveException extends BadRequestException {
         super(String.format("Project '%s' already has an active sprint", projectName));
     }
 
-    public SprintAlreadyActiveException(Integer projectId, Integer activeSprintId) {
+    public SprintAlreadyActiveException(Long projectId, Long activeSprintId) {
         super(String.format("Project %d already has active sprint with ID: %d", projectId, activeSprintId));
     }
 }

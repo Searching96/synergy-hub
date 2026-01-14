@@ -20,4 +20,16 @@ export const commentService = {
     const response = await api.post<ApiResponse<Comment>>(`/tasks/${taskId}/comments`, { content });
     return response.data;
   },
+
+  // Update an existing comment
+  async updateComment(taskId: number | string, commentId: number, content: string): Promise<ApiResponse<Comment>> {
+    const response = await api.put<ApiResponse<Comment>>(`/tasks/${taskId}/comments/${commentId}`, { content });
+    return response.data;
+  },
+
+  // Delete a comment
+  async deleteComment(taskId: number | string, commentId: number): Promise<ApiResponse<void>> {
+    const response = await api.delete<ApiResponse<void>>(`/tasks/${taskId}/comments/${commentId}`);
+    return response.data;
+  },
 };

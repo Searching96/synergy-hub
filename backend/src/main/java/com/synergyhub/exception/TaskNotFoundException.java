@@ -2,7 +2,7 @@ package com.synergyhub.exception;
 
 public class TaskNotFoundException extends ResourceNotFoundException {
 
-    public TaskNotFoundException(Integer taskId) {
+    public TaskNotFoundException(Long taskId) {
         super("Task", "id", taskId);
     }
 

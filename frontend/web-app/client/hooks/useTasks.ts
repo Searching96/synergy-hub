@@ -9,10 +9,14 @@ export function useCreateTask() {
   return useMutation({
     mutationFn: (taskData: any) => taskService.createTask(taskData),
     onSuccess: () => {
-      // Invalidate all project-related queries to refresh task counts
+      // Invalidate all task-related queries to refresh everywhere
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({ queryKey: ["project"] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["my-issues"] });
+      queryClient.invalidateQueries({ queryKey: ["backlog"] });
+      queryClient.invalidateQueries({ queryKey: ["board"] });
+      queryClient.invalidateQueries({ queryKey: ["my-projects"] });
       toast({
         title: "Success",
         description: "Issue created successfully",

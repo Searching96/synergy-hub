@@ -20,7 +20,7 @@ public class Comment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "comment_id")
-    private Integer id;
+    private Long id;
     
     @NotNull(message = "Task is required")
     @ManyToOne(fetch = FetchType.LAZY)

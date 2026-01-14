@@ -63,7 +63,7 @@ public class SsoProviderController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<SsoProviderResponse>> registerSsoProvider(
-            @PathVariable @Positive(message = "Organization ID must be positive") Integer organizationId,
+            @PathVariable @Positive(message = "Organization ID must be positive") Long organizationId,
             @Valid @RequestBody RegisterSsoProviderRequest request,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) {
@@ -90,7 +90,7 @@ public class SsoProviderController {
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<SsoProviderResponse>>> listSsoProviders(
-            @PathVariable @Positive(message = "Organization ID must be positive") Integer organizationId,
+            @PathVariable @Positive(message = "Organization ID must be positive") Long organizationId,
             @AuthenticationPrincipal UserPrincipal principal) {
         
         User user = getUser(principal);
@@ -108,8 +108,8 @@ public class SsoProviderController {
     @GetMapping("/{providerId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<SsoProviderResponse>> getSsoProvider(
-            @PathVariable @Positive(message = "Organization ID must be positive") Integer organizationId,
-            @PathVariable @Positive(message = "Provider ID must be positive") Integer providerId,
+            @PathVariable @Positive(message = "Organization ID must be positive") Long organizationId,
+            @PathVariable @Positive(message = "Provider ID must be positive") Long providerId,
             @AuthenticationPrincipal UserPrincipal principal) {
         
         User user = getUser(principal);
@@ -129,8 +129,8 @@ public class SsoProviderController {
     @PutMapping("/{providerId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<SsoProviderResponse>> updateSsoProvider(
-            @PathVariable @Positive(message = "Organization ID must be positive") Integer organizationId,
-            @PathVariable @Positive(message = "Provider ID must be positive") Integer providerId,
+            @PathVariable @Positive(message = "Organization ID must be positive") Long organizationId,
+            @PathVariable @Positive(message = "Provider ID must be positive") Long providerId,
             @Valid @RequestBody UpdateSsoProviderRequest request,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) {
@@ -156,8 +156,8 @@ public class SsoProviderController {
     @PostMapping("/{providerId}/rotate-secret")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<SsoProviderResponse>> rotateSsoSecret(
-            @PathVariable @Positive(message = "Organization ID must be positive") Integer organizationId,
-            @PathVariable @Positive(message = "Provider ID must be positive") Integer providerId,
+            @PathVariable @Positive(message = "Organization ID must be positive") Long organizationId,
+            @PathVariable @Positive(message = "Provider ID must be positive") Long providerId,
             @Valid @RequestBody RotateSsoSecretRequest request,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) {
@@ -182,8 +182,8 @@ public class SsoProviderController {
     @PutMapping("/{providerId}/enable")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<SsoProviderResponse>> enableSsoProvider(
-            @PathVariable @Positive(message = "Organization ID must be positive") Integer organizationId,
-            @PathVariable @Positive(message = "Provider ID must be positive") Integer providerId,
+            @PathVariable @Positive(message = "Organization ID must be positive") Long organizationId,
+            @PathVariable @Positive(message = "Provider ID must be positive") Long providerId,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) {
         
@@ -205,8 +205,8 @@ public class SsoProviderController {
     @PutMapping("/{providerId}/disable")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<SsoProviderResponse>> disableSsoProvider(
-            @PathVariable @Positive(message = "Organization ID must be positive") Integer organizationId,
-            @PathVariable @Positive(message = "Provider ID must be positive") Integer providerId,
+            @PathVariable @Positive(message = "Organization ID must be positive") Long organizationId,
+            @PathVariable @Positive(message = "Provider ID must be positive") Long providerId,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) {
         
@@ -230,8 +230,8 @@ public class SsoProviderController {
     @DeleteMapping("/{providerId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> deleteSsoProvider(
-            @PathVariable @Positive(message = "Organization ID must be positive") Integer organizationId,
-            @PathVariable @Positive(message = "Provider ID must be positive") Integer providerId,
+            @PathVariable @Positive(message = "Organization ID must be positive") Long organizationId,
+            @PathVariable @Positive(message = "Provider ID must be positive") Long providerId,
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest httpRequest) {
         

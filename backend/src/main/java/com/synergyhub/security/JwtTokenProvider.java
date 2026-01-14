@@ -62,7 +62,7 @@ public class JwtTokenProvider {
         return generateTokenFromUserId(userPrincipal.getId(), userPrincipal.getEmail());
     }
 
-    public String generateTokenFromUserId(Integer userId, String email) {
+    public String generateTokenFromUserId(Long userId, String email) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 
@@ -76,7 +76,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String generateTemporaryToken(Integer userId, String email) {
+    public String generateTemporaryToken(Long userId, String email) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + 300000); // 5 minutes
 
@@ -91,14 +91,39 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public Integer getUserIdFromToken(String token) {
+    public String generateRefreshToken(Long userId, String email) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpirationMs * 7); // 7 days (or longer as needed)
+
+        return Jwts.builder()
+                .subject(String.valueOf(userId))
+                .claim("email", email)
+                .claim("refresh", true)
+                .claim("jti", UUID.randomUUID().toString())
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey(), Jwts.SIG.HS512)
+                .compact();
+    }
+
+    public Long getUserIdFromToken(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
 
-        return Integer.parseInt(claims.getSubject());
+        return Long.parseLong(claims.getSubject());
+    }
+
+    public String getEmailFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return claims.get("email", String.class);
     }
 
     public String getTokenIdFromToken(String token) {

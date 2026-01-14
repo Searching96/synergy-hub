@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { Briefcase, CheckSquare, Loader2 } from "lucide-react";
 import type { ApiResponse } from "@/types/auth.types";
 import type { Task } from "@/types/task.types";
@@ -89,7 +90,15 @@ export default function YourWork() {
     }
 
     if (!projects || projects.length === 0) {
-      return <div className="text-muted-foreground text-sm">No recent projects yet.</div>;
+      return (
+        <div className="flex flex-col items-center justify-center py-12 border rounded-lg bg-muted/20 border-dashed">
+          <Briefcase className="h-10 w-10 text-muted-foreground mb-3 opacity-50" />
+          <p className="text-muted-foreground text-sm mb-4">No recent projects found.</p>
+          <Button variant="outline" size="sm" asChild>
+            <a href="/projects">View All Projects</a>
+          </Button>
+        </div>
+      );
     }
 
     return (

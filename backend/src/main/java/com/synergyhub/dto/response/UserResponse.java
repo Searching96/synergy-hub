@@ -16,10 +16,10 @@ import java.util.Set;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class UserResponse {
     
-    private Integer id;
+    private Long id;
     private String name;
     private String email;
-    private Integer organizationId;
+    private Long organizationId;
     private String organizationName;
     private boolean emailVerified;
     private boolean twoFactorEnabled;

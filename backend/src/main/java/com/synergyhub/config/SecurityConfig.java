@@ -32,7 +32,10 @@ public class SecurityConfig {
     private final CustomUserDetailsService customUserDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
     private final SessionService sessionService;
-    private final CorsConfigurationSource corsConfigurationSource; // ✅ Must be defined in another config class
+    private final CorsConfigurationSource corsConfigurationSource;
+    private final com.synergyhub.security.oauth2.CustomOAuth2UserService customOAuth2UserService;
+    private final com.synergyhub.security.oauth2.OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final com.synergyhub.security.oauth2.OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -61,39 +64,41 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
-            // ✅ Use the injected source directly
-            .cors(cors -> cors.configurationSource(corsConfigurationSource)) 
+            .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .exceptionHandling(exception -> exception
-                // ✅ Use the injected bean directly (no need for @Bean method call if injected)
                 .authenticationEntryPoint(new JwtAuthenticationEntryPoint()) 
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(auth -> auth
-                // ✅ PUBLIC AUTH ENDPOINTS
                 .requestMatchers(
-                    "/api/auth/login",
-                    "/api/auth/register",
-                    "/api/auth/verify-email",
-                    "/api/auth/resend-verification",
-                    "/api/auth/forgot-password",
-                    "/api/auth/validate-reset-token",
-                    "/api/auth/reset-password",
+                    "/api/auth/**",
                     "/api/public/**",
+                    "/api/oauth2/**", // Allow OAuth2 endpoints
                     "/actuator/health/**",
                     "/swagger-ui/**", 
                     "/v3/api-docs/**"
                 ).permitAll()
-                
-                // ✅ ALL OTHER ENDPOINTS
                 .anyRequest().authenticated()
+            )
+            .oauth2Login(oauth2 -> oauth2
+                .authorizationEndpoint(auth -> auth
+                    .baseUri("/api/oauth2/authorize")
+                )
+                .redirectionEndpoint(redir -> redir
+                    .baseUri("/api/oauth2/callback/*")
+                )
+                .userInfoEndpoint(userInfo -> userInfo
+                    .userService(customOAuth2UserService)
+                )
+                .successHandler(oAuth2AuthenticationSuccessHandler)
+                .failureHandler(oAuth2AuthenticationFailureHandler)
             );
 
-        // ✅ SECURITY HEADERS
         http.headers(headers -> headers
             .frameOptions(frame -> frame.deny())
-            .xssProtection(xss -> xss.disable()) // OK if using CSP
+            .xssProtection(xss -> xss.disable()) 
             .contentSecurityPolicy(csp -> csp
                 .policyDirectives("default-src 'self'; frame-ancestors 'none'; form-action 'self'")
             )

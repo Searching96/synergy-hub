@@ -4,25 +4,30 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
+import com.synergyhub.domain.entity.Organization;
+
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
 @Table(name = "roles")
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Role {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "role_id")
-    private Integer id;
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "organization_id", nullable = false)
+    private Organization organization;
     
     @NotBlank
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(nullable = false, length = 50)
     private String name;
     
     @Column(columnDefinition = "TEXT")

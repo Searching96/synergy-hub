@@ -12,11 +12,11 @@ import java.util.List;
 @AllArgsConstructor
 public class SprintDetailResponse {
 
-    private Integer id;
+    private Long id;
     private String name;
     private String goal;
 
-    private Integer projectId;
+    private Long projectId;
     private String projectName;
 
     private LocalDate startDate;

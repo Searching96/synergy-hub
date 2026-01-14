@@ -36,7 +36,7 @@ public class ProjectService {
     }
 
     // ✅ FIXED: Added ipAddress parameter
-    public ProjectResponse updateProject(Integer projectId, UpdateProjectRequest request, 
+    public ProjectResponse updateProject(Long projectId, UpdateProjectRequest request, 
                                         User currentUser, String ipAddress) {
         Project project = getProjectById(projectId);
         projectSecurity.requireLeadOrAdmin(project, currentUser);
@@ -47,7 +47,7 @@ public class ProjectService {
     }
 
     // ✅ FIXED: Added ipAddress parameter
-    public void deleteProject(Integer projectId, User currentUser, String ipAddress) {
+    public void deleteProject(Long projectId, User currentUser, String ipAddress) {
         Project project = getProjectById(projectId);
         projectSecurity.requireLeadOrAdmin(project, currentUser);
         
@@ -55,33 +55,33 @@ public class ProjectService {
         lifecycleService.deleteProjectPermanently(project, currentUser, ipAddress);
     }
 
-    public void archiveProject(Integer projectId, User currentUser, String ipAddress) {
+    public void archiveProject(Long projectId, User currentUser, String ipAddress) {
         Project project = getProjectById(projectId);
         projectSecurity.requireLeadOrAdmin(project, currentUser);
         
         lifecycleService.archiveProject(project, currentUser, ipAddress);
     }
 
-    public void unarchiveProject(Integer projectId, User currentUser, String ipAddress) {
+    public void unarchiveProject(Long projectId, User currentUser, String ipAddress) {
         Project project = getProjectById(projectId);
         projectSecurity.requireLeadOrAdmin(project, currentUser);
         
         lifecycleService.unarchiveProject(project, currentUser, ipAddress);
     }
 
-    public void addMember(Integer projectId, AddMemberRequest request, User currentUser, String ipAddress) {
+    public void addMember(Long projectId, AddMemberRequest request, User currentUser, String ipAddress) {
         Project project = getProjectById(projectId);
         projectSecurity.requireLeadOrAdmin(project, currentUser);
         membershipService.addMemberByEmail(project, request.getEmail(), request.getRole(), currentUser, ipAddress);
     }
 
-    public void removeMember(Integer projectId, Integer userId, User currentUser, String ipAddress) {
+    public void removeMember(Long projectId, Long userId, User currentUser, String ipAddress) {
         Project project = getProjectById(projectId);
         projectSecurity.requireLeadOrAdmin(project, currentUser);
         membershipService.removeMember(project, userId, currentUser, ipAddress);
     }
 
-    public void updateMemberRole(Integer projectId, Integer userId, UpdateMemberRoleRequest request, 
+    public void updateMemberRole(Long projectId, Long userId, UpdateMemberRoleRequest request, 
                                 User currentUser, String ipAddress) {
         Project project = getProjectById(projectId);
         projectSecurity.requireLeadOrAdmin(project, currentUser);
@@ -89,14 +89,14 @@ public class ProjectService {
     }
 
     @Transactional(readOnly = true)
-    public ProjectResponse getProject(Integer projectId, User currentUser) {
+    public ProjectResponse getProject(Long projectId, User currentUser) {
         Project project = getProjectById(projectId);
         projectSecurity.requireAccess(project, currentUser);
         return projectMapper.toProjectResponse(project);
     }
 
     @Transactional(readOnly = true)
-    public ProjectDetailResponse getProjectDetails(Integer projectId, User currentUser) {
+    public ProjectDetailResponse getProjectDetails(Long projectId, User currentUser) {
         Project project = projectRepository.findByIdWithMembers(projectId)
                 .orElseThrow(() -> new ProjectNotFoundException(projectId));
         projectSecurity.requireAccess(project, currentUser);
@@ -110,13 +110,27 @@ public class ProjectService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectMemberResponse> getProjectMembers(Integer projectId, User currentUser) {
+    public org.springframework.data.domain.Page<ProjectResponse> getProjects(
+            User currentUser, String search, String status, int page, int size) {
+        
+        org.springframework.data.domain.Pageable pageable = 
+            org.springframework.data.domain.PageRequest.of(page, size, 
+                org.springframework.data.domain.Sort.by("updatedAt").descending());
+                
+        org.springframework.data.domain.Page<Project> projectPage = 
+            projectRepository.findProjectsForUserWithFilter(currentUser.getId(), search, status, pageable);
+            
+        return projectPage.map(projectMapper::toProjectResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProjectMemberResponse> getProjectMembers(Long projectId, User currentUser) {
         Project project = getProjectById(projectId);
         projectSecurity.requireAccess(project, currentUser);
         return membershipService.getProjectMembers(project, projectMapper::toProjectMemberResponseList);
     }
 
-    private Project getProjectById(Integer projectId) {
+    private Project getProjectById(Long projectId) {
         return projectRepository.findById(projectId)
                 .orElseThrow(() -> new ProjectNotFoundException(projectId));
     }

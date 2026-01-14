@@ -36,7 +36,7 @@ function ProjectLayoutContent() {
   return (
     <>
       <ProjectSidebar />
-      <div className="lg:pl-64 p-6">
+      <div className="lg:pl-64">
         <Outlet />
       </div>
     </>

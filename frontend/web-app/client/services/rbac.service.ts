@@ -13,13 +13,17 @@ import type {
   ApiResponse,
 } from "@/types/rbac.types";
 
-// Get organization ID from current context (from auth or localStorage)
+// Get organization ID from current user context
 const getOrgId = (): number => {
-  // This would typically come from your auth context
-  // For now, assuming it's stored or available from user context
-  const orgId = localStorage.getItem("organizationId");
-  if (!orgId) throw new Error("Organization ID not found");
-  return parseInt(orgId, 10);
+  try {
+    const userStr = localStorage.getItem("user");
+    if (!userStr) throw new Error("User not found in localStorage");
+    const user = JSON.parse(userStr);
+    if (!user.organizationId) throw new Error("Organization ID not found in user object");
+    return user.organizationId;
+  } catch (error) {
+    throw new Error(`Failed to get organization ID: ${error}`);
+  }
 };
 
 export const rbacService = {

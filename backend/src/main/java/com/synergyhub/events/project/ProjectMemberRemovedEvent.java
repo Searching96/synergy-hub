@@ -6,9 +6,9 @@ import lombok.Getter;
 
 @Getter
 public class ProjectMemberRemovedEvent extends ProjectEvent {
-    private final Integer removedUserId;
+    private final Long removedUserId;
     
-    public ProjectMemberRemovedEvent(Project project, Integer removedUserId, 
+    public ProjectMemberRemovedEvent(Project project, Long removedUserId,
                                      User actor, String ipAddress) {
         super(project, actor, ipAddress);
         this.removedUserId = removedUserId;

@@ -68,4 +68,10 @@ public class DefaultAuthenticationStrategy implements AuthenticationStrategy {
         loginAttemptService.recordLoginAttempt(email, ipAddress, false);
         eventPublisher.publishEvent(new LoginFailedEvent(email, ipAddress, userAgent, reason));
     }
+
+    @Override
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmailWithRolesAndPermissions(email)
+                .orElse(null);
+    }
 }

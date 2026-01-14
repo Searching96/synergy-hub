@@ -1,15 +1,18 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
-import PrivateRoute from "@/components/PrivateRoute";
+import PrivateRoute from "@/components/guards/PrivateRoute";
+import { OrganizationGuard } from "@/components/guards/OrganizationGuard";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
+import EmailVerificationPage from "./pages/auth/EmailVerificationPage";
+import OAuth2RedirectHandler from "./pages/auth/OAuth2RedirectHandler";
+import OrganizationWelcome from "./pages/organization/OrganizationWelcome";
 import axios from "axios";
 
 import YourWork from "./pages/dashboard/YourWork";
@@ -21,75 +24,109 @@ import ProjectLayout from "./components/layout/ProjectLayout";
 import BacklogPage from "./pages/project/BacklogPage";
 import TimelinePage from "./pages/project/TimelinePage";
 import ActivityPage from "./pages/project/ActivityPage";
+import ChatPage from "./pages/project/ChatPage";
+import MeetingsListPage from "./pages/project/MeetingsListPage";
+import MeetingPage from "./pages/project/MeetingPage";
 import ProjectSettingsPage from "./pages/project/ProjectSettingsPage";
+import ListPage from "./pages/project/ListPage";
+import IssuesPage from "./pages/project/IssuesPage";
+import RoleManagerPage from "./pages/settings/RoleManagerPage";
+import TeamCreatePage from "./pages/teams/TeamCreatePage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: (failureCount, error) => {
-        // Don't retry on client errors (401, 403, 404)
         if (axios.isAxiosError(error)) {
           const status = error.response?.status || 0;
-          if ([401, 403, 404].includes(status)) {
+          if ([400, 401, 403, 404, 422].includes(status)) {
             return false;
           }
         }
-        // Retry server errors max 2 times
         return failureCount < 2;
       },
-      staleTime: 30 * 1000, // 30 seconds default
-      refetchOnWindowFocus: false, // Prevent aggressive refetching on window focus
-      refetchOnReconnect: true, // Refetch on network reconnection
+      staleTime: 30 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
     },
     mutations: {
-      retry: false, // Don't retry mutations by default
+      retry: (failureCount, error) => {
+        if (axios.isAxiosError(error)) {
+          const status = error.response?.status || 0;
+          if ([400, 401, 403, 404, 422].includes(status)) {
+            return false;
+          }
+        }
+        return failureCount < 1;
+      },
     },
   },
 });
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          }}
-        >
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+
           <Routes>
-            {/* Public Routes */}
+            {/* ========== PUBLIC ROUTES - No Auth Required ========== */}
+            <Route path="/" element={<Home />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            
-            {/* Protected Routes with Dashboard Layout */}
+            <Route path="/verify-email" element={<EmailVerificationPage />} />
+            <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
+
+            {/* ========== AUTHENTICATED BUT NO ORG - Organization Setup ========== */}
             <Route element={<PrivateRoute />}>
-              <Route element={<DashboardLayout />}>
+              <Route path="/welcome" element={<OrganizationWelcome />} />
+            </Route>
+
+            {/* ========== PROTECTED ROUTES - Auth + Organization Required ========== */}
+            <Route element={<PrivateRoute />}>
+              <Route
+                element={
+                  <OrganizationGuard>
+                    <DashboardLayout />
+                  </OrganizationGuard>
+                }
+              >
                 <Route path="/dashboard" element={<YourWork />} />
                 <Route path="/projects" element={<ProjectsPage />} />
+                <Route path="/teams/create" element={<TeamCreatePage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/settings/organization" element={<OrganizationSettingsPage />} />
-                
-                {/* Project Nested Routes */}
+                <Route path="/settings/roles" element={<RoleManagerPage />} />
+
+                {/* Project Nested Routes with Relative Paths */}
                 <Route path="/projects/:projectId" element={<ProjectLayout />}>
-                  <Route index element={<Navigate to="board" replace />} />
+                  <Route index element={<Navigate to="activity" replace />} />
                   <Route path="board" element={<BoardPage />} />
                   <Route path="backlog" element={<BacklogPage />} />
+                  <Route path="list" element={<ListPage />} />
+                  <Route path="issues" element={<IssuesPage />} />
                   <Route path="timeline" element={<TimelinePage />} />
                   <Route path="activity" element={<ActivityPage />} />
+                  <Route path="chat" element={<ChatPage />} />
+                  <Route path="meetings" element={<MeetingsListPage />} />
+                  <Route path="meetings/:meetingId" element={<MeetingPage />} />
                   <Route path="settings" element={<ProjectSettingsPage />} />
                 </Route>
               </Route>
             </Route>
-            
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+
+            {/* ========== CATCH-ALL 404 ========== */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
+        </TooltipProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 

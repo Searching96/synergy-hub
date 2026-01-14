@@ -39,9 +39,9 @@ public class ProjectMember {
     @EqualsAndHashCode
     public static class ProjectMemberId implements Serializable {
         @Column(name = "project_id")
-        private Integer projectId;
+        private Long projectId;
         
         @Column(name = "user_id")
-        private Integer userId;
+        private Long userId;
     }
 }

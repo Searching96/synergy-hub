@@ -26,7 +26,11 @@ public class RegisterRequest {
     @Size(min = 8, max = 100, message = "Password must be at least 8 characters")
     private String password;
     
-    private Integer organizationId; // Optional for invitation flow
-    
+    private Long organizationId; // Optional for invitation flow
+
     private String invitationToken; // Optional for invitation flow
+
+    // For new organization creation
+    private String newOrganizationName;
+    private String newOrganizationAddress;
 }

@@ -4,9 +4,15 @@ import { IssueHeaderEditor } from "@/components/issue/IssueHeaderEditor";
 import { IssueMetadataPanel } from "@/components/issue/IssueMetadataPanel";
 import { IssueMetadataPanelSkeleton } from "@/components/issue/IssueMetadataPanelSkeleton";
 import { IssueCommentsSection } from "@/components/issue/IssueCommentsSection";
+import { IssueHierarchySection } from "@/components/issue/IssueHierarchySection";
+import { IssueAttachmentsSection } from "@/components/issue/IssueAttachmentsSection";
 import type { Task, TaskStatus, TaskPriority } from "@/types/task.types";
 import type { ProjectMember } from "@/types/project.types";
 import type { Comment } from "@/types/comment.types";
+import type { Attachment } from "@/types/attachment.types";
+import { useState, useEffect } from "react";
+import { taskService } from "@/services/task.service";
+import { toast } from "sonner"; // Assuming sonner is used for toasts based on other files
 
 interface IssueDetailBodyProps {
   task: Task;
@@ -53,6 +59,50 @@ export function IssueDetailBody({
   onAssigneeChange,
   onAddComment,
 }: IssueDetailBodyProps) {
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [subtasks, setSubtasks] = useState<Task[]>([]);
+  // We can also store epic/parent info if needed, but task object typically has basic info
+
+  useEffect(() => {
+    if (task?.id) {
+      loadAttachments();
+      loadSubtasks();
+    }
+  }, [task?.id]);
+
+  const loadAttachments = async () => {
+    try {
+      const response = await taskService.getTaskAttachments(task.id);
+      setAttachments(response.data || []);
+    } catch (error) {
+      console.error("Failed to load attachments", error);
+    }
+  };
+
+  const loadSubtasks = async () => {
+    try {
+      const response = await taskService.getTaskSubtasks(task.id);
+      setSubtasks(response.data || []);
+    } catch (error) {
+      console.error("Failed to load subtasks", error);
+    }
+  };
+
+  const handleIssueClick = (issueId: number) => {
+    // Update URL to show the clicked issue
+    const searchParams = new URLSearchParams(window.location.search);
+    searchParams.set('selectedIssue', issueId.toString());
+    window.history.pushState({}, '', `?${searchParams.toString()}`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
+  // Combine fetched data with task prop
+  const taskWithData = {
+    ...task,
+    attachments: attachments,
+    subtasks: subtasks
+  };
+
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="grid grid-cols-3 gap-6 p-6">
@@ -60,7 +110,7 @@ export function IssueDetailBody({
         <div className="col-span-2 space-y-6">
           {/* Title */}
           <IssueHeaderEditor
-            task={task}
+            task={taskWithData}
             isEditing={isEditingTitle}
             isProjectArchived={isProjectArchived}
             onEdit={onEditTitle}
@@ -83,11 +133,36 @@ export function IssueDetailBody({
             />
           </div>
 
+          {/* Issue Hierarchy Section */}
+          <IssueHierarchySection
+            task={taskWithData}
+            onIssueClick={handleIssueClick}
+          />
+
+          {/* Attachments Section */}
+          <IssueAttachmentsSection
+            entityId={taskWithData.id}
+            attachments={attachments}
+            onUpload={async (entityId, file, onProgress) => {
+              const response = await taskService.uploadAttachment(entityId, file, onProgress);
+              // Refresh attachments
+              loadAttachments();
+              return response.data;
+            }}
+            onDelete={async (attachmentId) => {
+              await taskService.deleteAttachment(attachmentId);
+              loadAttachments();
+            }}
+            onDownload={taskService.downloadAttachment}
+            onBulkDownload={taskService.bulkDownloadAttachments}
+            isReadOnly={isProjectArchived}
+          />
+
           <Separator />
 
           {/* Comments Section */}
           <IssueCommentsSection
-            taskId={task.id}
+            taskId={taskWithData.id}
             comments={comments}
             isProjectArchived={isProjectArchived}
             onAddComment={onAddComment}
@@ -106,7 +181,7 @@ export function IssueDetailBody({
             </div>
           ) : (
             <IssueMetadataPanel
-              task={task}
+              task={taskWithData}
               members={members}
               isProjectArchived={isProjectArchived}
               onStatusChange={onStatusChange}

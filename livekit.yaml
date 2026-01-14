@@ -1,0 +1,13 @@
+port: 7880
+bind_address: 0.0.0.0
+rtc:
+    udp_port: 7882
+    tcp_port: 7881
+    use_external_ip: true
+
+redis:
+    address: redis:6379
+
+keys:
+    # API Key and Secret will be injected via environment variable LIVEKIT_KEYS
+    # Format: key: secret

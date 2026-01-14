@@ -4,16 +4,20 @@ USE synergy_hub;
 
 -- Table: organizations
 CREATE TABLE organizations (
-    org_id      INT AUTO_INCREMENT PRIMARY KEY,
-    name        VARCHAR(100) NOT NULL UNIQUE,
-    address     VARCHAR(255),
-    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    org_id                  INT AUTO_INCREMENT PRIMARY KEY,
+    name                    VARCHAR(100) NOT NULL UNIQUE,
+    address                 VARCHAR(255),
+    contact_email           VARCHAR(100),
+    invite_code             VARCHAR(20) UNIQUE,
+    invite_code_expires_at  DATETIME,
+    created_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_org_invite_code (invite_code),
+    INDEX idx_org_contact_email (contact_email)
 ) ENGINE=InnoDB;
 
 -- Table: users (each user belongs to an organization)
 CREATE TABLE users (
     user_id             INT AUTO_INCREMENT PRIMARY KEY,
-    organization_id     INT NOT NULL,
     name                VARCHAR(100) NOT NULL,
     email               VARCHAR(100) NOT NULL UNIQUE,
     password_hash       VARCHAR(255) NOT NULL,
@@ -24,32 +28,75 @@ CREATE TABLE users (
     last_login          DATETIME,
     failed_login_attempts INT NOT NULL DEFAULT 0,
     created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_email (email),
-    INDEX idx_organization (organization_id),
-    CONSTRAINT fk_user_org FOREIGN KEY (organization_id)
-        REFERENCES organizations(org_id)
-        ON DELETE CASCADE
+    INDEX idx_email (email)
+) ENGINE=InnoDB;
+
+-- Table: user_organizations (many-to-many user-org relationship)
+CREATE TABLE user_organizations (
+    user_id INT NOT NULL,
+    organization_id INT NOT NULL,
+    joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+    status ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED') NOT NULL DEFAULT 'ACTIVE',
+    PRIMARY KEY (user_id, organization_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (organization_id) REFERENCES organizations(org_id) ON DELETE CASCADE,
+    INDEX idx_user_orgs (user_id),
+    INDEX idx_org_users (organization_id),
+    INDEX idx_primary_org (user_id, is_primary)
+) ENGINE=InnoDB;
+
+-- Table: join_requests (users requesting to join organizations)
+CREATE TABLE join_requests (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    user_id         INT NOT NULL,
+    organization_id INT NOT NULL,
+    status          VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    requested_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    approved_by     INT,
+    approved_at     DATETIME,
+    INDEX idx_join_request_user (user_id),
+    INDEX idx_join_request_org (organization_id),
+    INDEX idx_join_request_status (status),
+    UNIQUE KEY uk_user_org (user_id, organization_id),
+    CONSTRAINT fk_join_request_user 
+        FOREIGN KEY (user_id) 
+        REFERENCES users(user_id) 
+        ON DELETE CASCADE,
+    CONSTRAINT fk_join_request_org 
+        FOREIGN KEY (organization_id) 
+        REFERENCES organizations(org_id) 
+        ON DELETE CASCADE,
+    CONSTRAINT fk_join_request_approver 
+        FOREIGN KEY (approved_by) 
+        REFERENCES users(user_id) 
+        ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- Insert sample organizations
-INSERT INTO organizations (org_id, name, address) VALUES
-(1, 'TechNova Corp', '1234 Elm Street, Metropolis'),
-(2, 'HealthPlus Inc', '9876 Oak Ave, Gotham'),
-(3, 'EduFuture Labs', '500 Academy Lane, Star City');
+INSERT INTO organizations (org_id, name, address, contact_email) VALUES
+(1, 'TechNova Corp', '1234 Elm Street, Metropolis', 'admin@technova.com'),
+(2, 'HealthPlus Inc', '9876 Oak Ave, Gotham', 'admin@healthplus.com'),
+(3, 'EduFuture Labs', '500 Academy Lane, Star City', 'admin@edufuture.com');
 
 -- Insert sample users (with organization linkage)
-INSERT INTO users (user_id, organization_id, name, email, password_hash, two_factor_enabled, email_verified) VALUES
-(1, 1, 'Alice Johnson', 'alice@technova.com', '$2a$10$dummyhash1', FALSE, TRUE),
-(2, 1, 'Bob Smith', 'bob@technova.com', '$2a$10$dummyhash2', TRUE, TRUE),
-(3, 2, 'Carol White', 'carol@healthplus.com', '$2a$10$dummyhash3', FALSE, TRUE),
-(4, 2, 'David Young', 'david@healthplus.com', '$2a$10$dummyhash4', FALSE, TRUE),
-(5, 3, 'Eve Jackson', 'eve@edufuture.com', '$2a$10$dummyhash5', FALSE, FALSE);
+INSERT INTO users (user_id, name, email, password_hash, two_factor_enabled, email_verified) VALUES
+(1, 'Alice Johnson', 'alice@technova.com', '$2a$10$dummyhash1', FALSE, TRUE),
+(2, 'Bob Smith', 'bob@technova.com', '$2a$10$dummyhash2', TRUE, TRUE),
+(3, 'Carol White', 'carol@healthplus.com', '$2a$10$dummyhash3', FALSE, TRUE),
+(4, 'David Young', 'david@healthplus.com', '$2a$10$dummyhash4', FALSE, TRUE),
+(5, 'Eve Jackson', 'eve@edufuture.com', '$2a$10$dummyhash5', FALSE, FALSE);
 
--- Table: roles (predefined roles like Admin, Manager, Member, Guest)
+-- Table: roles (per-organization roles)
 CREATE TABLE roles (
-    role_id   INT AUTO_INCREMENT PRIMARY KEY,
-    name      VARCHAR(50) NOT NULL UNIQUE,
-    description TEXT
+    role_id         INT AUTO_INCREMENT PRIMARY KEY,
+    organization_id INT NOT NULL,
+    name            VARCHAR(50) NOT NULL,
+    description     TEXT,
+    UNIQUE KEY uk_role_org_name (organization_id, name),
+    CONSTRAINT fk_role_org FOREIGN KEY (organization_id)
+        REFERENCES organizations(org_id)
+        ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Table: permissions (individual actionable permissions)
@@ -60,7 +107,6 @@ CREATE TABLE permissions (
     INDEX idx_permission_name (name)
 ) ENGINE=InnoDB;
 
--- Table: role_permissions (linking roles to permissions, many-to-many)
 CREATE TABLE role_permissions (
     role_id INT NOT NULL,
     perm_id INT NOT NULL,
@@ -69,21 +115,33 @@ CREATE TABLE role_permissions (
     FOREIGN KEY (perm_id) REFERENCES permissions(perm_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- Table: user_roles (assigning roles to users, many-to-many)
 CREATE TABLE user_roles (
     user_id INT NOT NULL,
     role_id INT NOT NULL,
-    PRIMARY KEY (user_id, role_id),
+    organization_id INT NOT NULL,
+    PRIMARY KEY (user_id, role_id, organization_id),
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE CASCADE
+    FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE CASCADE,
+    FOREIGN KEY (organization_id) REFERENCES organizations(org_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- Insert sample roles
-INSERT INTO roles (role_id, name, description) VALUES
-(1, 'Organization Admin', 'Admin of the organization with full access'),
-(2, 'Project Manager', 'Manages projects and sprints'),
-(3, 'Team Member', 'Regular team member with task access'),
-(4, 'Guest', 'External or view-only collaborator');
+-- Insert sample roles per organization (org_id, name)
+INSERT INTO roles (role_id, organization_id, name, description) VALUES
+-- Org 1: TechNova Corp
+(1, 1, 'ORG_ADMIN', 'Organization Admin with full access to manage roles and settings'),
+(2, 1, 'PROJECT_MANAGER', 'Manages projects and sprints'),
+(3, 1, 'TEAM_MEMBER', 'Regular team member with task access'),
+(4, 1, 'GUEST', 'External or view-only collaborator'),
+-- Org 2: HealthPlus Inc
+(5, 2, 'ORG_ADMIN', 'Organization Admin with full access to manage roles and settings'),
+(6, 2, 'PROJECT_MANAGER', 'Manages projects and sprints'),
+(7, 2, 'TEAM_MEMBER', 'Regular team member with task access'),
+(8, 2, 'GUEST', 'External or view-only collaborator'),
+-- Org 3: EduFuture Labs
+(9, 3, 'ORG_ADMIN', 'Organization Admin with full access to manage roles and settings'),
+(10, 3, 'PROJECT_MANAGER', 'Manages projects and sprints'),
+(11, 3, 'TEAM_MEMBER', 'Regular team member with task access'),
+(12, 3, 'GUEST', 'External or view-only collaborator');
 
 -- Insert sample permissions
 INSERT INTO permissions (perm_id, name, description) VALUES
@@ -93,26 +151,32 @@ INSERT INTO permissions (perm_id, name, description) VALUES
 (4, 'VIEW_PROJECT', 'View project and tasks'),
 (5, 'MANAGE_SPRINTS', 'Create and manage sprints');
 
--- Map roles to permissions (role_permissions)
--- e.g., Admin has all permissions, Project Manager can create projects, manage sprints, etc.
 INSERT INTO role_permissions (role_id, perm_id) VALUES
--- Admin (role 1) gets perm 1,2,3,4,5
-(1, 1), (1, 2), (1, 3), (1, 4), (1, 5),
--- Project Manager (role 2) gets perm 2,3,4,5 (create project, edit tasks, view projects, manage sprints)
-(2, 2), (2, 3), (2, 4), (2, 5),
--- Team Member (role 3) gets perm 3,4 (edit tasks, view projects)
-(3, 3), (3, 4),
--- Guest (role 4) gets perm 4 (view projects only)
-(4, 4);
+-- Org 1 roles
+(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), -- ORG_ADMIN all perms
+(2, 2), (2, 3), (2, 4), (2, 5),         -- PROJECT_MANAGER
+(3, 3), (3, 4),                         -- TEAM_MEMBER
+(4, 4),                                 -- GUEST
+-- Org 2 roles
+(5, 1), (5, 2), (5, 3), (5, 4), (5, 5),
+(6, 2), (6, 3), (6, 4), (6, 5),
+(7, 3), (7, 4),
+(8, 4),
+-- Org 3 roles
+(9, 1), (9, 2), (9, 3), (9, 4), (9, 5),
+(10, 2), (10, 3), (10, 4), (10, 5),
+(11, 3), (11, 4),
+(12, 4);
 
--- Assign roles to users (user_roles)
--- Alice (user 1) as Org Admin, Bob (2) as Project Manager, Carol (3) as Team Member, David (4) as Team Member, Eve (5) as Guest.
-INSERT INTO user_roles (user_id, role_id) VALUES
-(1, 1),  -- Alice is Org Admin
-(2, 2),  -- Bob is Project Manager
-(3, 3),  -- Carol is Team Member
-(4, 3),  -- David is Team Member
-(5, 4);  -- Eve is Guest
+INSERT INTO user_roles (user_id, role_id, organization_id) VALUES
+-- Org 1 users
+(1, 1, 1),  -- Alice is ORG_ADMIN in org 1
+(2, 2, 1),  -- Bob is PROJECT_MANAGER in org 1
+-- Org 2 users
+(3, 7, 2),  -- Carol is TEAM_MEMBER in org 2
+(4, 7, 2),  -- David is TEAM_MEMBER in org 2
+-- Org 3 users
+(5, 12, 3); -- Eve is GUEST in org 3
 
 -- Table: projects
 CREATE TABLE projects (
@@ -174,7 +238,7 @@ CREATE TABLE tasks (
     sprint_id       INT,
     title           VARCHAR(200) NOT NULL,
     description     TEXT,
-    type            ENUM('STORY','BUG','CHORE','TASK') NOT NULL DEFAULT 'TASK',
+    type            ENUM('EPIC','STORY','BUG','TASK','SUBTASK') NOT NULL DEFAULT 'TASK',
     status          ENUM('TO_DO','IN_PROGRESS','IN_REVIEW','DONE','BLOCKED','CANCELLED','BACKLOG') NOT NULL DEFAULT 'TO_DO',
     priority        ENUM('LOW','MEDIUM','HIGH','CRITICAL') NOT NULL DEFAULT 'MEDIUM',
     story_points    INT,
@@ -186,18 +250,21 @@ CREATE TABLE tasks (
     assignee_id     INT,
     reporter_id     INT NOT NULL,
     parent_task_id  INT,
+    epic_id         INT,
     archived        BOOLEAN NOT NULL DEFAULT FALSE,
     INDEX idx_task_sprint (sprint_id),
     INDEX idx_task_assignee (assignee_id),
     INDEX idx_task_project (project_id),
     INDEX idx_task_status (status),
     INDEX idx_task_parent (parent_task_id),
+    INDEX idx_task_epic (epic_id),
     INDEX idx_task_reporter (reporter_id),
     FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE,
     FOREIGN KEY (sprint_id)  REFERENCES sprints(sprint_id) ON DELETE SET NULL,
     FOREIGN KEY (assignee_id) REFERENCES users(user_id) ON DELETE SET NULL,
     FOREIGN KEY (reporter_id) REFERENCES users(user_id) ON DELETE RESTRICT,
-    FOREIGN KEY (parent_task_id) REFERENCES tasks(task_id) ON DELETE CASCADE
+    FOREIGN KEY (parent_task_id) REFERENCES tasks(task_id) ON DELETE CASCADE,
+    FOREIGN KEY (epic_id) REFERENCES tasks(task_id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- Table: task_dependencies (many-to-many self relationship for task blocking)
@@ -358,10 +425,27 @@ INSERT INTO comments (comment_id, task_id, user_id, content, created_at) VALUES
 (2, 2, 2, 'Good point, we will add that in a future sprint.', '2025-10-01 09:30:00'),
 (3, 4, 2, 'Any update on OAuth research? Need info by next week.', '2025-10-08 15:45:00');
 
--- ============================================================
--- OPTIONAL TABLES (Not yet implemented in backend entities)
--- Uncomment these when ready to implement resource booking/chat
--- ============================================================
+-- Table: attachments (file attachments for tasks)
+CREATE TABLE attachments (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    task_id         INT NOT NULL,
+    file_name       VARCHAR(255) NOT NULL,
+    file_size       BIGINT NOT NULL,
+    file_type       VARCHAR(100) NOT NULL,
+    file_key        VARCHAR(500) NOT NULL,
+    file_url        TEXT NOT NULL,
+    thumbnail_url   TEXT,
+    bucket_name     VARCHAR(100) NOT NULL,
+    uploaded_by     INT NOT NULL,
+    uploaded_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted         BOOLEAN DEFAULT FALSE,
+    deleted_at      TIMESTAMP,
+    INDEX idx_attachment_task_id (task_id),
+    INDEX idx_attachment_uploaded_by (uploaded_by),
+    INDEX idx_attachment_uploaded_at (uploaded_at),
+    CONSTRAINT fk_attachment_task FOREIGN KEY (task_id) REFERENCES tasks(task_id) ON DELETE CASCADE,
+    CONSTRAINT fk_attachment_user FOREIGN KEY (uploaded_by) REFERENCES users(user_id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
 
 -- Table: resources
 CREATE TABLE resources (
@@ -371,7 +455,7 @@ CREATE TABLE resources (
     resource_type   ENUM('ROOM','EQUIPMENT','LICENSE','OTHER') NOT NULL DEFAULT 'OTHER',
     details         TEXT,
     FOREIGN KEY (organization_id) REFERENCES organizations(org_id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+ ) ENGINE=InnoDB;
 
 -- Table: bookings (resource reservations)
 CREATE TABLE bookings (
@@ -433,4 +517,25 @@ CREATE TABLE chat_messages (
     FOREIGN KEY (channel_id) REFERENCES chat_channels(channel_id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (parent_message_id) REFERENCES chat_messages(message_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Table: teams
+CREATE TABLE teams (
+    team_id         INT AUTO_INCREMENT PRIMARY KEY,
+    organization_id INT NOT NULL,
+    name            VARCHAR(100) NOT NULL,
+    description     TEXT,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_team_organization (organization_id),
+    FOREIGN KEY (organization_id) REFERENCES organizations(org_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Table: team_members
+CREATE TABLE team_members (
+    team_id INT NOT NULL,
+    user_id INT NOT NULL,
+    PRIMARY KEY(team_id, user_id),
+    FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;

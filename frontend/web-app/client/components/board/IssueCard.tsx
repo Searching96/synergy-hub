@@ -1,11 +1,12 @@
 import { Draggable } from "@hello-pangea/dnd";
 import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { AlertCircle, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { AlertCircle, ArrowUp, ArrowDown, Minus, Zap, Lightbulb, CheckSquare, Bug, ListChecks } from "lucide-react";
 import { canMoveTask } from "@/lib/rbac";
 import { useAuth } from "@/context/AuthContext";
 import { useProject } from "@/context/ProjectContext";
 import type { BoardTask, TaskStatus } from "@/hooks/useProjectBoard";
+import type { TaskType } from "@/types/task.types";
 
 interface IssueCardProps {
   task: BoardTask;
@@ -42,12 +43,25 @@ const priorityConfig = {
   },
 };
 
+const typeConfig: Record<TaskType, { icon: any; color: string; label: string }> = {
+  EPIC: { icon: Zap, color: "text-purple-600", label: "Epic" },
+  STORY: { icon: Lightbulb, color: "text-green-600", label: "Story" },
+  TASK: { icon: CheckSquare, color: "text-blue-600", label: "Task" },
+  BUG: { icon: Bug, color: "text-red-600", label: "Bug" },
+  SUBTASK: { icon: ListChecks, color: "text-gray-600", label: "Subtask" },
+};
+
 export default function IssueCard({ task, index, projectKey = "PROJ", isProjectArchived, canMove = true }: IssueCardProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { project, isLoading: isLoadingProject } = useProject();
   const priority = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.MEDIUM;
   const PriorityIcon = priority.icon;
+  
+  // Get type configuration
+  const taskType = (task as any).type as TaskType || "TASK";
+  const typeInfo = typeConfig[taskType] || typeConfig.TASK;
+  const TypeIcon = typeInfo.icon;
 
   // Get user role from project context - eliminates prop drilling
   // Respect board-level move restriction and avoid flicker while project roles load
@@ -82,14 +96,17 @@ export default function IssueCard({ task, index, projectKey = "PROJ", isProjectA
         >
           {/* Issue Key */}
           <div className="flex items-center justify-between mb-2">
-            <span
-              className={cn(
-                "text-xs font-medium text-muted-foreground",
-                (task.status as TaskStatus) === "DONE" && "line-through"
-              )}
-            >
-              {projectKey}-{task.id}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <TypeIcon className={cn("h-3.5 w-3.5", typeInfo.color)} />
+              <span
+                className={cn(
+                  "text-xs font-medium text-muted-foreground",
+                  (task.status as TaskStatus) === "DONE" && "line-through"
+                )}
+              >
+                {projectKey}-{task.id}
+              </span>
+            </div>
             <div className={cn("flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium", priority.bg, priority.color)}>
               <PriorityIcon className="h-3 w-3" />
               <span className="hidden sm:inline">{priority.label}</span>

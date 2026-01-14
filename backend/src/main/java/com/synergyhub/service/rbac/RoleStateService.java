@@ -1,10 +1,13 @@
 package com.synergyhub.service.rbac;
 
 import com.synergyhub.domain.entity.Role;
+import com.synergyhub.domain.entity.Organization;
 import com.synergyhub.dto.request.CreateRoleRequest;
 import com.synergyhub.dto.request.UpdateRoleRequest;
 import com.synergyhub.exception.RoleNameAlreadyExistsException;
 import com.synergyhub.exception.RoleNotFoundException;
+import com.synergyhub.exception.ResourceNotFoundException;
+import com.synergyhub.repository.OrganizationRepository;
 import com.synergyhub.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,19 +19,23 @@ import org.springframework.stereotype.Service;
 public class RoleStateService {
 
     private final RoleRepository roleRepository;
+    private final OrganizationRepository organizationRepository;
 
     /**
      * Create a new role with provided request details.
      * Database will enforce unique constraint on role name.
      */
-    public Role createRole(CreateRoleRequest request) {
+    public Role createRole(Long organizationId, CreateRoleRequest request) {
         log.debug("Creating role: {}", request.getName());
-        
-        if (roleRepository.existsByName(request.getName())) {
+        Organization organization = organizationRepository.findById(organizationId)
+            .orElseThrow(() -> new ResourceNotFoundException("Organization", "id", organizationId));
+
+        if (roleRepository.existsByNameAndOrganizationId(request.getName(), organizationId)) {
             throw new RoleNameAlreadyExistsException(request.getName());
         }
-        
+
         Role role = Role.builder()
+                .organization(organization)
                 .name(request.getName())
                 .description(request.getDescription())
                 .build();
@@ -41,12 +48,12 @@ public class RoleStateService {
     /**
      * Update existing role with new details.
      */
-    public Role updateRole(Role role, UpdateRoleRequest request) {
+    public Role updateRole(Role role, UpdateRoleRequest request, Long organizationId) {
         log.debug("Updating role ID: {} with name: {}", role.getId(), request.getName());
         
         // If name changed, check uniqueness
         if (!role.getName().equals(request.getName()) && 
-                roleRepository.existsByName(request.getName())) {
+            roleRepository.existsByNameAndOrganizationId(request.getName(), organizationId)) {
             throw new RoleNameAlreadyExistsException(request.getName());
         }
         
@@ -70,16 +77,16 @@ public class RoleStateService {
     /**
      * Fetch role by ID.
      */
-    public Role getRoleById(Integer roleId) {
+    public Role getRoleById(Long roleId) {
         return roleRepository.findById(roleId)
                 .orElseThrow(() -> new RoleNotFoundException(roleId));
     }
 
     /**
-     * Fetch role by name.
+     * Fetch role by name within an organization.
      */
-    public Role getRoleByName(String name) {
-        return roleRepository.findByName(name)
-                .orElseThrow(() -> new RoleNotFoundException("Role '" + name + "' not found"));
+    public Role getRoleByName(String name, Long organizationId) {
+        return roleRepository.findByNameAndOrganizationId(name, organizationId)
+                .orElseThrow(() -> new RoleNotFoundException("Role '" + name + "' not found in org " + organizationId));
     }
 }

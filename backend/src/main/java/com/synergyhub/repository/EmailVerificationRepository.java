@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Repository
-public interface EmailVerificationRepository extends JpaRepository<EmailVerification, Integer> {
+public interface EmailVerificationRepository extends JpaRepository<EmailVerification, Long> {
     
     Optional<EmailVerification> findByToken(String token);
     
@@ -21,4 +21,8 @@ public interface EmailVerificationRepository extends JpaRepository<EmailVerifica
     @Modifying
     @Query("DELETE FROM EmailVerification e WHERE e.expiryTime < :now")
     void deleteExpiredVerifications(@Param("now") LocalDateTime now);
+
+    @Modifying(clearAutomatically = false, flushAutomatically = false)
+    @Query("UPDATE EmailVerification e SET e.verified = TRUE WHERE e.id = :id")
+    int markVerified(@Param("id") Long id);
 }

@@ -5,7 +5,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { ssoService } from "@/services/sso.service";
 import type {
   SsoProviderResponse,
@@ -30,20 +30,32 @@ const ssoKeys = {
 export const useSSOConfigs = (organizationId?: number) => {
   const queryClient = useQueryClient();
 
+  const orgId = useMemo(() => {
+    if (organizationId !== undefined) return organizationId;
+    const stored = localStorage.getItem("organizationId");
+    return stored ? Number(stored) : null;
+  }, [organizationId]);
+
+  const providersEnabled = orgId !== null;
+
   /**
    * Query: Fetch all SSO providers
    * Handles 403 Forbidden by returning empty array with error state
    */
   const providersQuery = useQuery({
     queryKey: ssoKeys.providers,
-    queryFn: ssoService.getSsoProviders,
+    queryFn: () => ssoService.getSsoProviders(orgId || undefined),
+    enabled: providersEnabled,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: (failureCount, error) => {
-      // Don't retry on 403 Forbidden
-      if (axios.isAxiosError(error) && error.response?.status === 403) {
-        return false;
+      // Don't retry on 403 Forbidden or client errors
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status || 0;
+        if ([400, 401, 403, 404, 422].includes(status)) {
+          return false;
+        }
       }
-      return failureCount < 3;
+      return failureCount < 2;
     },
   });
 
@@ -268,12 +280,13 @@ export const useSSOConfigs = (organizationId?: number) => {
    * Check if user has access (403 error handling)
    */
   const hasAccess = useCallback(() => {
+    if (!providersEnabled) return false;
     return (
       providersQuery.isError === false ||
       !axios.isAxiosError(providersQuery.error) ||
       providersQuery.error.response?.status !== 403
     );
-  }, [providersQuery.isError, providersQuery.error]);
+  }, [providersEnabled, providersQuery.isError, providersQuery.error]);
 
   return {
     // Queries
@@ -282,6 +295,8 @@ export const useSSOConfigs = (organizationId?: number) => {
     isErrorProviders: providersQuery.isError,
     errorProviders: providersQuery.error,
     hasAccess: hasAccess(),
+    isOrgMissing: !providersEnabled,
+    refetchProviders: providersQuery.refetch,
 
     // Mutations
     register: registerMutation.mutate,

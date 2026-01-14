@@ -26,6 +26,7 @@ export const TaskTypeSchema = z.enum([
   "BUG",
   "STORY",
   "EPIC",
+  "SUBTASK",
   "CHORE",
 ]);
 

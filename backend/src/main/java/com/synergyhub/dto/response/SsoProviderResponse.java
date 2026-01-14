@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class SsoProviderResponse {
     
-    private Integer id;
+    private Long id;
     
     private SsoProviderType providerType;
     

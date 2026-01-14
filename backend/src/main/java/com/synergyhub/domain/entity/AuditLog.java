@@ -25,7 +25,7 @@ public class AuditLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "audit_log_id")
-    private Integer id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id") // ✅ Can be null for system events
@@ -47,7 +47,7 @@ public class AuditLog {
     private String userAgent;
 
     @Column(name = "project_id") // ✅ Context for project-related events
-    private Integer projectId;
+    private Long projectId;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

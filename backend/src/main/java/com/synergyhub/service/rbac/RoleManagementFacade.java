@@ -42,7 +42,7 @@ public class RoleManagementFacade {
      */
     @Transactional
     public RoleResponse createRole(
-            Integer organizationId,
+            Long organizationId,
             CreateRoleRequest request,
             User actor,
             String ipAddress) {
@@ -53,7 +53,7 @@ public class RoleManagementFacade {
         rbacSecurity.requireRoleManagementAccess(organizationId, actor);
         
         // DELEGATE: Lifecycle service creates role
-        Role role = roleStateService.createRole(request);
+        Role role = roleStateService.createRole(organizationId, request);
         
         // DELEGATE: Assign initial permissions
         if (request.getPermissionIds() != null && !request.getPermissionIds().isEmpty()) {
@@ -79,8 +79,8 @@ public class RoleManagementFacade {
      */
     @Transactional
     public RoleResponse updateRole(
-            Integer organizationId,
-            Integer roleId,
+            Long organizationId,
+            Long roleId,
             UpdateRoleRequest request,
             User actor,
             String ipAddress) {
@@ -96,7 +96,7 @@ public class RoleManagementFacade {
         rbacSecurity.validateRoleModification(role);
         
         // DELEGATE: Update role
-        Role updated = roleStateService.updateRole(role, request);
+        Role updated = roleStateService.updateRole(role, request, organizationId);
         
         // DELEGATE: Update permissions
         if (request.getPermissionIds() != null && !request.getPermissionIds().isEmpty()) {
@@ -122,8 +122,8 @@ public class RoleManagementFacade {
      */
     @Transactional
     public void deleteRole(
-            Integer organizationId,
-            Integer roleId,
+            Long organizationId,
+            Long roleId,
             User actor,
             String ipAddress) {
         
@@ -156,8 +156,8 @@ public class RoleManagementFacade {
      */
     @Transactional
     public RoleResponse assignPermissionsToRole(
-            Integer organizationId,
-            Integer roleId,
+            Long organizationId,
+            Long roleId,
             AssignPermissionsRequest request,
             User actor,
             String ipAddress) {
@@ -197,7 +197,7 @@ public class RoleManagementFacade {
      * 2. Return as response DTO
      */
     @Transactional(readOnly = true)
-    public RoleResponse getRole(Integer roleId) {
+        public RoleResponse getRole(Long roleId) {
         log.info("Fetching role: {}", roleId);
         Role role = roleStateService.getRoleById(roleId);
         return mapToResponse(role);
@@ -207,9 +207,9 @@ public class RoleManagementFacade {
      * FACADE: Get all roles.
      */
     @Transactional(readOnly = true)
-    public List<RoleResponse> getAllRoles() {
-        log.info("Fetching all roles");
-        return roleRepository.findAll().stream()
+        public List<RoleResponse> getAllRoles(Long organizationId) {
+                log.info("Fetching all roles for org: {}", organizationId);
+                return roleRepository.findByOrganizationId(organizationId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

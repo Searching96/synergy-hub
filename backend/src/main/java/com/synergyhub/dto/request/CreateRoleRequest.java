@@ -23,5 +23,5 @@ public class CreateRoleRequest {
     private String description;
     
     @Builder.Default
-    private Set<Integer> permissionIds = Set.of();
+    private Set<Long> permissionIds = Set.of();
 }

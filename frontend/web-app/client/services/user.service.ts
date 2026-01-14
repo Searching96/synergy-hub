@@ -13,4 +13,16 @@ export const userService = {
   },
   // Note: Activity is project-scoped, not user-global
   // Use activityService.getProjectActivity(projectId) instead
+
+  // Update user profile
+  updateProfile: async (data: { name: string }) => {
+    const response = await api.put("/users/me", data);
+    return response.data;
+  },
+
+  // Change password
+  changePassword: async (data: { currentPassword: string; newPassword: string }) => {
+    const response = await api.put("/users/me/password", data);
+    return response.data;
+  },
 };

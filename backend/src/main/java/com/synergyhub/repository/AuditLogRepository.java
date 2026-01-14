@@ -13,21 +13,21 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
-public interface AuditLogRepository extends JpaRepository<AuditLog, Integer> {
+public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     // ✅ FIX: Added the method used by ActivityStreamService
     // Using @Query allows us to fetch logs for the project, ordered by time
     @Query("SELECT a FROM AuditLog a WHERE a.projectId = :projectId ORDER BY a.timestamp DESC")
-    Page<AuditLog> findProjectActivity(@Param("projectId") Integer projectId, Pageable pageable);
+    Page<AuditLog> findProjectActivity(@Param("projectId") Long projectId, Pageable pageable);
 
     // Find by user
-    List<AuditLog> findByUserId(Integer userId, Pageable pageable);
+    List<AuditLog> findByUserId(Long userId, Pageable pageable);
     
     // Find by project
-    List<AuditLog> findByProjectId(Integer projectId, Pageable pageable);
+    List<AuditLog> findByProjectId(Long projectId, Pageable pageable);
     
     // Find by user and time range
-    List<AuditLog> findByUserIdAndTimestampAfter(Integer userId, LocalDateTime after);
+    List<AuditLog> findByUserIdAndTimestampAfter(Long userId, LocalDateTime after);
     
     // Find by event type (for filtering)
     List<AuditLog> findByEventType(String eventType, Pageable pageable);

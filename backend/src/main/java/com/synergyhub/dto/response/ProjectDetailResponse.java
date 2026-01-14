@@ -14,12 +14,12 @@ import java.util.List;
 @AllArgsConstructor
 public class ProjectDetailResponse {
 
-    private Integer id;
+    private Long id;
     private String name;
     private String description;
-    private Integer organizationId;
+    private Long organizationId;
     private String organizationName;
-    private UserResponse projectLead;
+    private ProjectLeadResponse projectLead;
     private LocalDate startDate;
     private LocalDate endDate;
     private String status;

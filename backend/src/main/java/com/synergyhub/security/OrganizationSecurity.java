@@ -2,6 +2,7 @@ package com.synergyhub.security;
 
 import com.synergyhub.domain.entity.Organization;
 import com.synergyhub.domain.entity.User;
+import com.synergyhub.domain.entity.UserOrganization;
 import com.synergyhub.exception.UnauthorizedOrganizationAccessException;
 import com.synergyhub.repository.OrganizationRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import java.util.Set;
 public class OrganizationSecurity {
 
     private final OrganizationRepository organizationRepository;
+    private final com.synergyhub.repository.UserOrganizationRepository userOrganizationRepository; // ✅ Inject
     private static final String GLOBAL_ADMIN_ROLE = "GLOBAL_ADMIN";
     private static final String ORG_ADMIN_ROLE = "ORG_ADMIN";
 
@@ -48,14 +50,10 @@ public class OrganizationSecurity {
             return;
         }
         
-        // Check if user is ORG_ADMIN of this specific organization
-        boolean isOrgAdmin = organization.getUsers().stream()
-                .filter(u -> u.getId().equals(user.getId()))
-                .anyMatch(u -> u.getRoles().stream()
-                        .map(r -> r.getName())
-                        .collect(java.util.stream.Collectors.toSet())
-                        .contains(ORG_ADMIN_ROLE)
-                );
+        // Check if user is ORG_ADMIN of this specific organization via explicit membership check
+        boolean isOrgAdmin = organization.getMemberships().stream()
+                .filter(m -> m.getUser().getId().equals(user.getId()))
+                .anyMatch(m -> m.getRole() != null && ORG_ADMIN_ROLE.equals(m.getRole().getName()));
         
         if (!isOrgAdmin) {
             log.warn("User {} attempted to edit organization {} without ORG_ADMIN role in that org", 
@@ -82,8 +80,31 @@ public class OrganizationSecurity {
         }
         
         // User must belong to the organization
-        return organization.getUsers().stream()
-                .anyMatch(u -> u.getId().equals(user.getId()));
+        return organization.getMemberships().stream()
+                .anyMatch(m -> m.getUser().getId().equals(user.getId()));
+    }
+    
+    // ✅ NEW methods for PreAuthorize
+    public boolean hasOrganizationAccess(Long organizationId, UserPrincipal principal) {
+        if (organizationId == null || principal == null) return false;
+        
+        // Check local roles from principal (approximate) or fetch user
+        // Ideally we just check the repo
+        return hasOrganizationAccess(organizationId, principal.getId());
+    }
+
+    public boolean hasOrganizationAccess(Long organizationId, User user) {
+        if (organizationId == null || user == null) return false;
+        
+        // If user is GLOBAL_ADMIN, allow
+        boolean isGlobalAdmin = user.getRoles().stream().anyMatch(r -> GLOBAL_ADMIN_ROLE.equals(r.getName()));
+        if (isGlobalAdmin) return true;
+
+        return hasOrganizationAccess(organizationId, user.getId());
+    }
+
+    public boolean hasOrganizationAccess(Long organizationId, Long userId) {
+        return userOrganizationRepository.existsByIdUserIdAndIdOrganizationId(userId, organizationId);
     }
 
     public void requireReadAccess(Organization organization, User user) {

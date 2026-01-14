@@ -8,5 +8,5 @@ import lombok.*;
 @AllArgsConstructor
 public class MoveTaskToSprintRequest {
 
-    private Integer sprintId;
+    private Long sprintId;
 }

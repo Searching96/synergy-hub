@@ -146,17 +146,11 @@ export default function ActiveSessionsList() {
     hasAccess,
     revokeSession,
     isRevoking,
-    revokeAllOther,
-    isRevokingAll,
   } = useSessions();
-
-  const [revokeAllDialog, setRevokeAllDialog] = useState(false);
 
   // Handle API errors gracefully
   const isUnauthorized =
     axios.isAxiosError(error) && error.response?.status === 403;
-
-  const otherSessionsCount = sessions.filter((s) => !s.isCurrent).length;
 
   return (
     <div className="space-y-6">
@@ -172,16 +166,7 @@ export default function ActiveSessionsList() {
           </p>
         </div>
         
-        {otherSessionsCount > 0 && hasAccess && (
-          <Button
-            variant="destructive"
-            onClick={() => setRevokeAllDialog(true)}
-            disabled={isRevokingAll || isRevoking}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign out of all other devices
-          </Button>
-        )}
+
       </div>
 
       {/* 403 Forbidden Alert */}
@@ -242,32 +227,6 @@ export default function ActiveSessionsList() {
           )}
         </CardContent>
       </Card>
-
-      {/* Revoke All Confirmation Dialog */}
-      <AlertDialog open={revokeAllDialog} onOpenChange={setRevokeAllDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Sign out of all other devices?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will immediately end all other active sessions ({otherSessionsCount}{" "}
-              {otherSessionsCount === 1 ? "device" : "devices"}). You will remain signed
-              in on this device. Other devices will need to sign in again.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                revokeAllOther();
-                setRevokeAllDialog(false);
-              }}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Sign out all other devices
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

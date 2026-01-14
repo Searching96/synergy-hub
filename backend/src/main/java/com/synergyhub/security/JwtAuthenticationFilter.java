@@ -33,25 +33,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
-            String jwt = getJwtFromRequest(request);
-            
-            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
-                Integer userId = tokenProvider.getUserIdFromToken(jwt);
-                String tokenId = tokenProvider.getTokenIdFromToken(jwt);
-                
-                // ✅ CHECK IF SESSION IS REVOKED
-                if (sessionService.isSessionRevoked(tokenId)) {
-                    log.warn("Attempted to use revoked token: {} from IP: {}", tokenId, request.getRemoteAddr());
-                    response.setHeader("X-Auth-Error", "SESSION_REVOKED");
-                    filterChain.doFilter(request, response);
-                    return;
+            final String authHeader = request.getHeader("Authorization");
+            final String jwt;
+            final String userEmail;
+
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            jwt = authHeader.substring(7);
+            userEmail = tokenProvider.getEmailFromToken(jwt);
+            // Note: No orgId extraction from token in current implementation
+            // Organization context should be set elsewhere if needed
+
+            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = this.customUserDetailsService.loadUserByUsername(userEmail);
+                if (tokenProvider.validateToken(jwt)) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
-                
-                UserDetails userDetails = customUserDetailsService.loadUserById(userId);
-                UsernamePasswordAuthenticationToken authentication = 
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (ExpiredJwtException ex) {
             log.debug("Expired JWT token from IP: {}", request.getRemoteAddr());
@@ -74,9 +80,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             log.error("Unexpected error during JWT authentication from IP: {} - Error: {}", 
                     request.getRemoteAddr(), ex.getMessage(), ex);
             response.setHeader("X-Auth-Error", "INTERNAL_ERROR");
+        } finally {
+            // Continue chain
+            try {
+                filterChain.doFilter(request, response);
+            } finally {
+                OrganizationContext.clear(); // Clean up thread local
+            }
         }
-        
-        filterChain.doFilter(request, response);
     }
 
     private String getJwtFromRequest(HttpServletRequest request) {

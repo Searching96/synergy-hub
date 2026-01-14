@@ -16,36 +16,26 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class UserPrincipal implements UserDetails {
     
-    private Integer id;
+    private Long id;
     private String name;
     private String email;
     private String password;
-    private Integer organizationId;
+    private Long organizationId;
     private boolean emailVerified;
     private boolean twoFactorEnabled;
     private Collection<? extends GrantedAuthority> authorities;
     
     public static UserPrincipal create(User user) {
-        List<GrantedAuthority> authorities = user.getRoles().stream()
-                .flatMap(role -> role.getPermissions().stream())
-                .map(Permission::getName)
-                .map(SimpleGrantedAuthority::new)
-                .collect(Collectors.toList());
-        
-        // Add roles as authorities with ROLE_ prefix
-        user.getRoles().forEach(role -> 
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()))
-        );
-        
+        // Remove orgId logic based on user.getOrganization()
         return new UserPrincipal(
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
-                user.getPasswordHash(),
-                user.getOrganization().getId(),
-                user.getEmailVerified(),
-                user.getTwoFactorEnabled(),
-                authorities
+            user.getUserId(),
+            user.getName(),
+            user.getEmail(),
+            user.getPasswordHash(),
+            null, // orgId is now context-driven
+            user.getEmailVerified(),
+            user.getTwoFactorEnabled(),
+            List.of() // authorities will be context-driven
         );
     }
     
@@ -59,9 +49,24 @@ public class UserPrincipal implements UserDetails {
         return password;
     }
     
+    public List<com.synergyhub.domain.entity.Role> getRoles() {
+        // In a real implementation, roles should be loaded from the User entity or context
+        // For now, return an empty list or fetch from context if available
+        return java.util.Collections.emptyList();
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return authorities;
+        Long currentOrgId = OrganizationContext.getcurrentOrgId();
+        if (currentOrgId == null) {
+            return java.util.Collections.emptyList();
+        }
+        // Context-aware role filtering
+        return this.getRoles().stream()
+            .filter(role -> role.getOrganization() != null && role.getOrganization().getId().equals(currentOrgId))
+            .flatMap(role -> role.getPermissions().stream())
+            .map(perm -> new SimpleGrantedAuthority(perm.getName()))
+            .collect(Collectors.toList());
     }
     
     @Override

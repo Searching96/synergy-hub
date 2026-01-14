@@ -22,7 +22,7 @@ public class RbacSecurity {
      * Verify that user is an Admin (ORG_ADMIN or GLOBAL_ADMIN) of the organization.
      * Required to manage roles within that organization.
      */
-    public void requireRoleManagementAccess(Integer organizationId, User user) {
+    public void requireRoleManagementAccess(Long organizationId, User user) {
         Set<String> roles = user.getRoles().stream()
                 .map(r -> r.getName())
                 .collect(java.util.stream.Collectors.toSet());
@@ -33,7 +33,8 @@ public class RbacSecurity {
         }
         
         // ORG_ADMIN of this specific organization can manage roles
-        boolean isOrgAdminOfOrg = user.getOrganization().getId().equals(organizationId) &&
+        Long currentOrgId = OrganizationContext.getcurrentOrgId();
+        boolean isOrgAdminOfOrg = currentOrgId != null && currentOrgId.equals(organizationId) &&
                 roles.contains(ORG_ADMIN_ROLE);
         
         if (!isOrgAdminOfOrg) {

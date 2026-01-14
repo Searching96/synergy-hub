@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { useProject } from "@/context/ProjectContext";
 import { useAuth } from "@/context/AuthContext";
@@ -14,15 +14,26 @@ import {
 import BoardColumn from "@/components/board/BoardColumn";
 import CreateSprintDialog from "@/components/sprint/CreateSprintDialog";
 import SprintListDialog from "@/components/sprint/SprintListDialog";
+import IssueDetailModal from "@/components/issue/IssueDetailModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input"; // Added
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"; // Added
+import { ProjectBreadcrumb } from "@/components/project/ProjectBreadcrumb";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, List, Loader2, Plus, X } from "lucide-react";
+import { AlertCircle, List, Loader2, Plus, X, Search } from "lucide-react"; // Added Search
 import { toast } from "sonner";
 import { canMoveTask } from "@/lib/rbac";
 
 export default function BoardView() {
   const { projectId } = useParams<{ projectId: string }>();
+  const [searchParams] = useSearchParams();
   const { project, projectKey } = useProject();
   const { user } = useAuth();
   const { error: permissionError, clearError } = usePermissionError();
@@ -44,14 +55,38 @@ export default function BoardView() {
   const [createSprintOpen, setCreateSprintOpen] = useState(false);
   const [sprintListOpen, setSprintListOpen] = useState(false);
 
+  // Filter State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedAssignee, setSelectedAssignee] = useState("ALL");
+
   const isProjectArchived = project?.status === "ARCHIVED";
 
   // Derive columns directly from activeSprint data (single source of truth)
   const columns = useMemo(() => {
     if (!activeSprint) return groupTasksByStatus([]);
-    const filteredTasks = (activeSprint.tasks || []).filter((task) => !task.archived);
+
+    let filteredTasks = (activeSprint.tasks || []).filter((task) => !task.archived);
+
+    // Filter by Search Query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filteredTasks = filteredTasks.filter(task =>
+        task.title.toLowerCase().includes(query)
+      );
+    }
+
+    // Filter by Assignee
+    if (selectedAssignee && selectedAssignee !== "ALL") {
+      if (selectedAssignee === "UNASSIGNED") {
+        filteredTasks = filteredTasks.filter(task => !task.assignee);
+      } else {
+        const assigneeId = parseInt(selectedAssignee);
+        filteredTasks = filteredTasks.filter(task => task.assignee?.id === assigneeId);
+      }
+    }
+
     return groupTasksByStatus(filteredTasks);
-  }, [activeSprint?.tasks]);
+  }, [activeSprint?.tasks, searchQuery, selectedAssignee]); // Added dependencies
 
   const handleDragEnd = async (result: DropResult) => {
     const { source, destination } = result;
@@ -121,7 +156,10 @@ export default function BoardView() {
 
   if (!activeSprint) {
     return (
-      <div>
+      <div className="p-6">
+        <div className="mb-4">
+          <ProjectBreadcrumb current="Board" />
+        </div>
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Board</h1>
@@ -169,7 +207,10 @@ export default function BoardView() {
   }
 
   return (
-    <div>
+    <div className="p-6">
+      <div className="mb-4">
+        <ProjectBreadcrumb current="Board" />
+      </div>
       {/* Permission Error Banner - Persistent until dismissed */}
       {permissionError && (
         <Alert variant="destructive" className="mb-4">
@@ -177,9 +218,9 @@ export default function BoardView() {
           <AlertTitle>Access Denied</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
             <span>{permissionError}</span>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={clearError}
               className="ml-4 h-6 px-2"
             >
@@ -189,14 +230,39 @@ export default function BoardView() {
         </Alert>
       )}
 
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Board</h1>
           <p className="text-muted-foreground mt-1">
             {activeSprint.name} • {Math.round(activeSprint.metrics?.completionPercentage || 0)}% complete
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-48">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Filter tasks..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Assignee" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Assignees</SelectItem>
+              <SelectItem value="UNASSIGNED">Unassigned</SelectItem>
+              {project?.members?.map((member) => (
+                <SelectItem key={member.userId} value={member.userId?.toString() || ""}>
+                  {member.name || member.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Button variant="outline" onClick={() => setSprintListOpen(true)}>
             <List className="h-4 w-4 mr-2" />
             All Sprints
@@ -226,6 +292,7 @@ export default function BoardView() {
           </div>
         </ErrorBoundary>
       </DragDropContext>
+
 
       {visibleBacklog && visibleBacklog.length > 0 && (
         <div className="mt-8 pt-8 border-t">
@@ -259,6 +326,7 @@ export default function BoardView() {
 
       <CreateSprintDialog open={createSprintOpen} onOpenChange={setCreateSprintOpen} />
       <SprintListDialog open={sprintListOpen} onOpenChange={setSprintListOpen} />
+      {searchParams.get("selectedIssue") && <IssueDetailModal />}
     </div>
   );
 }

@@ -34,7 +34,7 @@ public class AuditLogService {
      */
     @Transactional
     public void createAuditLog(User user, String eventType, String eventDetails, 
-                               String ipAddress, String userAgent, Integer projectId) {
+                               String ipAddress, String userAgent, Long projectId) {
         
         AuditLog auditLog = AuditLog.builder()
                 .user(user)
@@ -63,7 +63,7 @@ public class AuditLogService {
      */
     @Transactional
     public void createAuditLog(User user, AuditEventType eventType, String eventDetails, 
-                               String ipAddress, String userAgent, Integer projectId) {
+                               String ipAddress, String userAgent, Long projectId) {
         createAuditLog(user, eventType.name(), eventDetails, ipAddress, userAgent, projectId);
     }
 
@@ -80,7 +80,7 @@ public class AuditLogService {
      */
     @Transactional
     public void createAuditLog(User user, String eventType, String eventDetails, 
-                               String ipAddress, Integer projectId) {
+                               String ipAddress, Long projectId) {
         createAuditLog(user, eventType, eventDetails, ipAddress, null, projectId);
     }
 

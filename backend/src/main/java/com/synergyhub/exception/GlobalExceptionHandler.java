@@ -51,6 +51,21 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
     
+    @ExceptionHandler(ContextMissingException.class)
+    public ResponseEntity<ApiResponse<Object>> handleContextMissingException(
+            ContextMissingException ex, WebRequest request) {
+        log.error("Organization context missing: {}", ex.getMessage());
+        
+        ApiResponse<Object> response = ApiResponse.builder()
+                .success(false)
+                .message("Organization context required")
+                .error(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
+    
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ApiResponse<Object>> handleUnauthorizedException(
             UnauthorizedException ex, WebRequest request) {
@@ -224,14 +239,27 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleBadCredentialsException(
             BadCredentialsException ex, WebRequest request) {
         log.error("Bad credentials: {}", ex.getMessage());
-        
+
+        String detail = ex.getMessage();
+        String message = "Invalid credentials";
+        String error = "Email or password is incorrect";
+
+        if (detail != null) {
+            if (detail.toLowerCase().contains("email not verified")) {
+                message = "Email not verified";
+                error = detail;
+            } else if (!detail.isBlank() && !detail.equalsIgnoreCase("bad credentials")) {
+                error = detail;
+            }
+        }
+
         ApiResponse<Object> response = ApiResponse.builder()
                 .success(false)
-                .message("Invalid credentials")
-                .error("Email or password is incorrect")
+                .message(message)
+                .error(error)
                 .timestamp(LocalDateTime.now())
                 .build();
-        
+
         return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
     }
     

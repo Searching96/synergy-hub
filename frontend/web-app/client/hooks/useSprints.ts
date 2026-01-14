@@ -7,7 +7,8 @@ export function useProjectSprints(projectId: string | undefined) {
     queryKey: ["sprints", projectId],
     queryFn: async () => {
       if (!projectId) throw new Error("Project ID is required");
-      return sprintService.getProjectSprints(projectId);
+      const response = await sprintService.getProjectSprints(projectId);
+      return response.data;
     },
     enabled: !!projectId,
   });

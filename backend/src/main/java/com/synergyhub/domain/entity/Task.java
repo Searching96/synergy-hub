@@ -31,14 +31,14 @@ import java.util.List;
 @AllArgsConstructor
 @Builder(toBuilder = true)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@ToString(exclude = {"sprint", "project", "assignee", "reporter", "parentTask", "subtasks"}) // ✅ FIXED: Changed "creator" to "reporter"
+@ToString(exclude = {"sprint", "project", "assignee", "reporter", "parentTask", "subtasks", "epic", "epicChildren"}) // ✅ FIXED: Changed "creator" to "reporter"
 public class Task {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "task_id")
     @EqualsAndHashCode.Include
-    private Integer id;
+    private Long id;
 
     @NotBlank(message = "Task title is required")
     @Size(max = 200, message = "Task title must not exceed 200 characters")
@@ -61,10 +61,19 @@ public class Task {
     @JoinColumn(name = "parent_task_id")
     private Task parentTask;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "epic_id")
+    private Task epic;
+
     @OneToMany(mappedBy = "parentTask", cascade = CascadeType.ALL, orphanRemoval = true)
     @BatchSize(size = 20)
     @Builder.Default
     private List<Task> subtasks = new ArrayList<>();
+
+    @OneToMany(mappedBy = "epic")
+    @BatchSize(size = 50)
+    @Builder.Default
+    private List<Task> epicChildren = new ArrayList<>();
 
     @NotNull(message = "Task status is required")
     @Enumerated(EnumType.STRING)
@@ -99,7 +108,7 @@ public class Task {
     private User reporter;
 
     @Column(name = "story_points")
-    private Integer storyPoints;
+    private Integer storyPoints; // keep as Integer, not an ID
 
     @Column(name = "due_date")
     private LocalDateTime dueDate;
@@ -138,6 +147,14 @@ public class Task {
     
     public boolean isSubtask() {
         return parentTask != null;
+    }
+
+    public boolean isEpic() {
+        return type == TaskType.EPIC;
+    }
+
+    public boolean belongsToEpic() {
+        return epic != null;
     }
 
     // ✅ Optional: Convenience method if you prefer "creator" terminology elsewhere

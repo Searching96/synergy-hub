@@ -15,7 +15,7 @@ import java.util.Set;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class RoleResponse {
     
-    private Integer id;
+    private Long id;
     private String name;
     private String description;
     private Set<PermissionResponse> permissions;

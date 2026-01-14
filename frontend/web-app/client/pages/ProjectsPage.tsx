@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProjects, useCreateProject } from "@/hooks/useProjects";
@@ -17,16 +18,31 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Briefcase, Users, CheckCircle2, Clock, Plus, Calendar, Archive } from "lucide-react";
+import { Briefcase, Users, CheckCircle2, Clock, Plus, Calendar, Archive, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Project } from "@/types/project.types";
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: response, isLoading, isError } = useProjects();
+
+  // State for filtering and pagination
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("ACTIVE");
+  const [page, setPage] = useState(0);
+  const pageSize = 9; // 3x3 grid
+
+  // Debounced search could be added here, but for simplicity we pass search directly
+  // In a real app, wrap search in useDebounce
+  const { data: response, isLoading, isError } = useProjects({
+    search: search || undefined,
+    status: status === "ALL" ? undefined : status, // "ALL" isn't a backend status
+    page,
+    size: pageSize
+  });
+
   const createProject = useCreateProject();
-  
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -37,7 +53,6 @@ export default function ProjectsPage() {
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!formData.name.trim()) {
       toast({
         title: "Error",
@@ -46,18 +61,29 @@ export default function ProjectsPage() {
       });
       return;
     }
-
     try {
       await createProject.mutateAsync(formData);
       setIsCreateDialogOpen(false);
       setFormData({ name: "", description: "", startDate: "", endDate: "" });
-      toast({
-        title: "Success",
-        description: "Project created successfully",
-      });
+      toast({ title: "Success", description: "Project created successfully" });
     } catch (error) {
-      // Error handled by the mutation
+      // Error handled by mutation
     }
+  };
+
+  const paginatedData = response?.data;
+  const projects = paginatedData?.content || [];
+  const totalPages = paginatedData?.totalPages || 0;
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setPage(newPage);
+    }
+  };
+
+  const handleTabChange = (value: string) => {
+    setStatus(value === "active" ? "ACTIVE" : value === "archived" ? "ARCHIVED" : "ALL");
+    setPage(0); // Reset to first page on tab change
   };
 
   if (isLoading) {
@@ -91,133 +117,164 @@ export default function ProjectsPage() {
     );
   }
 
-  // Separate active and archived projects
-  const allProjects: Project[] = response?.data || [];
-  const activeProjects = allProjects.filter((project) => project.status !== "ARCHIVED");
-  const archivedProjects = allProjects.filter((project) => project.status === "ARCHIVED");
-
-  const renderProjectGrid = (projects: Project[], emptyMessage: string) => {
-    if (projects.length === 0) {
-      return (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Briefcase className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">{emptyMessage}</h3>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projects.map((project) => (
-          <Card
-            key={project.id}
-            className="cursor-pointer hover:shadow-lg transition-all hover:border-blue-300"
-            onClick={() => navigate(`/projects/${project.id}/board`)}
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between mb-2">
-                <CardTitle className="text-xl">{project.name}</CardTitle>
-                <Badge variant="secondary" className="text-xs">
-                  {project.status}
-                </Badge>
-              </div>
-              <CardDescription className="line-clamp-2 min-h-[40px]">
-                {project.description || "No description provided"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>{project.memberCount} {project.memberCount === 1 ? "member" : "members"}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>{project.taskCount} {project.taskCount === 1 ? "task" : "tasks"}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-green-600">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>{project.completedTaskCount} done</span>
-                  </div>
-                </div>
-
-                {project.taskCount > 0 && (
-                  <div className="pt-2">
-                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                      <span>Progress</span>
-                      <span>
-                        {Math.round((project.completedTaskCount / project.taskCount) * 100)}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all"
-                        style={{
-                          width: `${(project.completedTaskCount / project.taskCount) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {(project.startDate || project.endDate) && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
-                    <Calendar className="h-3 w-3" />
-                    <span>
-                      {project.startDate && new Date(project.startDate).toLocaleDateString()} 
-                      {project.startDate && project.endDate && " - "}
-                      {project.endDate && new Date(project.endDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  };
-
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-8 max-w-[1400px] mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2">All Projects</h1>
+          <h1 className="text-3xl font-bold mb-2">Projects</h1>
           <p className="text-muted-foreground">
-            {activeProjects.length} active, {archivedProjects.length} archived
+            Manage your projects and teams
           </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="h-4 w-4 mr-2" />
-          New Project
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="relative w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search projects..."
+              className="pl-8"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0); // Reset page on search
+              }}
+            />
+          </div>
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="h-4 w-4 mr-2" />
+            New Project
+          </Button>
+        </div>
       </div>
 
-      <Tabs defaultValue="active" className="w-full">
+      <Tabs
+        defaultValue="active"
+        className="w-full"
+        onValueChange={handleTabChange}
+      >
         <TabsList>
           <TabsTrigger value="active">
             <Briefcase className="h-4 w-4 mr-2" />
-            Active Projects ({activeProjects.length})
+            Active
           </TabsTrigger>
           <TabsTrigger value="archived">
             <Archive className="h-4 w-4 mr-2" />
-            Archived ({archivedProjects.length})
+            Archived
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="active" className="mt-6">
-          {renderProjectGrid(activeProjects, "No Active Projects")}
-        </TabsContent>
+        <div className="mt-6">
+          {projects.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <Briefcase className="h-16 w-16 text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No projects found</h3>
+                <p className="text-muted-foreground text-sm">
+                  {search ? "Try adjusting your search terms" : "Get started by creating a new project"}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {projects.map((project) => (
+                <Card
+                  key={project.id}
+                  className="cursor-pointer hover:shadow-lg transition-all hover:border-blue-300"
+                  onClick={() => navigate(`/projects/${project.id}/board`)}
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between mb-2">
+                      <CardTitle className="text-xl">{project.name}</CardTitle>
+                      <Badge variant="secondary" className="text-xs">
+                        {project.status}
+                      </Badge>
+                    </div>
+                    <CardDescription className="line-clamp-2 min-h-[40px]">
+                      {project.description || "No description provided"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Users className="h-4 w-4" />
+                          <span>{project.memberCount} {project.memberCount === 1 ? "member" : "members"}</span>
+                        </div>
+                      </div>
 
-        <TabsContent value="archived" className="mt-6">
-          {renderProjectGrid(archivedProjects, "No Archived Projects")}
-        </TabsContent>
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Clock className="h-4 w-4" />
+                          <span>{project.taskCount} {project.taskCount === 1 ? "task" : "tasks"}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-green-600">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span>{project.completedTaskCount} done</span>
+                        </div>
+                      </div>
+
+                      {project.taskCount > 0 && (
+                        <div className="pt-2">
+                          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                            <span>Progress</span>
+                            <span>
+                              {Math.round((project.completedTaskCount / project.taskCount) * 100)}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full transition-all"
+                              style={{
+                                width: `${(project.completedTaskCount / project.taskCount) * 100}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {(project.startDate || project.endDate) && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
+                          <Calendar className="h-3 w-3" />
+                          <span>
+                            {project.startDate && new Date(project.startDate).toLocaleDateString()}
+                            {project.startDate && project.endDate && " - "}
+                            {project.endDate && new Date(project.endDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-4 mt-8">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page === 0}
+              >
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {page + 1} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= totalPages - 1}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          )}
+        </div>
       </Tabs>
 
       {/* Create Project Dialog */}
@@ -230,7 +287,7 @@ export default function ProjectsPage() {
                 Add a new project to organize your work. Fill in the details below.
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="name">

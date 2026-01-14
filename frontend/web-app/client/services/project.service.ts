@@ -6,12 +6,16 @@ import type {
   ProjectMember,
   CreateProjectDto,
   UpdateProjectDto,
+  PaginatedResponse,
+  ProjectFilter,
 } from "@/types/project.types";
 
 export const projectService = {
   // Get all projects for the current user
-  async getProjects(): Promise<ApiResponse<Project[]>> {
-    const response = await api.get<ApiResponse<Project[]>>("/projects");
+  async getProjects(filter?: ProjectFilter): Promise<ApiResponse<PaginatedResponse<Project>>> {
+    const response = await api.get<ApiResponse<PaginatedResponse<Project>>>("/projects", {
+      params: filter
+    });
     return response.data;
   },
 

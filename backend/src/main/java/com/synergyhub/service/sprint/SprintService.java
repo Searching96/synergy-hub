@@ -107,42 +107,56 @@ public class SprintService {
 
     @PreAuthorize("@projectSecurity.hasSprintAccess(#sprintId, #currentUser)")
     @Transactional(readOnly = true)
-    public SprintResponse getSprintById(Integer sprintId, User currentUser) {
+    public SprintResponse getSprintById(Long sprintId, User currentUser) {
         log.info("Getting sprint: {} for user: {}", sprintId, currentUser.getId());
 
         Sprint sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new SprintNotFoundException(sprintId));
+            .orElseThrow(() -> new SprintNotFoundException(sprintId));
 
         return sprintMapper.toSprintResponse(sprint);
     }
 
     @PreAuthorize("@projectSecurity.hasSprintAccess(#sprintId, #currentUser)")
     @Transactional(readOnly = true)
-    public SprintDetailResponse getSprintDetails(Integer sprintId, User currentUser) {
+    public SprintDetailResponse getSprintDetails(Long sprintId, User currentUser) {
         log.info("Getting sprint details: {} for user: {}", sprintId, currentUser.getId());
 
         Sprint sprint = sprintRepository.findByIdWithTasks(sprintId)
-                .orElseThrow(() -> new SprintNotFoundException(sprintId));
+            .orElseThrow(() -> new SprintNotFoundException(sprintId));
 
         return sprintMapper.toSprintDetailResponse(sprint);
     }
 
     @PreAuthorize("@projectSecurity.hasProjectAccess(#projectId, #currentUser)")
     @Transactional(readOnly = true)
-    public List<SprintResponse> getSprintsByProject(Integer projectId, User currentUser) {
-        log.info("Getting sprints for project: {} by user: {}", projectId, currentUser.getId());
+    public List<SprintResponse> getSprintsByProject(Long projectId, String status, User currentUser) {
+        log.info("Getting sprints for project: {} by user: {} with status: {}", projectId, currentUser.getId(), status);
 
         if (!projectRepository.existsById(projectId)) {
             throw new ProjectNotFoundException(projectId);
         }
 
-        List<Sprint> sprints = sprintRepository.findByProjectIdOrderByStartDateDesc(projectId);
+        List<Sprint> sprints;
+        if (status != null && !status.isEmpty()) {
+            try {
+                SprintStatus sprintStatus = SprintStatus.valueOf(status.toUpperCase());
+                sprints = sprintRepository.findByProjectIdAndStatus(projectId, sprintStatus);
+            } catch (IllegalArgumentException e) {
+                // If invalid status is provided, either throw error or return empty.
+                // For robustness, let's treat invalid status as "no match"
+                log.warn("Invalid sprint status filtered: {}", status);
+                return List.of();
+            }
+        } else {
+            sprints = sprintRepository.findByProjectIdOrderByStartDateDesc(projectId);
+        }
+
         return sprintMapper.toSprintResponseList(sprints);
     }
 
     @PreAuthorize("@projectSecurity.hasProjectAccess(#projectId, #currentUser)")
     @Transactional(readOnly = true)
-    public SprintResponse getActiveSprint(Integer projectId, User currentUser) {
+    public SprintResponse getActiveSprint(Long projectId, User currentUser) {
         log.info("Getting active sprint for project: {}", projectId);
 
         if (!projectRepository.existsById(projectId)) {
@@ -157,7 +171,7 @@ public class SprintService {
 
     @PreAuthorize("@projectSecurity.hasProjectAccess(#projectId, #currentUser)")
     @Transactional(readOnly = true)
-    public List<SprintResponse> getCompletedSprints(Integer projectId, User currentUser) {
+    public List<SprintResponse> getCompletedSprints(Long projectId, User currentUser) {
         log.info("Getting completed sprints for project: {}", projectId);
 
         if (!projectRepository.existsById(projectId)) {
@@ -170,11 +184,11 @@ public class SprintService {
 
     @PreAuthorize("@projectSecurity.hasSprintAccess(#sprintId, #currentUser)")
     @Transactional
-    public SprintResponse updateSprint(Integer sprintId, UpdateSprintRequest request, User currentUser) {
+    public SprintResponse updateSprint(Long sprintId, UpdateSprintRequest request, User currentUser) {
         log.info("Updating sprint: {} by user: {}", sprintId, currentUser.getId());
 
         Sprint sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new SprintNotFoundException(sprintId));
+            .orElseThrow(() -> new SprintNotFoundException(sprintId));
 
         // Don't allow updating completed or cancelled sprints
         if (sprint.getStatus() == SprintStatus.COMPLETED) {
@@ -249,11 +263,11 @@ public class SprintService {
 
     @PreAuthorize("@projectSecurity.hasSprintAccess(#sprintId, #currentUser)")
     @Transactional
-    public SprintResponse startSprint(Integer sprintId, User currentUser) {
+    public SprintResponse startSprint(Long sprintId, User currentUser) {
         log.info("Starting sprint: {} by user: {}", sprintId, currentUser.getId());
 
         Sprint sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new SprintNotFoundException(sprintId));
+            .orElseThrow(() -> new SprintNotFoundException(sprintId));
 
         // Check if sprint can be started
         if (!sprint.canBeStarted()) {
@@ -304,11 +318,11 @@ public class SprintService {
 
     @PreAuthorize("@projectSecurity.hasSprintAccess(#sprintId, #currentUser)")
     @Transactional
-    public SprintResponse completeSprint(Integer sprintId, User currentUser) {
+    public SprintResponse completeSprint(Long sprintId, User currentUser) {
         log.info("Completing sprint: {} by user: {}", sprintId, currentUser.getId());
 
         Sprint sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new SprintNotFoundException(sprintId));
+            .orElseThrow(() -> new SprintNotFoundException(sprintId));
 
         // Check if sprint can be completed
         if (!sprint.canBeCompleted()) {
@@ -342,11 +356,11 @@ public class SprintService {
 
     @PreAuthorize("@projectSecurity.hasSprintAccess(#sprintId, #currentUser)")
     @Transactional
-    public SprintResponse cancelSprint(Integer sprintId, User currentUser) {
+    public SprintResponse cancelSprint(Long sprintId, User currentUser) {
         log.info("Cancelling sprint: {} by user: {}", sprintId, currentUser.getId());
 
         Sprint sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new SprintNotFoundException(sprintId));
+            .orElseThrow(() -> new SprintNotFoundException(sprintId));
 
         if (sprint.getStatus() == SprintStatus.COMPLETED) {
             auditLogService.createAuditLog(
@@ -390,11 +404,11 @@ public class SprintService {
 
     @PreAuthorize("@projectSecurity.hasSprintAccess(#sprintId, #currentUser)")
     @Transactional
-    public void deleteSprint(Integer sprintId, User currentUser) {
+    public void deleteSprint(Long sprintId, User currentUser) {
         log.info("Deleting sprint: {} by user: {}", sprintId, currentUser.getId());
 
         Sprint sprint = sprintRepository.findById(sprintId)
-                .orElseThrow(() -> new SprintNotFoundException(sprintId));
+            .orElseThrow(() -> new SprintNotFoundException(sprintId));
 
         if (!sprint.canBeDeleted()) {
             auditLogService.createAuditLog(

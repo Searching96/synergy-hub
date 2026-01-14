@@ -28,7 +28,7 @@ public class Sprint {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "sprint_id")
     @EqualsAndHashCode.Include
-    private Integer id;
+    private Long id;
 
     @NotNull(message = "Project is required")
     @ManyToOne(fetch = FetchType.LAZY)

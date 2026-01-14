@@ -10,13 +10,13 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 public class CommentResponse {
-    private Integer id;
-    private Integer taskId;
+    private Long id;
+    private Long taskId;
     private String content;
     private LocalDateTime createdAt;
     
     // User info for display
-    private Integer userId;
+    private Long userId;
     private String userName;
     // Optional: Add avatarUrl if you have it
 }

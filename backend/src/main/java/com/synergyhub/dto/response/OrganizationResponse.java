@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class OrganizationResponse {
     
-    private Integer id;
+    private Long id;
     private String name;
     private String address;
     private LocalDateTime createdAt;

@@ -37,7 +37,7 @@ public class ProjectMembershipService {
     }
 
     @Transactional
-    public void addMember(Project project, Integer userId, ProjectRole role, User actor, String ipAddress) {
+    public void addMember(Project project, Long userId, ProjectRole role, User actor, String ipAddress) {
         User memberUser = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
@@ -66,7 +66,7 @@ public class ProjectMembershipService {
     }
 
     @Transactional
-    public void removeMember(Project project, Integer userId, User actor, String ipAddress) {
+    public void removeMember(Project project, Long userId, User actor, String ipAddress) {
         User memberUser = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
@@ -87,7 +87,7 @@ public class ProjectMembershipService {
     }
 
     @Transactional
-    public void updateMemberRole(Project project, Integer userId, ProjectRole role, User actor, String ipAddress) {
+    public void updateMemberRole(Project project, Long userId, ProjectRole role, User actor, String ipAddress) {
         User memberUser = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
