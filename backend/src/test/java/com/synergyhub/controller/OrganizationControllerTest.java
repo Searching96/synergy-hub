@@ -52,7 +52,7 @@ public class OrganizationControllerTest {
     @BeforeEach
     void setUp() {
         mockUser = new User();
-        mockUser.setUserId(1L);
+        mockUser.setId(1L);
         mockUser.setEmail("test@example.com");
         
         mockPrincipal = UserPrincipal.create(mockUser);
