@@ -26,7 +26,7 @@ export default function Topbar() {
     queryFn: () => projectService.getProjects(),
   });
 
-  const projects = projectsResponse?.data?.filter(p => p.status !== "ARCHIVED") || [];
+  const projects = projectsResponse?.data?.content?.filter(p => p.status !== "ARCHIVED") || [];
   const isAdmin = user?.roles?.includes("GLOBAL_ADMIN") || user?.roles?.includes("ORG_ADMIN");
 
   const handleLogout = () => {
