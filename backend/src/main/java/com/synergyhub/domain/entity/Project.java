@@ -7,6 +7,10 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
 
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -70,6 +74,14 @@ public class Project {
     @BatchSize(size = 20)
     @Builder.Default
     private Set<Task> tasks = new HashSet<>();
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     @AssertTrue(message = "End date must be after start date")
     public boolean isValidDateRange() {

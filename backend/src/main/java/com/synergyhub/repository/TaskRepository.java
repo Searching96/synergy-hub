@@ -77,9 +77,9 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     long countBySprintIdAndStatusInOrganization(@Param("sprintId") Long sprintId, @Param("status") TaskStatus status, @Param("orgId") Long orgId);
 
     // Organization-scoped query: derived method
-    List<Task> findAllByProjectOrganizationOrgId(Long orgId);
+    List<Task> findAllByProjectOrganizationId(Long orgId);
 
     // Organization-scoped query: explicit JPQL
-    @Query("SELECT t FROM Task t WHERE t.project.organization.orgId = :orgId")
+    @Query("SELECT t FROM Task t WHERE t.project.organization.id = :orgId")
     List<Task> findAllByOrganizationId(@Param("orgId") Long orgId);
 }

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import com.synergyhub.domain.enums.ProjectStatus;
 
 @Repository
 public interface ProjectRepository extends JpaRepository<Project, Long> {
@@ -41,7 +42,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     long countByOrganizationId(Long organizationId);
 
     // Find projects by status
-    List<Project> findByStatusAndOrganizationId(String status, Long organizationId);
+    List<Project> findByStatusAndOrganizationId(ProjectStatus status, Long organizationId);
 
     // Find all active projects in organization
     @Query("SELECT p FROM Project p WHERE p.organization.id = :organizationId AND p.status = 'ACTIVE'")
@@ -55,6 +56,6 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     org.springframework.data.domain.Page<Project> findProjectsForUserWithFilter(
             @Param("userId") Long userId,
             @Param("search") String search,
-            @Param("status") String status,
+            @Param("status") ProjectStatus status,
             org.springframework.data.domain.Pageable pageable);
 }

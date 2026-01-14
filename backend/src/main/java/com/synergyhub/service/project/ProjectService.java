@@ -116,9 +116,19 @@ public class ProjectService {
         org.springframework.data.domain.Pageable pageable = 
             org.springframework.data.domain.PageRequest.of(page, size, 
                 org.springframework.data.domain.Sort.by("updatedAt").descending());
+        
+        // Convert String to ProjectStatus enum, null if empty/null
+        com.synergyhub.domain.enums.ProjectStatus statusEnum = null;
+        if (status != null && !status.isBlank()) {
+            try {
+                statusEnum = com.synergyhub.domain.enums.ProjectStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // Invalid status, treat as null (no filter)
+            }
+        }
                 
         org.springframework.data.domain.Page<Project> projectPage = 
-            projectRepository.findProjectsForUserWithFilter(currentUser.getId(), search, status, pageable);
+            projectRepository.findProjectsForUserWithFilter(currentUser.getId(), search, statusEnum, pageable);
             
         return projectPage.map(projectMapper::toProjectResponse);
     }
