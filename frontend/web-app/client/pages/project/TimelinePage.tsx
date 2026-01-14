@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { format, differenceInDays, addMonths, startOfMonth } from "date-fns";
 import { toast } from "@/hooks/use-toast";
+import IssueModal from "@/components/issue/IssueModal";
 
 export default function TimelinePage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -178,7 +179,19 @@ export default function TimelinePage() {
             <Share2 className="h-4 w-4" />
             Share
           </Button>
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => toast({ title: "Export", description: "Coming soon!" })}>
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => {
+            const exportData = JSON.stringify(timelineData, null, 2);
+            const blob = new Blob([exportData], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `timeline-export-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toast({ title: "Exported", description: "Timeline data exported to JSON" });
+          }}>
             <Download className="h-4 w-4" />
             Export
           </Button>
@@ -342,6 +355,7 @@ export default function TimelinePage() {
           </div>
         </div>
       </div>
+      <IssueModal />
     </div>
   );
 }

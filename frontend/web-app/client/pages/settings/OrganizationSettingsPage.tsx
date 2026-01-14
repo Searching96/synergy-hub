@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // Added import
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -30,6 +31,7 @@ type OrganizationFormData = z.infer<typeof organizationSchema>;
 
 export default function OrganizationSettingsPage() {
   const { user } = useAuth();
+  const navigate = useNavigate(); // Hook for navigation
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
 
@@ -253,6 +255,49 @@ export default function OrganizationSettingsPage() {
               )}
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Roles & Permissions Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+              />
+            </svg>
+            Roles & Permissions
+          </CardTitle>
+          <CardDescription>
+            Manage user roles and access permissions within your organization
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="font-medium text-sm">Role Configuration</h3>
+              <p className="text-sm text-muted-foreground">
+                Define what users effectively can do in your organization
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/settings/roles")}
+              className="gap-2"
+            >
+              Manage Roles
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

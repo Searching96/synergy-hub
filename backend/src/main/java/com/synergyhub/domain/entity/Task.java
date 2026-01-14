@@ -144,7 +144,11 @@ public class Task {
     }
 
     public boolean canBeMovedToSprint() {
-        return status == TaskStatus.TO_DO || status == TaskStatus.BACKLOG;
+        return status == TaskStatus.TO_DO || 
+               status == TaskStatus.BACKLOG ||
+               status == TaskStatus.IN_PROGRESS ||
+               status == TaskStatus.IN_REVIEW ||
+               status == TaskStatus.BLOCKED;
     }
 
     public boolean isOverdue() {
