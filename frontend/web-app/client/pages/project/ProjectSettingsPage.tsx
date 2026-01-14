@@ -45,6 +45,13 @@ export default function ProjectSettingsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Helper to format role
+  const formatRole = (role: string) => {
+    return role.split('_').map(word =>
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
+  };
+
   // Details form state
   const [name, setName] = useState(project?.name || "");
   const [description, setDescription] = useState(project?.description || "");
@@ -276,7 +283,7 @@ export default function ProjectSettingsPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium px-3 py-1 bg-muted rounded-full">
-                        {member.role}
+                        {formatRole(member.role)}
                       </span>
                       {member.role !== "OWNER" && member.role !== "PROJECT_LEAD" && (
                         <Button
@@ -373,13 +380,18 @@ export default function ProjectSettingsPage() {
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem key="PROJECT_LEAD" value="PROJECT_LEAD">Project Lead</SelectItem>
+                    <SelectItem key="PRODUCT_OWNER" value="PRODUCT_OWNER">Product Owner</SelectItem>
+                    <SelectItem key="SCRUM_MASTER" value="SCRUM_MASTER">Scrum Master</SelectItem>
                     <SelectItem key="DEVELOPER" value="DEVELOPER">Developer</SelectItem>
-                    <SelectItem key="ADMIN" value="ADMIN">Admin</SelectItem>
-                    <SelectItem key="VIEWER" value="VIEWER">Viewer</SelectItem>
+                    <SelectItem key="TESTER" value="TESTER">Tester</SelectItem>
+                    <SelectItem key="DESIGNER" value="DESIGNER">Designer</SelectItem>
+                    <SelectItem key="BUSINESS_ANALYST" value="BUSINESS_ANALYST">Business Analyst</SelectItem>
+                    <SelectItem key="STAKEHOLDER" value="STAKEHOLDER">Stakeholder</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Developers can create and edit tasks, Admins can manage members and sprints, Viewers have read-only access
+                  Project Leads and Product Owners have full access. Developers, Testers, and Designers can manage tasks. Stakeholders are read-only.
                 </p>
               </div>
             </div>
