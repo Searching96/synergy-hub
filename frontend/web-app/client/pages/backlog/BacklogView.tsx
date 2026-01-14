@@ -55,7 +55,11 @@ export default function BacklogView() {
   const { project } = useProject();
   const { user } = useAuth();
   const { data: tasksData, isLoading, error } = useBacklogTasks(projectId);
-  const tasks = tasksData?.data?.content || [];
+  const tasks = useMemo(() => {
+    if (!tasksData?.data) return [];
+    if (Array.isArray(tasksData.data)) return tasksData.data;
+    return tasksData.data.content || [];
+  }, [tasksData]);
   const { data: sprints } = useProjectSprints(projectId);
   const moveTask = useMoveTaskToSprint(projectId);
   const updateTask = useUpdateTaskInline(projectId);

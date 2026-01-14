@@ -39,8 +39,8 @@ export const taskService = {
   async getProjectTasks(
     projectId: number | string,
     params: TaskFilters | Record<string, unknown> = {}
-  ): Promise<ApiResponse<PaginatedResponse<Task>>> {
-    const response = await api.get<ApiResponse<PaginatedResponse<Task>>>(`/projects/${projectId}/tasks`, { params });
+  ): Promise<ApiResponse<PaginatedResponse<Task> | Task[]>> {
+    const response = await api.get<ApiResponse<PaginatedResponse<Task> | Task[]>>(`/projects/${projectId}/tasks`, { params });
     return response.data;
   },
 
