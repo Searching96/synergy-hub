@@ -5,14 +5,15 @@
 
 import api from './api';
 
-id: number;
-name: string;
-address ?: string;
-contactEmail ?: string;
-createdAt: string;
-userCount ?: number;
-inviteCode ?: string;
-inviteCodeExpiresAt ?: string;
+export interface Organization {
+  id: number;
+  name: string;
+  address?: string;
+  contactEmail?: string;
+  createdAt: string;
+  userCount?: number;
+  inviteCode?: string;
+  inviteCodeExpiresAt?: string;
 }
 
 export interface CreateOrganizationRequest {

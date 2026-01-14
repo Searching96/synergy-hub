@@ -1,9 +1,22 @@
 package com.synergyhub.config;
 
-import com.synergyhub.repository.OrganizationRepository; // Added
-import com.synergyhub.security.OrganizationContext; // Added
-import com.synergyhub.domain.entity.Organization; // Added
-import java.util.List; // Added
+import com.synergyhub.repository.EmailVerificationRepository;
+import com.synergyhub.repository.LoginAttemptRepository;
+import com.synergyhub.repository.OrganizationRepository;
+import com.synergyhub.repository.PasswordResetTokenRepository;
+import com.synergyhub.repository.UserSessionRepository;
+import com.synergyhub.security.OrganizationContext;
+import com.synergyhub.domain.entity.Organization;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Configuration
 @EnableScheduling
