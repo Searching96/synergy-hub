@@ -36,8 +36,8 @@ public class UserPrincipal implements UserDetails {
             user.getEmail(),
             user.getPasswordHash(),
             null, // orgId is now context-driven
-            user.getEmailVerified(),
-            user.getTwoFactorEnabled(),
+            Boolean.TRUE.equals(user.getEmailVerified()), // null-safe
+            Boolean.TRUE.equals(user.getTwoFactorEnabled()), // null-safe
             List.of() // authorities will be context-driven
         );
     }

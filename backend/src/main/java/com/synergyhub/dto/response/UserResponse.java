@@ -19,6 +19,7 @@ public class UserResponse {
     private Long id;
     private String name;
     private String email;
+    private String imageUrl;
     private Long organizationId;
     private String organizationName;
     private boolean emailVerified;
