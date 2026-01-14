@@ -16,7 +16,12 @@ services:
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - DB_ENCRYPTION_KEY=${DB_ENCRYPTION_KEY}
-      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS} 
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - FRONTEND_URL=${FRONTEND_URL:-https://thinhuit.id.vn}
     depends_on:
       - db
     restart: unless-stopped
