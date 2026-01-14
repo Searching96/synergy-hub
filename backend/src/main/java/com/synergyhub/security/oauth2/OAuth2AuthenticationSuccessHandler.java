@@ -35,6 +35,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         }
 
         String targetUrl = determineTargetUrl(request, response, authentication);
+        logger.info("Redirecting to targetUrl: " + targetUrl);
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 
