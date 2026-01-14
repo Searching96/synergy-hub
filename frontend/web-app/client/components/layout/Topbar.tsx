@@ -178,9 +178,13 @@ export default function Topbar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-blue-600 text-white text-xs">
-                    {user?.name ? getInitials(user.name) : "U"}
-                  </AvatarFallback>
+                  {user?.imageUrl ? (
+                    <img src={user.imageUrl} alt={user.name} className="h-full w-full object-cover rounded-full" />
+                  ) : (
+                    <AvatarFallback className="bg-blue-600 text-white text-xs">
+                      {user?.name ? getInitials(user.name) : "U"}
+                    </AvatarFallback>
+                  )}
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
