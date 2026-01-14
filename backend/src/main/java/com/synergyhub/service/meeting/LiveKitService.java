@@ -8,24 +8,34 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+
+/**
+ * Service to generate LiveKit access tokens for video conferencing.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class LiveKitService {
 
-    @Value("${livekit.api.key}")
+    @Value("${livekit.api.key:devkey}")
     private String apiKey;
 
-    @Value("${livekit.api.secret}")
+    @Value("${livekit.api.secret:secret}")
     private String apiSecret;
 
+    /**
+     * Generates a LiveKit access token for the given room and participant.
+     */
     public String generateToken(String roomName, String participantIdentity, String participantName) {
         AccessToken token = new AccessToken(apiKey, apiSecret);
         token.setName(participantName);
         token.setIdentity(participantIdentity);
+        token.setTtl(Duration.ofHours(24));
+        
+        // Grant room access
         token.addGrants(new RoomJoin(true), new RoomName(roomName));
-        token.setTtl(24 * 60 * 60 * 1000); // 24 hours
-
+        
         return token.toJwt();
     }
 }
