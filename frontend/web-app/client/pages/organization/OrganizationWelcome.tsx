@@ -54,12 +54,12 @@ export default function OrganizationWelcome() {
 
       if (response.success) {
         setSuccessMessage("Organization created successfully! Redirecting...");
-        
+
         // Update user in localStorage with organization
         const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
         currentUser.organizationId = response.data.id;
         localStorage.setItem("user", JSON.stringify(currentUser));
-        
+
         setTimeout(() => {
           navigate("/dashboard");
         }, 2000);
@@ -90,15 +90,15 @@ export default function OrganizationWelcome() {
         response = await organizationService.joinOrganization({
           inviteCode: joinForm.inviteCode,
         });
-        
+
         if (response.success) {
           setSuccessMessage("Joined organization successfully! Redirecting...");
-          
+
           // Update user in localStorage
           const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-          currentUser.organizationId = response.data.organizationId;
+          currentUser.organizationId = response.data.id;
           localStorage.setItem("user", JSON.stringify(currentUser));
-          
+
           setTimeout(() => {
             navigate("/dashboard");
           }, 2000);
@@ -108,12 +108,12 @@ export default function OrganizationWelcome() {
         response = await organizationService.requestJoinOrganization(
           joinForm.organizationEmail
         );
-        
+
         if (response.success) {
           setSuccessMessage(
             "Join request sent! You'll be notified once the admin approves your request."
           );
-          
+
           setTimeout(() => {
             navigate("/dashboard");
           }, 3000);
@@ -156,7 +156,7 @@ export default function OrganizationWelcome() {
               <div className="absolute top-6 right-6 h-12 w-12 rounded-full bg-blue-100 group-hover:bg-blue-600 flex items-center justify-center transition-colors">
                 <Plus className="h-6 w-6 text-blue-600 group-hover:text-white transition-colors" />
               </div>
-              
+
               <div className="pr-16">
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
                   Create Organization
@@ -164,7 +164,7 @@ export default function OrganizationWelcome() {
                 <p className="text-gray-600 mb-6">
                   Start fresh by creating your own organization. You'll be the admin and can invite team members.
                 </p>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-gray-700">
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -195,7 +195,7 @@ export default function OrganizationWelcome() {
               <div className="absolute top-6 right-6 h-12 w-12 rounded-full bg-purple-100 group-hover:bg-purple-600 flex items-center justify-center transition-colors">
                 <Users className="h-6 w-6 text-purple-600 group-hover:text-white transition-colors" />
               </div>
-              
+
               <div className="pr-16">
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
                   Join Organization
@@ -203,7 +203,7 @@ export default function OrganizationWelcome() {
                 <p className="text-gray-600 mb-6">
                   Join an existing organization using an invite code or request to join via email.
                 </p>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-gray-700">
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -259,7 +259,7 @@ export default function OrganizationWelcome() {
                 Fill in the details below to create your organization. You can update these later.
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label htmlFor="org-name">
@@ -340,7 +340,7 @@ export default function OrganizationWelcome() {
                 Enter an invite code or request to join an organization via email.
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label htmlFor="invite-code">Invite Code</Label>
