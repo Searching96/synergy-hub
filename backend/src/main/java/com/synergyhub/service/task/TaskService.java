@@ -259,6 +259,24 @@ public class TaskService {
             task.setSprint(sprint);
         }
 
+        if (request.getEpicId() != null) {
+            Task epic = taskRepository.findById(request.getEpicId())
+                    .orElseThrow(() -> new TaskNotFoundException(request.getEpicId()));
+
+            if (epic.getType() != TaskType.EPIC) {
+                throw new BadRequestException("Selected task is not an epic");
+            }
+            if (!epic.getProject().getId().equals(task.getProject().getId())) {
+                throw new BadRequestException("Epic does not belong to task's project");
+            }
+            
+            if (task.getEpic() == null || !task.getEpic().getId().equals(epic.getId())) {
+                String oldEpic = task.getEpic() != null ? task.getEpic().getTitle() : "None";
+                changes.append(String.format("Epic: %s → %s; ", oldEpic, epic.getTitle()));
+                task.setEpic(epic);
+            }
+        }
+
         Task updatedTask = taskRepository.save(task);
         log.info("Task updated successfully: {}", taskId);
 

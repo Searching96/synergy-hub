@@ -39,14 +39,14 @@ export default function IssueDetailPanel({
   const [subtaskTitle, setSubtaskTitle] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: attachmentsResponse } = useTaskAttachments(taskId);
+  const { data: attachmentsData } = useTaskAttachments(taskId);
   const { data: subtasksResponse } = useTaskSubtasks(taskId);
 
   const uploadAttachment = useUploadAttachment();
   const deleteAttachment = useDeleteAttachment();
   const createSubtask = useCreateSubtask();
 
-  const attachments = attachmentsResponse?.data || [];
+  const attachments = attachmentsData || [];
   const subtasks = subtasksResponse?.data || [];
 
   const getTypeColor = (type: string) => {

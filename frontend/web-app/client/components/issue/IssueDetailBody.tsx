@@ -73,7 +73,7 @@ export function IssueDetailBody({
   const loadAttachments = async () => {
     try {
       const response = await taskService.getTaskAttachments(task.id);
-      setAttachments(response.data || []);
+      setAttachments(response || []);
     } catch (error) {
       console.error("Failed to load attachments", error);
     }

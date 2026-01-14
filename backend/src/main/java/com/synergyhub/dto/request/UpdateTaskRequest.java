@@ -45,6 +45,8 @@ public class UpdateTaskRequest {
     
     // Position for drag-and-drop ordering (ignored by backend for now)
     private Integer position;
+
+    private Long epicId;
     
     private java.util.List<String> labels;
 }

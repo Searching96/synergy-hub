@@ -117,8 +117,8 @@ export const taskService = {
   },
 
   // Get task attachments
-  async getTaskAttachments(taskId: number | string): Promise<ApiResponse<Attachment[]>> {
-    const response = await api.get<ApiResponse<Attachment[]>>(`/tasks/${taskId}/attachments`);
+  async getTaskAttachments(taskId: number | string): Promise<Attachment[]> {
+    const response = await api.get<Attachment[]>(`/tasks/${taskId}/attachments`);
     return response.data;
   },
 
