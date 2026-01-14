@@ -16,6 +16,8 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class UserPrincipal implements UserDetails {
     
+    private final User user; // Store the full entity
+    
     private Long id;
     private String name;
     private String email;
@@ -28,6 +30,7 @@ public class UserPrincipal implements UserDetails {
     public static UserPrincipal create(User user) {
         // Remove orgId logic based on user.getOrganization()
         return new UserPrincipal(
+            user,
             user.getUserId(),
             user.getName(),
             user.getEmail(),
@@ -94,5 +97,9 @@ public class UserPrincipal implements UserDetails {
     @Override
     public boolean isEnabled() {
         return emailVerified;
+    }
+
+    public User getUser() {
+        return user;
     }
 }

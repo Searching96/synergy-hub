@@ -6,8 +6,5 @@ import jakarta.validation.constraints.NotNull;
 @Data
 public class JoinOrganizationRequest {
     @NotNull
-    private Long organizationId;
-    @NotNull
-    private Long userId;
     private String inviteCode;
 }
