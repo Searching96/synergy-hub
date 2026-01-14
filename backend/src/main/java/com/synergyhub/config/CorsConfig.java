@@ -57,8 +57,16 @@ public class CorsConfig {
             "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
         ));
         
-        // ✅ Allow all headers to prevent preflight errors
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        // ✅ Explicit headers required for allowCredentials=true
+        configuration.setAllowedHeaders(Arrays.asList(
+            "Authorization",
+            "Content-Type",
+            "Accept",
+            "Origin",
+            "X-Requested-With",
+            "x-organization-id",
+            "x-organization-context"
+        ));
         
         configuration.setExposedHeaders(Arrays.asList(
             "Authorization",

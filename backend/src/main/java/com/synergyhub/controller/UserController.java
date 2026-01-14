@@ -95,6 +95,9 @@ public class UserController {
         log.info("Checking organization for user: {}", user.getId());
         
         UserOrganizationResponse response = UserOrganizationResponse.builder()
+                .userId(user.getId())
+                .userName(user.getName())
+                .userEmail(user.getEmail())
                 .organizationId(user.getOrganization() != null ? user.getOrganization().getId() : null)
                 .organizationName(user.getOrganization() != null ? user.getOrganization().getName() : null)
                 .hasOrganization(user.getOrganization() != null)
