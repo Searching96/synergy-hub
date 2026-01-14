@@ -56,6 +56,7 @@ export interface ApiResponse<T = any> {
     field: string;
     message: string;
   }>;
+  error?: string;
   timestamp?: string;
   path?: string;
 }

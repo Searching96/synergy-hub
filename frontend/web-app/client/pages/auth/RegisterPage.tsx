@@ -51,7 +51,7 @@ const RegisterPage = () => {
       setIsLoading(true);
       setError(null);
 
-      const response = await registerUser(data);
+      const response = await registerUser(data as any);
 
       if (response.success) {
         setSuccess(true);
@@ -59,10 +59,10 @@ const RegisterPage = () => {
           navigate('/login');
         }, 3000);
       } else {
-        setError(response.message || 'Registration failed');
+        setError((response as any).error || response.message || 'Registration failed');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred during registration');
+      setError(err.response?.data?.error || err.response?.data?.message || 'An error occurred during registration');
     } finally {
       setIsLoading(false);
     }

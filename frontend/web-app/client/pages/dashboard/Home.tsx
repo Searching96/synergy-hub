@@ -36,7 +36,8 @@ export default function DashboardHome() {
   }
 
   // Filter out archived projects from paginated content
-  const projects: Project[] = (response?.data?.content || []).filter((project: Project) => project.status !== "ARCHIVED");
+  const content = response?.data?.content;
+  const projects: Project[] = (Array.isArray(content) ? content : []).filter((project: Project) => project.status !== "ARCHIVED");
 
   return (
     <div className="p-6">

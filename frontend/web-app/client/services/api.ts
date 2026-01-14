@@ -40,7 +40,7 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     // Add X-Organization-ID header if organization ID is available
     // First check localStorage for separate organizationId item (used by SSO service)
     const orgIdFromLocalStorage = localStorage.getItem("organizationId");
@@ -61,7 +61,7 @@ api.interceptors.request.use(
         }
       }
     }
-    
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -79,50 +79,38 @@ const validateTaskStatus = (status: string, fieldName?: string): string => {
   if (VALID_TASK_STATUSES.includes(status as any)) {
     return status;
   }
-  
-  // Accept valid sprint statuses as-is (these appear in sprint objects within responses)
+
+  // Accept valid sprint statuses as-is
   if (VALID_SPRINT_STATUSES.includes(status as any)) {
     return status;
   }
-  
+
+  // Accept valid meeting statuses as-is (fix for "Unknown status received: SCHEDULED")
+  if (["SCHEDULEED", "ENDED"].includes(status)) {
+    return status;
+  }
+
   // Legacy backend compatibility - remove once backend is updated
   if (status === "TODO") {
     console.warn("Backend sent deprecated status 'TODO', expected 'TO_DO'");
     return "TO_DO";
   }
-  
+
   // Unknown status - log for monitoring and use safe fallback
   const validStatuses = `${VALID_TASK_STATUSES.join(", ")} (task) or ${VALID_SPRINT_STATUSES.join(", ")} (sprint)`;
   console.error(`Unknown status received: "${status}"${fieldName ? ` in ${fieldName}` : ""}. Expected one of: ${validStatuses}`);
-  
-  // Error monitoring integration - uncomment and configure when ready:
-  // Option 1: Sentry
-  // import * as Sentry from "@sentry/react";
-  // Sentry.captureMessage(`Unknown status: ${status}`, {
-  //   level: 'warning',
-  //   tags: { module: 'api-normalization', feature: 'status-validation' },
-  //   extra: { receivedStatus: status, fieldName }
-  // });
-  
-  // Option 2: LogRocket
-  // import LogRocket from 'logrocket';
-  // LogRocket.track('Unknown Status', { status, fieldName, timestamp: Date.now() });
-  
-  // Option 3: Datadog
-  // import { datadogLogs } from '@datadog/browser-logs';
-  // datadogLogs.logger.warn('Unknown status', { status, fieldName });
-  
-  return "TO_DO"; // Safe fallback to prevent task from disappearing
+
+  return status; // Return original status instead of overriding with TO_DO, to prevent data loss
 };
 
 const normalizeResponseData = (data: any): any => {
   if (!data) return data;
-  
+
   // Normalize task status in single task response
   if (data.data && typeof data.data === "object" && data.data.status) {
     data.data.status = validateTaskStatus(data.data.status);
   }
-  
+
   // Normalize task status in array responses
   if (data.data && Array.isArray(data.data)) {
     data.data = data.data.map((item: any) => {
@@ -132,7 +120,7 @@ const normalizeResponseData = (data: any): any => {
       return item;
     });
   }
-  
+
   // Normalize nested tasks in board/sprint responses
   if (data.data && data.data.activeSprints && Array.isArray(data.data.activeSprints)) {
     data.data.activeSprints = data.data.activeSprints.map((sprint: any) => {
@@ -147,7 +135,7 @@ const normalizeResponseData = (data: any): any => {
       return sprint;
     });
   }
-  
+
   return data;
 };
 

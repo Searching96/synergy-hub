@@ -10,7 +10,7 @@ export function useBacklogTasks(projectId: string | undefined) {
       if (!projectId) throw new Error("Project ID is required");
 
       const response = await taskService.getProjectTasks(projectId, {});
-      return response.data as BacklogTask[];
+      return response;
     },
     enabled: !!projectId,
   });

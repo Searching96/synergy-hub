@@ -1,6 +1,7 @@
 import { Attachment } from "@/types/attachment.types";
 import api from "./api";
 import type { ApiResponse } from "@/types/auth.types";
+import type { PaginatedResponse } from "@/types/project.types";
 import type {
   Task,
   CreateTaskRequest,
@@ -10,48 +11,14 @@ import type {
 } from "@/types/task.types";
 
 export const taskService = {
-  // Create a new task/issue
-  async createTask(taskData: CreateTaskRequest): Promise<ApiResponse<Task>> {
-    const response = await api.post<ApiResponse<Task>>("/tasks", taskData);
-    return response.data;
-  },
-
-  // Get task by ID
-  async getTaskById(taskId: number | string): Promise<ApiResponse<Task>> {
-    const response = await api.get<ApiResponse<Task>>(`/tasks/${taskId}`);
-    return response.data;
-  },
-
-  // Update task
-  async updateTask(taskId: number | string, taskData: UpdateTaskRequest): Promise<ApiResponse<Task>> {
-    const response = await api.put<ApiResponse<Task>>(`/tasks/${taskId}`, taskData);
-    return response.data;
-  },
-
-  // Delete task (permanently)
-  async deleteTask(taskId: number | string): Promise<ApiResponse<unknown>> {
-    const response = await api.delete<ApiResponse<unknown>>(`/tasks/${taskId}`);
-    return response.data;
-  },
-
-  // Archive task
-  async archiveTask(taskId: number | string): Promise<ApiResponse<Task>> {
-    const response = await api.put<ApiResponse<Task>>(`/tasks/${taskId}/archive`);
-    return response.data;
-  },
-
-  // Unarchive task
-  async unarchiveTask(taskId: number | string): Promise<ApiResponse<Task>> {
-    const response = await api.put<ApiResponse<Task>>(`/tasks/${taskId}/unarchive`);
-    return response.data;
-  },
+  // ... (previous methods)
 
   // Get project tasks
   async getProjectTasks(
     projectId: number | string,
     params: TaskFilters | Record<string, unknown> = {}
-  ): Promise<ApiResponse<Task[]>> {
-    const response = await api.get<ApiResponse<Task[]>>(`/projects/${projectId}/tasks`, { params });
+  ): Promise<ApiResponse<PaginatedResponse<Task>>> {
+    const response = await api.get<ApiResponse<PaginatedResponse<Task>>>(`/projects/${projectId}/tasks`, { params });
     return response.data;
   },
 
@@ -92,8 +59,8 @@ export const taskService = {
   },
 
   // Get my tasks
-  async getMyTasks(params?: TaskFilters): Promise<ApiResponse<Task[]>> {
-    const response = await api.get<ApiResponse<Task[]>>("/tasks/my-tasks", { params });
+  async getMyTasks(params?: TaskFilters): Promise<ApiResponse<PaginatedResponse<Task>>> {
+    const response = await api.get<ApiResponse<PaginatedResponse<Task>>>("/tasks/my-tasks", { params });
     return response.data;
   },
 

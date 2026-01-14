@@ -25,8 +25,11 @@ export default function YourWork() {
     queryFn: userService.getMyProjects,
   });
 
-  const issues = useMemo<Task[]>(() => issuesData?.data || [], [issuesData]);
-  const projects = useMemo<Project[]>(() => projectsData?.data?.content || [], [projectsData]);
+  const issues = useMemo<Task[]>(() => Array.isArray(issuesData?.data) ? issuesData.data : [], [issuesData]);
+  const projects = useMemo<Project[]>(() => {
+    const content = projectsData?.data?.content;
+    return Array.isArray(content) ? content : [];
+  }, [projectsData]);
 
   const renderIssues = () => {
     if (loadingIssues) {
