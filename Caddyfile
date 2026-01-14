@@ -1,0 +1,7 @@
+api.thinhuit.id.vn {
+    reverse_proxy backend:8080
+}
+
+livekit.thinhuit.id.vn {
+    reverse_proxy livekit:7880
+}

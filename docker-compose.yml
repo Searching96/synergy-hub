@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: synergyhub-backend
     ports:
-      - "8080:8080" # Expose for external access (or use Nginx on VPS)
+      - "127.0.0.1:8080:8080" # Bound to localhost, proxy via your existing Nginx
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - DATABASE_URL="jdbc:mysql://db:3306/synergyhub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
@@ -16,7 +16,6 @@ services:
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - DB_ENCRYPTION_KEY=${DB_ENCRYPTION_KEY}
-      # IMPORTANT: Add your Vietnam domain here
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS} 
     depends_on:
       - db
@@ -50,9 +49,9 @@ services:
     container_name: synergyhub-livekit
     command: --config /etc/livekit.yaml
     ports:
-      - "7880:7880"
-      - "7881:7881"
-      - "7882:7882/udp"
+      - "127.0.0.1:7880:7880" # Signaling: Proxy via your existing Nginx
+      - "7881:7881"           # WebRTC TCP: Must be public
+      - "7882:7882/udp"       # WebRTC UDP: Must be public
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml
     depends_on:
