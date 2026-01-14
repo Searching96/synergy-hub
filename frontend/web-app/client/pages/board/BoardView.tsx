@@ -48,11 +48,6 @@ export default function BoardView() {
     isMoving,
   } = useProjectBoard(projectId);
 
-  const visibleBacklog = useMemo(
-    () => (backlogTasks || []).filter((task) => !task.archived),
-    [backlogTasks]
-  );
-
   const [createSprintOpen, setCreateSprintOpen] = useState(false);
   const [sprintListOpen, setSprintListOpen] = useState(false);
 
@@ -91,12 +86,39 @@ export default function BoardView() {
         filteredTasks = filteredTasks.filter(task => !task.assignee);
       } else {
         const assigneeId = parseInt(selectedAssignee);
-        filteredTasks = filteredTasks.filter(task => task.assignee?.id === assigneeId);
+        if (!isNaN(assigneeId)) {
+          filteredTasks = filteredTasks.filter(task => task.assignee?.id === assigneeId);
+        }
       }
     }
 
     return groupTasksByStatus(filteredTasks);
-  }, [activeSprint?.tasks, debouncedSearchQuery, selectedAssignee]); // Updated to use debounced version
+  }, [activeSprint, debouncedSearchQuery, selectedAssignee]); // Updated to use object ref and debounced query
+
+  // Derive filtered backlog for preview (apply same filters for consistency)
+  const visibleBacklog = useMemo(() => {
+    let filtered = (backlogTasks || []).filter((task) => !task.archived);
+
+    // Apply search filter
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.toLowerCase();
+      filtered = filtered.filter(task => task.title.toLowerCase().includes(query));
+    }
+
+    // Apply assignee filter
+    if (selectedAssignee && selectedAssignee !== "ALL") {
+      if (selectedAssignee === "UNASSIGNED") {
+        filtered = filtered.filter(task => !task.assignee);
+      } else {
+        const assigneeId = parseInt(selectedAssignee);
+        if (!isNaN(assigneeId)) {
+          filtered = filtered.filter(task => task.assignee?.id === assigneeId);
+        }
+      }
+    }
+
+    return filtered;
+  }, [backlogTasks, debouncedSearchQuery, selectedAssignee]);
 
   const handleDragEnd = async (result: DropResult) => {
     const { source, destination } = result;

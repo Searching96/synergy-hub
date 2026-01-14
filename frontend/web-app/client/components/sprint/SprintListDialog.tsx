@@ -70,6 +70,13 @@ export default function SprintListDialog({ open, onOpenChange }: SprintListDialo
           <div className="space-y-3">
             {sprints.map((sprint) => {
               const normalizedStatus = sprint.status === "PLANNING" ? "PLANNED" : sprint.status;
+              const badgeClass = statusColors[normalizedStatus] || statusColors.PLANNING;
+
+              const isValidDate = (dateString?: string) => {
+                if (!dateString) return false;
+                const d = new Date(dateString);
+                return d instanceof Date && !isNaN(d.getTime());
+              };
 
               return (
                 <div
@@ -80,7 +87,7 @@ export default function SprintListDialog({ open, onOpenChange }: SprintListDialo
                     <div className="space-y-1 flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">{sprint.name}</h3>
-                        <Badge className={statusColors[normalizedStatus] || statusColors.PLANNED}>
+                        <Badge className={badgeClass}>
                           {normalizedStatus}
                         </Badge>
                       </div>
@@ -113,8 +120,8 @@ export default function SprintListDialog({ open, onOpenChange }: SprintListDialo
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
-                      {sprint.startDate && sprint.endDate ? (
-                        `${new Date(sprint.startDate).toLocaleDateString()} - ${new Date(sprint.endDate).toLocaleDateString()}`
+                      {isValidDate(sprint.startDate) && isValidDate(sprint.endDate) ? (
+                        `${new Date(sprint.startDate!).toLocaleDateString()} - ${new Date(sprint.endDate!).toLocaleDateString()}`
                       ) : (
                         "No dates set"
                       )}

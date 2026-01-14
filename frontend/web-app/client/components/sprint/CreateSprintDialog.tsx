@@ -42,9 +42,14 @@ export default function CreateSprintDialog({ open, onOpenChange }: CreateSprintD
       const prevStart = new Date(prev.startDate);
       const prevEnd = prev.endDate ? new Date(prev.endDate) : null;
 
-      // Auto-update if end date is empty OR if it matches the default 2-week duration from previous start date
-      const isDefaultDuration = prevEnd && prevStart &&
-        prevEnd.getTime() === prevStart.getTime() + 14 * 24 * 60 * 60 * 1000;
+      // Auto-update if end date is empty OR if it matches the default 2-week duration (approx)
+      let isDefaultDuration = false;
+      if (prevEnd && prevStart) {
+        const diffTime = Math.abs(prevEnd.getTime() - prevStart.getTime());
+        const twoWeeksTime = 14 * 24 * 60 * 60 * 1000;
+        // Allow 1 hour tolerance for DST/timezone shifts
+        isDefaultDuration = Math.abs(diffTime - twoWeeksTime) < 3600000;
+      }
 
       return {
         ...prev,
@@ -75,13 +80,16 @@ export default function CreateSprintDialog({ open, onOpenChange }: CreateSprintD
     try {
       await createSprint.mutateAsync(formData);
       toast.success("Sprint created successfully");
-      onOpenChange(false);
+
+      // Reset form on success
       setFormData({
         name: "",
         goal: "",
         startDate: new Date().toISOString().split("T")[0],
         endDate: "",
       });
+
+      onOpenChange(false);
     } catch (error: any) {
       const errorMessage = error?.response?.data?.error || error?.response?.data?.message || "Failed to create sprint";
       toast.error(errorMessage);
@@ -90,17 +98,7 @@ export default function CreateSprintDialog({ open, onOpenChange }: CreateSprintD
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-      if (!isOpen && !createSprint.isPending) {
-        setFormData({
-          name: "",
-          goal: "",
-          startDate: new Date().toISOString().split("T")[0],
-          endDate: "",
-        });
-      }
-      onOpenChange(isOpen);
-    }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Create New Sprint</DialogTitle>

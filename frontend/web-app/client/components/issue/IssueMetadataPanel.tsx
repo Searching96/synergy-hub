@@ -52,7 +52,7 @@ export function IssueMetadataPanel({
   onAssigneeChange,
 }: IssueMetadataPanelProps) {
   const isOverdue = task.dueDate && isPastDate(task.dueDate) && task.status !== "DONE";
-  
+
   // Use safe enum getters with fallbacks
   const safeStatus = getTaskStatus(task.status);
   const safePriority = getTaskPriority(task.priority);
@@ -125,9 +125,9 @@ export function IssueMetadataPanel({
           onValueChange={(value) =>
             onAssigneeChange(value === "unassigned" ? null : parseInt(value))
           }
-          disabled={isProjectArchived}
+          disabled={isProjectArchived || task.status === "DONE"}
         >
-          <SelectTrigger>
+          <SelectTrigger title={task.status === "DONE" ? "Cannot reassign completed tasks" : ""}>
             <SelectValue>
               {task.assignee ? (
                 <div className="flex items-center gap-2">

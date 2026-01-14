@@ -15,6 +15,9 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Building2, Mail, MapPin, Save, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 
+import { organizationService } from "@/services/organization.service";
+import { toast } from "sonner";
+
 // Zod schema matching backend DTOs
 const organizationSchema = z.object({
   name: z.string()
@@ -302,6 +305,60 @@ export default function OrganizationSettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Invite Code Card */}
+      {canEdit && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Invite Code
+            </CardTitle>
+            <CardDescription>
+              Generate a unique code for users to join your organization
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+              <div className="space-y-1">
+                {organization.inviteCode ? (
+                  <>
+                    <p className="text-sm font-medium text-muted-foreground">Active Invite Code</p>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xl font-mono font-bold bg-background px-2 py-1 rounded border">
+                        {organization.inviteCode}
+                      </code>
+                      {organization.inviteCodeExpiresAt && new Date(organization.inviteCodeExpiresAt) < new Date() && (
+                        <span className="text-xs text-red-500 font-semibold bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded">EXPIRED</span>
+                      )}
+                    </div>
+                    {organization.inviteCodeExpiresAt && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Expires: {new Date(organization.inviteCodeExpiresAt).toLocaleDateString()} {new Date(organization.inviteCodeExpiresAt).toLocaleTimeString()}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No active invite code generated yet.</p>
+                )}
+              </div>
+              <Button
+                onClick={async () => {
+                  try {
+                    await organizationService.generateInviteCode(organization.id);
+                    window.location.reload(); // Simple reload to fetch new code since we don't have a specific hook action for this yet
+                  } catch (e) {
+                    console.error("Failed to generate code", e);
+                  }
+                }}
+                variant="secondary"
+              >
+                Generate New Code
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Danger Zone Card */}
       {canDelete && (

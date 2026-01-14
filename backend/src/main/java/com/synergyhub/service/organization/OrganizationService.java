@@ -165,15 +165,21 @@ public class OrganizationService {
             String ipAddress) {
         log.info("User {} attempting to join organization with invite code", user.getId());
 
-        // Find organization by invite code from repository directly
-        Organization org = organizationRepository.findByInviteCode(inviteCode)
-                .orElseThrow(() -> new InvalidInviteCodeException("Invalid or expired invite code"));
+        // Delegate to lifecycle service which handles lookup, expiration check, and user update
+        Organization org = organizationLifecycleService.joinWithInviteCode(user, inviteCode);
+
+        // Check/create user organization membership record if not exists (Lifecycle service updates User entity relation, but we track history/roles in UserOrganization)
+        // Ideally Lifecycle service should handle this too, but for refactor safety we keep the role assignment logic here or ensure Lifecycle does it.
+        // Looking at LifecycleService.joinWithInviteCode:
+        //    user.setOrganization(organization);
+        //    userRepository.save(user);
+        // It updates the User->Org relationship. We still need to create the UserOrganization entry for roles.
 
         if (userOrganizationRepository.existsByIdUserIdAndIdOrganizationId(user.getId(), org.getId())) {
-            throw new UserAlreadyInOrganizationException("You are already a member of this organization");
-        }
-
-        UserOrganization userOrg = UserOrganization.builder()
+             // This might be redundant if lifecycle checked it, but safe to keep
+             // Actually Lifecycle just overwrites user.setOrganization.
+        } else {
+             UserOrganization userOrg = UserOrganization.builder()
                 .id(new UserOrganizationId(user.getId(), org.getId()))
                 .user(user)
                 .organization(org)
@@ -181,10 +187,11 @@ public class OrganizationService {
                 .status(MembershipStatus.ACTIVE)
                 .joinedAt(LocalDateTime.now())
                 .build();
-        userOrganizationRepository.save(userOrg);
-
-        // Assign default TEAM_MEMBER role
-        assignDefaultRole(user, org, userOrg);
+            userOrganizationRepository.save(userOrg);
+            
+            // Assign default TEAM_MEMBER role
+            assignDefaultRole(user, org, userOrg);
+        }
 
         eventPublisher.publishEvent(
                 new UserJoinedOrganizationEvent(org, user, ipAddress)

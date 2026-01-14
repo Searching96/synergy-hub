@@ -63,12 +63,74 @@ export default function IssueDetailModal() {
     updateTask,
     updateTaskAsync,
     updateAssignee,
+    updateAssigneeAsync,
     addComment,
     deleteTask,
     archiveTask,
     unarchiveTask,
     taskQuery,
   } = useIssueDetail({ taskId, onClose: handleClose });
+
+  // Edit state hook for title and description
+  // MOVED UP: Call unconditionally to avoid React Error #310
+  const {
+    isEditingTitle,
+    setIsEditingTitle,
+    editedTitle,
+    setEditedTitle,
+    editedDescription,
+    setEditedDescription,
+    canSaveTitle,
+    canSaveDescription,
+  } = useIssueEdit(task);
+
+  // Event Handlers
+  const handleSaveTitle = async () => {
+    if (canSaveTitle && taskId) {
+      await updateTaskAsync({
+        taskId: taskId,
+        data: { title: editedTitle },
+      });
+      setIsEditingTitle(false);
+    }
+  };
+
+  const handleStatusToggle = () => {
+    if (!task) return;
+    const newStatus: TaskStatus = task.status === "DONE" ? "TO_DO" : "DONE";
+    handleStatusChange(newStatus);
+  };
+
+  // Keyboard shortcuts
+  // MOVED UP
+  useIssueDetailKeyboardShortcuts({
+    isOpen: !!selectedIssue,
+    isEditingTitle,
+    canSaveTitle,
+    taskStatus: task?.status,
+    onClose: handleClose,
+    onSaveTitle: handleSaveTitle,
+    onStatusToggle: handleStatusToggle,
+  });
+
+  const handleSaveDescription = async () => {
+    if (canSaveDescription && taskId) {
+      await updateTaskAsync({
+        taskId: taskId,
+        data: { description: editedDescription || null },
+      });
+    }
+  };
+
+  // Debounced auto-save for description (saves 800ms after user stops typing)
+  // MOVED UP
+  const debouncedSaveDescription = useDebouncedCallback(handleSaveDescription, 800);
+
+  // Wrapper to update state AND trigger debounce
+  const handleDescriptionChange = (value: string) => {
+    setEditedDescription(value);
+    debouncedSaveDescription();
+  };
 
   // Show loading skeleton while fetching
   if (!selectedIssue) return null;
@@ -80,6 +142,22 @@ export default function IssueDetailModal() {
   // Show error state
   if (!task) {
     const error = taskQuery?.error as any;
+    // Handle case where task is null but error is undefined (e.g. invalid ID format)
+    if (!error) {
+      return (
+        <Dialog open={!!selectedIssue} onOpenChange={handleClose}>
+          <DialogContent className="max-w-md">
+            <DialogTitle>Issue Not Found</DialogTitle>
+            <div className="flex flex-col items-center justify-center py-8">
+              <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+              <p className="text-sm text-muted-foreground">The requested issue could not be found.</p>
+              <Button onClick={handleClose} className="mt-4">Close</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )
+    }
+
     const isNotFound = error?.response?.status === 404;
     const isForbidden = error?.response?.status === 403;
 
@@ -117,57 +195,6 @@ export default function IssueDetailModal() {
       </Dialog>
     );
   }
-
-  // Edit state hook for title and description
-  const {
-    isEditingTitle,
-    setIsEditingTitle,
-    editedTitle,
-    setEditedTitle,
-    editedDescription,
-    setEditedDescription,
-    canSaveTitle,
-    canSaveDescription,
-  } = useIssueEdit(task);
-
-  // Event Handlers
-  const handleSaveTitle = async () => {
-    if (canSaveTitle) {
-      await updateTaskAsync({
-        taskId: taskId!,
-        data: { title: editedTitle },
-      });
-      setIsEditingTitle(false);
-    }
-  };
-
-  const handleStatusToggle = () => {
-    const newStatus: TaskStatus = task?.status === "DONE" ? "TO_DO" : "DONE";
-    handleStatusChange(newStatus);
-  };
-
-  // Keyboard shortcuts
-  useIssueDetailKeyboardShortcuts({
-    isOpen: !!selectedIssue,
-    isEditingTitle,
-    canSaveTitle,
-    taskStatus: task?.status,
-    onClose: handleClose,
-    onSaveTitle: handleSaveTitle,
-    onStatusToggle: handleStatusToggle,
-  });
-
-  const handleSaveDescription = async () => {
-    if (canSaveDescription) {
-      await updateTaskAsync({
-        taskId: taskId!,
-        data: { description: editedDescription || null },
-      });
-    }
-  };
-
-  // Debounced auto-save for description (saves 800ms after user stops typing)
-  const debouncedSaveDescription = useDebouncedCallback(handleSaveDescription, 800);
 
   const handleStatusChange = (status: TaskStatus) => {
     const previousStatus = task?.status;
@@ -209,8 +236,23 @@ export default function IssueDetailModal() {
     }
   };
 
-  const handleAssigneeChange = (assigneeId: number | null) => {
-    updateAssignee({ taskId: taskId!, assigneeId });
+  const handleAssigneeChange = async (assigneeId: number | null) => {
+    if (task?.status === "DONE") {
+      toast.error("Cannot reassign completed tasks", {
+        description: "Change the task status first, then reassign"
+      });
+      return;
+    }
+
+    try {
+      await updateAssigneeAsync({ taskId: taskId!, assigneeId });
+    } catch (error: any) {
+      // Error handling is likely managed by the mutation hook, but we catch here just in case
+      // if updateAssignee propagate errors.
+      if (error?.response?.data?.message?.includes('current state')) {
+        toast.error("Cannot reassign task in current status");
+      }
+    }
   };
 
   const handleAddComment = (text: string) => {
@@ -283,7 +325,7 @@ export default function IssueDetailModal() {
               setIsEditingTitle(false);
             }}
             onTitleChange={setEditedTitle}
-            onDescriptionChange={setEditedDescription}
+            onDescriptionChange={handleDescriptionChange}
             onSaveDescription={handleSaveDescription}
             onStatusChange={handleStatusChange}
             onPriorityChange={handlePriorityChange}
