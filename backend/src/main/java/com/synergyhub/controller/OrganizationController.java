@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 public class OrganizationController {
 
     private final OrganizationService organizationService;
-    private final OrganizationService organizationService;
+
     private final ClientIpResolver ipResolver;
 
     // Helper removed - fetching from principal directly
