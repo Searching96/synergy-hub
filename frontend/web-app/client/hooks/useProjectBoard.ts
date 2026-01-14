@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { taskService } from "@/services/task.service";
 import { toast } from "sonner";
 import { extractErrorMessage } from "@/lib/error";
@@ -192,7 +193,7 @@ export function useProjectBoard(projectId: string | undefined) {
         }
         queryClient.setQueryData(["board", projectId], context.previousData);
       }
-      
+
       // Show error message to user
       const errorMessage = extractErrorMessage(_err, "Failed to move task");
       toast.error(errorMessage, {
@@ -208,14 +209,16 @@ export function useProjectBoard(projectId: string | undefined) {
     await updateTaskMutation.mutateAsync(input);
   };
 
-  const activeSprint = getActiveSprint(query.data || null);
+  /* Use useMemo to ensure referential stability of derived data */
+  const activeSprint = useMemo(() => getActiveSprint(query.data || null), [query.data]);
+  const backlogTasks = useMemo(() => query.data?.backlogTasks || [], [query.data?.backlogTasks]);
 
-  return {
+  return useMemo(() => ({
     ...query,
     activeSprint,
-    backlogTasks: query.data?.backlogTasks || [],
+    backlogTasks,
     moveTask,
     isMoving: updateTaskMutation.isPending,
-    isFetching: query.isFetching, // Expose isFetching for transition states
-  };
+    isFetching: query.isFetching,
+  }), [query, activeSprint, backlogTasks, moveTask, updateTaskMutation.isPending]);
 }

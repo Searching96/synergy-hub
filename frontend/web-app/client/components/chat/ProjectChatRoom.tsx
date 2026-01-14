@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/types/chat.types";
+import { EmptyState } from "@/components/EmptyState";
 
 interface ProjectChatRoomProps {
   projectId: number;
@@ -155,13 +156,11 @@ export function ProjectChatRoom({
             </div>
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <MessageSquare className="h-12 w-12 text-muted-foreground mb-3" />
-            <h3 className="font-semibold mb-1">No messages yet</h3>
-            <p className="text-sm text-muted-foreground">
-              Start the conversation by sending a message
-            </p>
-          </div>
+          <EmptyState
+            icon={MessageSquare}
+            title="No messages yet"
+            description="Start the conversation by sending a message below."
+          />
         ) : (
           <div className="space-y-6">
             {Object.entries(groupedMessages).map(([date, msgs]) => (

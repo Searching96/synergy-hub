@@ -24,7 +24,7 @@ import {
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import type { BacklogTask } from "@/hooks/useBacklog";
+import type { BacklogTask } from "@/types/task.types";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -43,6 +43,7 @@ interface BacklogTaskRowProps {
   onUpdateAssignee: (taskId: number, assigneeId: number | null) => void;
   isProjectArchived?: boolean;
   onClick?: () => void;
+  onAddEpic?: (taskId: number) => void;
 }
 
 const typeIcons = {
@@ -67,6 +68,7 @@ export default function BacklogTaskRow({
   onUpdateStoryPoints,
   onUpdateAssignee,
   isProjectArchived,
+  onAddEpic,
   ...props
 }: BacklogTaskRowProps) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -111,16 +113,24 @@ export default function BacklogTaskRow({
             (task.archived || isProjectArchived) && "opacity-60"
           )}
         >
-          {/* Hover actions for missing epic */}
+          {/* Hover actions for missing epic - moved left to avoid overlapping assignee */}
           {!task.epicName && (
-            <div className="absolute right-2 top-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button size="sm" variant="outline" className="h-8 text-xs px-2">
+            <div className="absolute right-40 top-1/2 -translate-y-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 p-1 rounded-md shadow-sm z-10 border">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs px-2 hover:bg-gray-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddEpic?.(task.id);
+                }}
+              >
                 <Plus className="h-3.5 w-3.5 mr-1" />
                 Add epic
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="icon" variant="ghost" className="h-8 w-8">
+                  <Button size="icon" variant="ghost" className="h-7 w-7 hover:bg-gray-100">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import authService from '@/services/auth.service';
 import type { User, LoginResponse, RegisterResponse } from '@/types/auth.types';
 
@@ -21,6 +22,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Check for existing token on mount
@@ -31,7 +33,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (token && storedUser) {
         setUser(storedUser);
       }
-      
+
       setLoading(false);
     };
 
@@ -40,11 +42,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string, totpCode?: string): Promise<LoginResponse> => {
     const response = await authService.login(email, password, totpCode);
-    
+
     if (response.success && response.data.user) {
       setUser(response.data.user);
     }
-    
+
     return response;
   };
 
@@ -56,6 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     authService.logout();
     setUser(null);
+    navigate('/login');
   };
 
   const value = {

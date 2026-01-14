@@ -23,13 +23,31 @@ export default function ChatPage() {
   // Handle incoming WebSocket messages
   const handleWebSocketMessage = useCallback((message: ChatMessage) => {
     setMessages((prev) => {
-      // Avoid duplicates (in case message was sent by this user)
+      // 1. Avoid duplicates if the real ID is already present
       if (prev.some((m) => m.id === message.id)) {
         return prev;
       }
+
+      // 2. Look for an optimistic message from this user with the same content
+      // and a temporary ID (Date.now() based IDs are much larger than backend IDs)
+      // This is a heuristic until we have client-side UUIDs
+      if (message.userId === currentUserId) {
+        // Use slice().reverse() to find the last occurrence without findLastIndex
+        const reversedIdx = [...prev].reverse().findIndex(
+          (m) => m.userId === currentUserId && m.id > 1000000000000 && m.message === message.message
+        );
+
+        if (reversedIdx !== -1) {
+          const optimisticIdx = prev.length - 1 - reversedIdx;
+          const newMessages = [...prev];
+          newMessages[optimisticIdx] = message;
+          return newMessages;
+        }
+      }
+
       return [...prev, message];
     });
-  }, []);
+  }, [currentUserId]);
 
   // WebSocket connection with automatic reconnect
   const { isConnected } = useProjectChatWebSocket({
@@ -76,7 +94,7 @@ export default function ChatPage() {
     if (!project || !currentUser) return;
 
     // 1. Optimistic Update
-    const tempId = Date.now();
+    const tempId = Date.now(); // Large temporary ID
     const optimisticMessage: ChatMessage = {
       id: tempId,
       projectId: parseInt(projectId!),
@@ -102,10 +120,16 @@ export default function ChatPage() {
         replyToId
       });
 
-      // 3. Reconcile (Replace temp message with real one)
-      setMessages((prev) =>
-        prev.map((msg) => (msg.id === tempId ? newMessage : msg))
-      );
+      // 3. Reconcile
+      setMessages((prev) => {
+        // Check if the WebSocket already handled this message
+        if (prev.some((msg) => msg.id === newMessage.id)) {
+          // If real message exists, just remove our temp one
+          return prev.filter((msg) => msg.id !== tempId);
+        }
+        // Otherwise, replace the temp one with the real one
+        return prev.map((msg) => (msg.id === tempId ? newMessage : msg));
+      });
     } catch (error) {
       console.error("Failed to send message:", error);
       // Revert optimistic update

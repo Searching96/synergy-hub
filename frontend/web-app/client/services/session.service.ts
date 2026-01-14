@@ -24,4 +24,12 @@ export const sessionService = {
   revokeSession: async (sessionId: string): Promise<void> => {
     await api.delete(`/auth/sessions/${sessionId}`);
   },
+
+  /**
+   * DELETE /auth/sessions/other
+   * Revoke all sessions except the current one
+   */
+  revokeAllOtherSessions: async (): Promise<void> => {
+    await api.delete("/auth/sessions/other");
+  },
 };

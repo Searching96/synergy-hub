@@ -79,7 +79,6 @@ const authService = {
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
       localStorage.removeItem("organizationId");
-      window.location.href = "/login";
     }
   },
 

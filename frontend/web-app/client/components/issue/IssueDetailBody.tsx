@@ -150,11 +150,11 @@ export function IssueDetailBody({
               return response.data;
             }}
             onDelete={async (attachmentId) => {
-              await taskService.deleteAttachment(attachmentId);
+              await taskService.deleteAttachment(task.id, attachmentId);
               loadAttachments();
             }}
-            onDownload={taskService.downloadAttachment}
-            onBulkDownload={taskService.bulkDownloadAttachments}
+            onDownload={(attachment) => taskService.downloadAttachment(task.id, attachment)}
+            onBulkDownload={(attachmentIds) => taskService.bulkDownloadAttachments(task.id, attachmentIds)}
             isReadOnly={isProjectArchived}
           />
 

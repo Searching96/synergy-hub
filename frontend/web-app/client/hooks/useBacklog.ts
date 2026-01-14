@@ -41,13 +41,30 @@ export function useMoveTaskToSprint(projectId: string | undefined) {
       const previousData = queryClient.getQueryData<BacklogTask[]>(["backlog", projectId]);
 
       // Optimistically update
+      // Optimistically update
       if (previousData) {
-        const newData = previousData.map(task =>
-          task.id === taskId
-            ? { ...task, sprintId }
-            : task
-        );
-        queryClient.setQueryData(["backlog", projectId], newData);
+        // Handle ApiResponse structure (data wrapper)
+        const currentData = (previousData as any).data;
+        const isPaginated = currentData && !Array.isArray(currentData) && Array.isArray(currentData.content);
+        const taskList = isPaginated ? currentData.content : currentData;
+
+        if (Array.isArray(taskList)) {
+          const newTaskList = taskList.map((task: any) =>
+            task.id === taskId
+              ? { ...task, sprintId }
+              : task
+          );
+
+          // Reconstruct the response structure
+          const newData = {
+            ...previousData,
+            data: isPaginated
+              ? { ...currentData, content: newTaskList }
+              : newTaskList
+          };
+
+          queryClient.setQueryData(["backlog", projectId], newData);
+        }
       }
 
       return { previousData };

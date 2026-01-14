@@ -58,16 +58,8 @@ function mapToMeeting(dto: any): Meeting {
             isScreenSharing: false,
             isHandRaised: false,
             isSpeaking: false,
-            joinedAt: new Date().toISOString() // Mocked as we don't track join time in Set<User> yet
         })),
-        maxParticipants: 50,
-        isRecording: false,
-        settings: {
-            allowParticipantScreenShare: true,
-            allowParticipantChat: true,
-            muteParticipantsOnEntry: false,
-            waitingRoomEnabled: false,
-            recordingEnabled: false
-        }
-    };
+        maxParticipants: dto.maxParticipants || 50,
+        isRecording: dto.isRecording || false,
+    } as Meeting;
 }

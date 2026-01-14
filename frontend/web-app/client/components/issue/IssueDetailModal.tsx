@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,7 +72,7 @@ export default function IssueDetailModal() {
 
   // Show loading skeleton while fetching
   if (!selectedIssue) return null;
-  
+
   if (isLoading) {
     return <IssueDetailSkeleton />;
   }
@@ -80,10 +82,14 @@ export default function IssueDetailModal() {
     const error = taskQuery?.error as any;
     const isNotFound = error?.response?.status === 404;
     const isForbidden = error?.response?.status === 403;
-    
+
     return (
       <Dialog open={!!selectedIssue} onOpenChange={handleClose}>
         <DialogContent className="max-w-md">
+          <DialogTitle className="sr-only">Error Loading Issue</DialogTitle>
+          <DialogDescription className="sr-only">
+            An error occurred while trying to load the issue details.
+          </DialogDescription>
           <div className="flex flex-col items-center justify-center py-8">
             <AlertCircle className={cn(
               "h-12 w-12 mb-4",
@@ -96,11 +102,11 @@ export default function IssueDetailModal() {
               {isNotFound ? "Issue Not Found" : isForbidden ? "Access Denied" : "Failed to Load Issue"}
             </h2>
             <p className="text-sm text-muted-foreground text-center">
-              {isNotFound 
+              {isNotFound
                 ? "This issue may have been deleted or the ID is incorrect."
                 : isForbidden
-                ? "You don't have permission to view this issue."
-                : "The issue could not be loaded. Please try again."
+                  ? "You don't have permission to view this issue."
+                  : "The issue could not be loaded. Please try again."
               }
             </p>
             <Button onClick={handleClose} className="mt-4">
@@ -215,6 +221,10 @@ export default function IssueDetailModal() {
     <ErrorBoundary fallback={(error, retry) => (
       <Dialog open={!!selectedIssue} onOpenChange={handleClose}>
         <DialogContent className="max-w-md">
+          <DialogTitle className="sr-only">Unexpected Error</DialogTitle>
+          <DialogDescription className="sr-only">
+            An unexpected error occurred.
+          </DialogDescription>
           <div className="flex flex-col items-center justify-center py-8">
             <AlertCircle className="h-12 w-12 text-destructive mb-4" />
             <h2 className="text-lg font-semibold text-destructive mb-2">
@@ -230,6 +240,10 @@ export default function IssueDetailModal() {
     )}>
       <Dialog open={!!selectedIssue} onOpenChange={(open) => !open && handleClose()}>
         <DialogContent className="max-w-6xl max-h-[90vh] p-0 gap-0 flex flex-col" hideClose>
+          <DialogTitle className="sr-only">Issue Details</DialogTitle>
+          <DialogDescription className="sr-only">
+            View and edit details for this issue.
+          </DialogDescription>
           {/* Header Component */}
           <IssueDetailHeader
             task={task}

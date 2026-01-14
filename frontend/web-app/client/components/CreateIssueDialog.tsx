@@ -174,15 +174,14 @@ export default function CreateIssueDialog({ open, onOpenChange }: CreateIssueDia
                 Required fields are marked with an asterisk <span className="text-red-500">*</span>
               </span>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" type="button">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  onClick={() => toast({ title: "Coming Soon", description: "Issue watching will be available in the next update." })}
+                >
                   <Eye className="h-4 w-4 mr-1" />
-                  1
-                </Button>
-                <Button variant="ghost" size="sm" type="button">
-                  Import issues
-                </Button>
-                <Button variant="ghost" size="icon" type="button">
-                  <MoreHorizontal className="h-4 w-4" />
+                  Watch
                 </Button>
               </div>
             </div>
@@ -244,9 +243,17 @@ export default function CreateIssueDialog({ open, onOpenChange }: CreateIssueDia
                   ))}
                 </SelectContent>
               </Select>
-              <a href="#" className="text-xs text-blue-600 hover:underline">
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-xs text-blue-600 justify-start"
+                onClick={() => toast({
+                  title: "Issue Types Help",
+                  description: "EPIC: Large goals. STORY: User-centric features. TASK: General work. BUG: Defects. SUBTASK: Child work.",
+                })}
+              >
                 Learn about issue types
-              </a>
+              </Button>
             </div>
 
             {/* Status */}

@@ -15,6 +15,7 @@ import { sprintService } from "@/services/sprint.service";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import BacklogTaskRow from "@/components/backlog/BacklogTaskRow";
 import EpicPanel from "@/components/backlog/EpicPanel";
+import EpicSelectDialog from "@/components/backlog/EpicSelectDialog";
 import IssueDetailPanel from "@/components/backlog/IssueDetailPanel";
 import CreateSprintDialog from "@/components/sprint/CreateSprintDialog";
 import {
@@ -82,6 +83,28 @@ export default function BacklogView() {
   const [selectedEpicId, setSelectedEpicId] = useState<string | undefined>();
   const [showIssueDetail, setShowIssueDetail] = useState(false);
   const [selectedIssueId, setSelectedIssueId] = useState<number | undefined>();
+
+  // Epic selection dialog state
+  const [epicSelectOpen, setEpicSelectOpen] = useState(false);
+  const [taskForEpicSelect, setTaskForEpicSelect] = useState<number | null>(null);
+
+  const handleAddEpic = (taskId: number) => {
+    setTaskForEpicSelect(taskId);
+    setEpicSelectOpen(true);
+  };
+
+  const handleEpicSelected = async (epicId: string) => {
+    if (!taskForEpicSelect) return;
+    try {
+      await updateTask.mutateAsync({
+        taskId: taskForEpicSelect,
+        updates: { epicId: parseInt(epicId) }
+      });
+      toast.success("Task added to epic");
+    } catch (err: any) {
+      toast.error("Failed to add task to epic");
+    }
+  };
 
   const [startForm, setStartForm] = useState({
     name: "",
@@ -158,22 +181,53 @@ export default function BacklogView() {
     }));
 
   const handleDragEnd = async (result: DropResult) => {
+    console.log("DnD: handleDragEnd called", result);
     const { source, destination, draggableId } = result;
-    if (!destination) return;
+
+    if (!destination) {
+      console.log("DnD: No destination");
+      return;
+    }
+
     if (
       source.droppableId === destination.droppableId &&
       source.index === destination.index
     ) {
+      console.log("DnD: Dropped in same place");
       return;
     }
 
     const taskId = parseInt(draggableId.replace("task-", ""));
-    const targetSprintId = destination.droppableId === "sprint" ? currentSprint?.id || null : null;
+    console.log("DnD: Parsed taskId", taskId);
+    if (isNaN(taskId)) {
+      console.error("Invalid task ID:", draggableId);
+      return;
+    }
 
+    let targetSprintId: number | null = null;
+
+    if (destination.droppableId === "sprint") {
+      console.log("DnD: Dropped in sprint. currentSprint:", currentSprint);
+      if (!currentSprint) {
+        toast.error("No active or planned sprint found to move task to.");
+        return;
+      }
+      targetSprintId = currentSprint.id;
+    } else if (destination.droppableId === "backlog") {
+      console.log("DnD: Dropped in backlog");
+      targetSprintId = null;
+    } else {
+      console.log("DnD: Unknown destination", destination.droppableId);
+      return;
+    }
+
+    console.log("DnD: Attempting mutation", { taskId, targetSprintId });
     try {
       await moveTask.mutateAsync({ taskId, sprintId: targetSprintId });
+      console.log("DnD: Mutation success");
       toast.success(targetSprintId ? "Task moved to sprint" : "Task moved to backlog");
     } catch (err: any) {
+      console.error("DnD: Mutation failed", err);
       const message = err?.response?.data?.error || err?.response?.data?.message || "Failed to move task";
       toast.error(message);
     }
@@ -374,6 +428,7 @@ export default function BacklogView() {
         {/* Epic Panel - Left Column (Collapsible) */}
         {showEpicPanel && (
           <EpicPanel
+            projectId={parseInt(projectId || "0")}
             epics={epics}
             selectedEpicId={selectedEpicId}
             onSelectEpic={(epicId) => {
@@ -460,7 +515,7 @@ export default function BacklogView() {
 
               {/* Sprint Body */}
               {!isSprintCollapsed && (
-                <Droppable droppableId="sprint">
+                <Droppable droppableId="sprint" type="TASK">
                   {(provided, snapshot) => (
                     <div
                       ref={provided.innerRef}
@@ -493,6 +548,7 @@ export default function BacklogView() {
                             onUpdateStoryPoints={handleUpdateStoryPoints}
                             onUpdateAssignee={handleUpdateAssignee}
                             isProjectArchived={isProjectArchived}
+                            onAddEpic={handleAddEpic}
                           />
                         ))
                       )}
@@ -544,7 +600,7 @@ export default function BacklogView() {
               </header>
 
               {/* Backlog Body */}
-              <Droppable droppableId="backlog">
+              <Droppable droppableId="backlog" type="TASK">
                 {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
@@ -642,6 +698,7 @@ export default function BacklogView() {
                               setSelectedIssueId(task.id);
                               setShowIssueDetail(true);
                             }}
+                            onAddEpic={handleAddEpic}
                           />
                         </div>
                       ))
@@ -673,6 +730,8 @@ export default function BacklogView() {
         {/* Issue Detail Panel - Right Column (Collapsible) */}
         {showIssueDetail && selectedIssueId && (
           <IssueDetailPanel
+            taskId={selectedIssueId}
+            projectId={parseInt(projectId || "0")}
             issueKey={`${projectKey}-${selectedIssueId}`}
             issueType={(tasks?.find(t => t.id === selectedIssueId)?.type) || "TASK"}
             title={(tasks?.find(t => t.id === selectedIssueId)?.title) || "No Title"}
@@ -685,6 +744,14 @@ export default function BacklogView() {
           />
         )}
       </div>
+
+      <EpicSelectDialog
+        open={epicSelectOpen}
+        onOpenChange={setEpicSelectOpen}
+        epics={epics}
+        onSelect={handleEpicSelected}
+        isLoading={updateTask.isPending}
+      />
 
       {/* Dialogs & Modals */}
       <CreateSprintDialog open={createSprintOpen} onOpenChange={setCreateSprintOpen} />

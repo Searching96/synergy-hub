@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { useProject } from "@/context/ProjectContext";
@@ -30,6 +30,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, List, Loader2, Plus, X, Search } from "lucide-react"; // Added Search
 import { toast } from "sonner";
 import { canMoveTask } from "@/lib/rbac";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function BoardView() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -57,7 +58,16 @@ export default function BoardView() {
 
   // Filter State
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedAssignee, setSelectedAssignee] = useState("ALL");
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const isProjectArchived = project?.status === "ARCHIVED";
 
@@ -67,9 +77,9 @@ export default function BoardView() {
 
     let filteredTasks = (activeSprint.tasks || []).filter((task) => !task.archived);
 
-    // Filter by Search Query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+    // Filter by Debounced Search Query
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.toLowerCase();
       filteredTasks = filteredTasks.filter(task =>
         task.title.toLowerCase().includes(query)
       );
@@ -86,7 +96,7 @@ export default function BoardView() {
     }
 
     return groupTasksByStatus(filteredTasks);
-  }, [activeSprint?.tasks, searchQuery, selectedAssignee]); // Added dependencies
+  }, [activeSprint?.tasks, debouncedSearchQuery, selectedAssignee]); // Updated to use debounced version
 
   const handleDragEnd = async (result: DropResult) => {
     const { source, destination } = result;
@@ -179,25 +189,18 @@ export default function BoardView() {
           </div>
         </div>
 
-        <div className="border rounded-lg p-12 text-center">
-          <div className="max-w-md mx-auto space-y-4">
-            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto" />
-            <div>
-              <h3 className="text-lg font-semibold mb-2">No Active Sprint</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Start or create a sprint to use the board. You can also prioritize issues from the backlog.
-              </p>
-              <div className="flex items-center justify-center gap-3">
-                <Button asChild variant="outline">
-                  <Link to={`/projects/${projectId}/backlog`}>Go to Backlog</Link>
-                </Button>
-                <Button onClick={() => setCreateSprintOpen(true)} disabled={isProjectArchived}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Sprint
-                </Button>
-              </div>
-            </div>
-          </div>
+        <EmptyState
+          icon={AlertCircle}
+          title="No Active Sprint"
+          description="Start or create a sprint to use the board. You can also prioritize issues from the backlog."
+          actionLabel="Create Sprint"
+          onAction={() => setCreateSprintOpen(true)}
+        />
+
+        <div className="flex items-center justify-center gap-3 mt-6">
+          <Button asChild variant="outline">
+            <Link to={`/projects/${projectId}/backlog`}>Go to Backlog</Link>
+          </Button>
         </div>
 
         <CreateSprintDialog open={createSprintOpen} onOpenChange={setCreateSprintOpen} />

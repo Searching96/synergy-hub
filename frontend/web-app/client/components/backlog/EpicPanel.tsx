@@ -1,6 +1,11 @@
 import { useState } from "react";
-import { X, ChevronRight, ChevronDown, Plus } from "lucide-react";
+import { X, ChevronRight, ChevronDown, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useCreateTask } from "@/hooks/useTasks";
+import { toast } from "sonner";
 
 interface Epic {
   id: string;
@@ -12,6 +17,7 @@ interface Epic {
 }
 
 interface EpicPanelProps {
+  projectId: number;
   epics: Epic[];
   selectedEpicId?: string;
   onSelectEpic: (epicId: string) => void;
@@ -19,6 +25,7 @@ interface EpicPanelProps {
 }
 
 export default function EpicPanel({
+  projectId,
   epics,
   selectedEpicId,
   onSelectEpic,
@@ -27,6 +34,9 @@ export default function EpicPanel({
   const [expandedItems, setExpandedItems] = useState<Set<string>>(
     new Set(["issues-without-epic"])
   );
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newEpicName, setNewEpicName] = useState("");
+  const createTask = useCreateTask();
 
   const toggleExpanded = (id: string) => {
     const newSet = new Set(expandedItems);
@@ -44,10 +54,33 @@ export default function EpicPanel({
 
   const isExpanded = (id: string) => expandedItems.has(id);
 
+  const handleCreateEpic = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEpicName.trim()) return;
+
+    try {
+      await createTask.mutateAsync({
+        title: newEpicName,
+        description: "",
+        status: "TO_DO",
+        priority: "MEDIUM",
+        type: "EPIC",
+        projectId: projectId,
+        storyPoints: null,
+      });
+      setNewEpicName("");
+      setIsCreateDialogOpen(false);
+      // Toast handled by hook
+    } catch (error) {
+      console.error("Failed to create epic", error);
+    }
+  };
+
+
   return (
-    <div className="flex flex-col w-[280px] border-r border-gray-200 bg-white flex-shrink-0 overflow-hidden">
+    <div className="flex flex-col w-[280px] border-r border-gray-200 bg-white flex-shrink-0 overflow-hidden h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
         <h3 className="font-semibold text-sm text-gray-900">Epics</h3>
         <button
           onClick={onClose}
@@ -64,11 +97,10 @@ export default function EpicPanel({
         <div className="border-b border-gray-200">
           <button
             onClick={() => toggleExpanded("issues-without-epic")}
-            className={`w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${
-              selectedEpicId === "none"
+            className={`w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${selectedEpicId === "none"
                 ? "bg-blue-50 border-l-4 border-purple-600"
                 : ""
-            }`}
+              }`}
           >
             {isExpanded("issues-without-epic") ? (
               <ChevronDown className="h-4 w-4 text-gray-500" />
@@ -94,11 +126,10 @@ export default function EpicPanel({
                 handleSelectEpic(epic.id);
                 toggleExpanded(epic.id);
               }}
-              className={`w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${
-                selectedEpicId === epic.id
+              className={`w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${selectedEpicId === epic.id
                   ? "bg-blue-50 border-l-4 border-purple-600 pl-3"
                   : ""
-              }`}
+                }`}
             >
               {isExpanded(epic.id) ? (
                 <ChevronDown className="h-4 w-4 text-gray-500" />
@@ -152,16 +183,45 @@ export default function EpicPanel({
       </div>
 
       {/* Footer */}
-      <div className="border-t border-gray-200 px-4 py-3">
+      <div className="border-t border-gray-200 px-4 py-3 flex-shrink-0">
         <Button
           variant="ghost"
           size="sm"
           className="w-full text-left justify-start text-gray-700 hover:text-gray-900 h-8"
+          onClick={() => setIsCreateDialogOpen(true)}
         >
           <Plus className="h-4 w-4 mr-2" />
           Create epic
         </Button>
       </div>
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create Epic</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateEpic}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="epic-name">Epic Name</Label>
+                <Input
+                  id="epic-name"
+                  value={newEpicName}
+                  onChange={(e) => setNewEpicName(e.target.value)}
+                  placeholder="e.g., Q1 Marketing Launch"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={createTask.isPending || !newEpicName.trim()}>
+                {createTask.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

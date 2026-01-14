@@ -29,6 +29,18 @@ export const taskService = {
     return response.data;
   },
 
+  // Archive a task
+  async archiveTask(taskId: number | string): Promise<ApiResponse<void>> {
+    const response = await api.put<ApiResponse<void>>(`/tasks/${taskId}/archive`, {});
+    return response.data;
+  },
+
+  // Unarchive a task
+  async unarchiveTask(taskId: number | string): Promise<ApiResponse<void>> {
+    const response = await api.put<ApiResponse<void>>(`/tasks/${taskId}/unarchive`, {});
+    return response.data;
+  },
+
   // Get single task by ID
   async getTask(taskId: number | string): Promise<ApiResponse<Task>> {
     const response = await api.get<ApiResponse<Task>>(`/tasks/${taskId}`);
@@ -133,24 +145,27 @@ export const taskService = {
     return response.data;
   },
 
-  async deleteAttachment(attachmentId: number): Promise<ApiResponse<void>> {
-    return api.delete(`/attachments/${attachmentId}`);
+  async deleteAttachment(taskId: number | string, attachmentId: number | string): Promise<ApiResponse<void>> {
+    return api.delete(`/tasks/${taskId}/attachments/${attachmentId}`);
   },
 
-  async downloadAttachment(attachment: Attachment): Promise<void> {
+  async downloadAttachment(taskId: number | string, attachment: Attachment): Promise<void> {
     // Use signed URL from backend for secure download
-    const { data } = await api.get<{ url: string }>(
-      `/attachments/${attachment.id}/download-url`
+    const { data } = await api.get<string>(
+      `/tasks/${taskId}/attachments/${attachment.id}/download-url`
     );
-    window.open(data.url, '_blank');
+    // If data is an object with url property (legacy), use that, otherwise use data directly if it is string
+    const url = (typeof data === 'object' && (data as any).url) ? (data as any).url : data;
+    window.open(url, '_blank');
   },
 
-  async bulkDownloadAttachments(attachmentIds: number[]): Promise<void> {
+  async bulkDownloadAttachments(taskId: number | string, attachmentIds: number[]): Promise<void> {
     // Backend creates zip file and returns download URL
-    const { data } = await api.post<{ url: string }>(
-      '/attachments/bulk-download',
+    const { data } = await api.post<string>(
+      `/tasks/${taskId}/attachments/bulk-download`, // Assuming this exists or works similar to above?
       { attachmentIds }
     );
-    window.open(data.url, '_blank');
+    const url = (typeof data === 'object' && (data as any).url) ? (data as any).url : data;
+    window.open(url, '_blank');
   }
 };

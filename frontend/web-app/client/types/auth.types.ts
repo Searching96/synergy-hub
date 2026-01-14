@@ -9,6 +9,7 @@ export interface User {
   emailVerified?: boolean;
   twoFactorEnabled?: boolean;
   createdAt?: string;
+  organizationId?: number;
 }
 
 export interface LoginRequest {

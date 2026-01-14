@@ -11,6 +11,13 @@ interface UseWebSocketOptions {
 }
 
 export function useProjectChatWebSocket({ projectId, onMessage, enabled = true }: UseWebSocketOptions) {
+    const onMessageRef = useRef(onMessage);
+
+    // Keep ref in sync with latest callback without re-triggering connection
+    useEffect(() => {
+        onMessageRef.current = onMessage;
+    }, [onMessage]);
+
     const clientRef = useRef<Client | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -43,7 +50,7 @@ export function useProjectChatWebSocket({ projectId, onMessage, enabled = true }
             client.subscribe(`/topic/project/${projectId}/chat`, (message: IMessage) => {
                 try {
                     const parsedMessage = JSON.parse(message.body);
-                    onMessage(parsedMessage);
+                    onMessageRef.current(parsedMessage);
                 } catch (e) {
                     console.error('Failed to parse WebSocket message:', e);
                 }

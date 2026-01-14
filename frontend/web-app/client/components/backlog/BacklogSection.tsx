@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BacklogTaskRow from "./BacklogTaskRow";
-import type { BacklogTask } from "@/hooks/useBacklog";
+import type { BacklogTask } from "@/types/task.types";
 
 interface BacklogSectionProps {
   title: string;

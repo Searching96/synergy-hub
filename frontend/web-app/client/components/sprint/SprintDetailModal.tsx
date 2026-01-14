@@ -37,7 +37,10 @@ const PRIORITY_COLORS = {
 export default function SprintDetailModal({ sprintId, onClose }: SprintDetailModalProps) {
   const { data: sprint, isLoading } = useQuery<SprintDetails | undefined>({
     queryKey: ["sprint-details", sprintId],
-    queryFn: () => sprintService.getSprintDetails(sprintId!),
+    queryFn: async () => {
+      const response = await sprintService.getSprintDetails(sprintId!);
+      return response.data;
+    },
     enabled: !!sprintId,
   });
 

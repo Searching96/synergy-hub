@@ -42,24 +42,25 @@ api.interceptors.request.use(
     }
 
     // Add X-Organization-ID header if organization ID is available
-    // First check localStorage for separate organizationId item (used by SSO service)
+    // Check localStorage for organization context
     const orgIdFromLocalStorage = localStorage.getItem("organizationId");
-    if (orgIdFromLocalStorage) {
-      config.headers["X-Organization-ID"] = orgIdFromLocalStorage;
-    } else {
-      // Fall back to checking user object in localStorage
-      const userStr = localStorage.getItem("user");
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          if (user.organizationId) {
-            config.headers["X-Organization-ID"] = user.organizationId.toString();
-          }
-        } catch (error) {
-          // Silently fail - organization context will be missing
-          console.debug("Failed to parse user object for organization ID");
+    const userStr = localStorage.getItem("user");
+
+    let organizationId: string | null = orgIdFromLocalStorage;
+
+    if (!organizationId && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.organizationId) {
+          organizationId = user.organizationId.toString();
         }
+      } catch (e) {
+        console.debug("Failed to parse user for org ID");
       }
+    }
+
+    if (organizationId) {
+      config.headers["X-Organization-ID"] = organizationId;
     }
 
     return config;
@@ -86,21 +87,16 @@ const validateTaskStatus = (status: string, fieldName?: string): string => {
   }
 
   // Accept valid meeting statuses as-is (fix for "Unknown status received: SCHEDULED")
-  if (["SCHEDULEED", "ENDED"].includes(status)) {
+  if (["SCHEDULED", "ENDED"].includes(status)) {
     return status;
   }
 
-  // Legacy backend compatibility - remove once backend is updated
-  if (status === "TODO") {
-    console.warn("Backend sent deprecated status 'TODO', expected 'TO_DO'");
-    return "TO_DO";
+  // Unknown status - log for monitoring
+  if (!VALID_TASK_STATUSES.includes(status as any) && !VALID_SPRINT_STATUSES.includes(status as any) && !["SCHEDULED", "ENDED"].includes(status)) {
+    console.debug(`Unknown status received: "${status}"${fieldName ? ` in ${fieldName}` : ""}`);
   }
 
-  // Unknown status - log for monitoring and use safe fallback
-  const validStatuses = `${VALID_TASK_STATUSES.join(", ")} (task) or ${VALID_SPRINT_STATUSES.join(", ")} (sprint)`;
-  console.error(`Unknown status received: "${status}"${fieldName ? ` in ${fieldName}` : ""}. Expected one of: ${validStatuses}`);
-
-  return status; // Return original status instead of overriding with TO_DO, to prevent data loss
+  return status;
 };
 
 const normalizeResponseData = (data: any): any => {

@@ -48,7 +48,9 @@ export default function TimelinePage() {
     queryFn: async () => {
       if (!projectId) return [];
       const res = await taskService.getProjectTasks(projectId);
-      return res.data || [];
+      const data = res.data;
+      if (Array.isArray(data)) return data;
+      return data && 'content' in data ? (data as any).content : [];
     },
     enabled: !!projectId,
   });
@@ -148,7 +150,7 @@ export default function TimelinePage() {
   if (isLoadingEpics || isLoadingTasks) {
     return (
       <div className="flex justify-center items-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 data-testid="timeline-loading" className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }

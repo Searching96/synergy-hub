@@ -68,13 +68,13 @@ export interface CreateTaskRequest {
   status?: string;
   labels?: string[];
   startDate?: string | null;
-  estimatedHours?: string | null;
+  estimatedHours?: string | number | null;
 }
 
 export interface UpdateTaskRequest extends Partial<CreateTaskRequest> {
   status?: string;
   position?: number;
-  estimatedHours?: string | null;
+  estimatedHours?: string | number | null;
   actualHours?: number | null;
 }
 
@@ -112,4 +112,5 @@ export interface BoardData {
 
 export interface BacklogTask extends Task {
   sprintName?: string | null;
+  epicName?: string | null;
 }

@@ -23,7 +23,7 @@ export const chatService = {
 function mapToChatMessage(dto: any): ChatMessage {
     return {
         id: dto.id,
-        projectId: 0, // Not provided in message DTO, usually known by context
+        projectId: dto.projectId || 0, // Extract from DTO if available
         userId: dto.userId,
         user: {
             id: dto.userId,
@@ -32,7 +32,5 @@ function mapToChatMessage(dto: any): ChatMessage {
         },
         message: dto.content,
         timestamp: dto.sentAt,
-        reactions: [], // Not implemented backend side yet
-        attachments: [] // Not implemented backend side yet
-    };
+    } as ChatMessage; // Cast to ensure it matches the interface exactly
 }

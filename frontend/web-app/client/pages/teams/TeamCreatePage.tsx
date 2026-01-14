@@ -38,8 +38,9 @@ export default function TeamCreatePage() {
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Team Name</label>
+              <label htmlFor="name" className="text-sm font-medium">Team Name</label>
               <Input
+                id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Platform Squad"
@@ -47,8 +48,9 @@ export default function TeamCreatePage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
+              <label htmlFor="description" className="text-sm font-medium">Description</label>
               <Textarea
+                id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="What is this team responsible for?"
