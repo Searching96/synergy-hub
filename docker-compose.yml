@@ -26,6 +26,7 @@ services:
       - MAIL_SSL_ENABLE=${MAIL_SSL_ENABLE:-false}
       - MAIL_STARTTLS_ENABLE=${MAIL_STARTTLS_ENABLE:-true}
       - FRONTEND_URL=${FRONTEND_URL:-https://thinhuit.id.vn}
+      - APP_OAUTH2_REDIRECT_URI=${APP_OAUTH2_REDIRECT_URI:-https://thinhuit.id.vn/oauth2/redirect}
       # OAuth2 Configuration (optional)
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}

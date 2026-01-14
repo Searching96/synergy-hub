@@ -32,7 +32,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         try {
             return processOAuth2User(userRequest, oAuth2User);
         } catch (Exception ex) {
-            throw new OAuth2AuthenticationException(ex.getMessage());
+            // Ensure error code is not null/empty
+            String msg = ex.getMessage() != null ? ex.getMessage() : "An error occurred while processing OAuth2 login";
+            throw new OAuth2AuthenticationException(new org.springframework.security.oauth2.core.OAuth2Error("login_failure"), msg, ex);
         }
     }
 
