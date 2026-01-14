@@ -43,7 +43,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.id = :id AND u IN (SELECT uo.user FROM UserOrganization uo WHERE uo.organization.id = :orgId)")
     Optional<User> findByIdWithRolesAndPermissionsInOrganization(@Param("id") Long id, @Param("orgId") Long orgId);
     
-    List<User> findByOrganizationId(Long organizationId);
+    @Query("SELECT u FROM User u WHERE u IN (SELECT uo.user FROM UserOrganization uo WHERE uo.organization.id = :organizationId)")
+    List<User> findByOrganizationId(@Param("organizationId") Long organizationId);
     
     @Query("SELECT u FROM User u WHERE u.accountLocked = true AND u.lockUntil < :now AND u IN (SELECT uo.user FROM UserOrganization uo WHERE uo.organization.id = :orgId)")
     List<User> findExpiredLockedAccountsInOrganization(@Param("now") LocalDateTime now, @Param("orgId") Long orgId);
