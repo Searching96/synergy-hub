@@ -12,6 +12,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.LocalDateTime;
+import org.springframework.transaction.annotation.Transactional;
 
 @Configuration
 @EnableScheduling
@@ -26,6 +27,7 @@ public class ScheduledTasksConfig {
     private final UserSessionRepository userSessionRepository;
 
     @Scheduled(cron = "0 0 * * * *")
+    @Transactional
     public void cleanupExpiredPasswordResetTokens() {
         log.info("Running scheduled task: cleanup expired password reset tokens");
         LocalDateTime now = LocalDateTime.now();
@@ -33,6 +35,7 @@ public class ScheduledTasksConfig {
     }
 
     @Scheduled(cron = "0 0 * * * *")
+    @Transactional
     public void cleanupExpiredEmailVerifications() {
         log.info("Running scheduled task: cleanup expired email verifications");
         LocalDateTime now = LocalDateTime.now();
@@ -40,6 +43,7 @@ public class ScheduledTasksConfig {
     }
 
     @Scheduled(cron = "0 0 0 * * *")
+    @Transactional
     public void cleanupOldLoginAttempts() {
         log.info("Running scheduled task: cleanup old login attempts");
         LocalDateTime before = LocalDateTime.now().minusDays(30);
@@ -47,6 +51,7 @@ public class ScheduledTasksConfig {
     }
 
     @Scheduled(cron = "0 0 */6 * * *")
+    @Transactional
     public void cleanupExpiredSessions() {
         log.info("Running scheduled task: cleanup expired and revoked sessions");
         LocalDateTime now = LocalDateTime.now();

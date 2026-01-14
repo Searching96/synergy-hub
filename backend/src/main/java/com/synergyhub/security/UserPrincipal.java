@@ -64,7 +64,7 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        Long currentOrgId = OrganizationContext.getcurrentOrgId();
+        Long currentOrgId = OrganizationContext.getcurrentOrgIdOrNull();
         if (currentOrgId == null) {
             return java.util.Collections.emptyList();
         }
