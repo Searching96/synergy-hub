@@ -24,13 +24,14 @@ services:
       - synergyhub-network
 
   db:
-    image: mysql:8.0
+    image: mariadb:10.6
     container_name: synergyhub-db
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=${DB_NAME}
       - MYSQL_USER=${DB_USER}
       - MYSQL_PASSWORD=${DB_PASSWORD}
+    command: --default-authentication-plugin=mysql_native_password
     volumes:
       - ./mysql-data:/var/lib/mysql
     restart: unless-stopped
