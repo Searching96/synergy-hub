@@ -63,6 +63,13 @@ api.interceptors.request.use(
       config.headers["X-Organization-ID"] = organizationId;
     }
 
+    console.log(`[API Debug] Request to ${config.url}`, {
+      headers: config.headers,
+      method: config.method,
+      tokenPresent: !!token,
+      orgId: organizationId
+    });
+
     return config;
   },
   (error) => Promise.reject(error)

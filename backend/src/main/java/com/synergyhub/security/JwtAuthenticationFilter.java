@@ -37,11 +37,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             final String jwt;
             final String userEmail;
 
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 jwt = authHeader.substring(7);
                 userEmail = tokenProvider.getEmailFromToken(jwt);
-                // Note: No orgId extraction from token in current implementation
-                // Organization context should be set elsewhere if needed
+                
+                // Extract and set Organization Context
+                String orgIdStr = request.getHeader("X-Organization-ID");
+                if (orgIdStr != null && !orgIdStr.isEmpty()) {
+                    try {
+                        Long orgId = Long.parseLong(orgIdStr);
+                        OrganizationContext.setcurrentOrgId(orgId);
+                    } catch (NumberFormatException e) {
+                        log.warn("Invalid Organization ID format: {}", orgIdStr);
+                    }
+                }
 
                 if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     UserDetails userDetails = this.customUserDetailsService.loadUserByUsername(userEmail);
