@@ -543,13 +543,18 @@ public class TaskService {
                 .orElseThrow(() -> new TaskNotFoundException(taskId));
         Task linkedTask = taskRepository.findById(linkedTaskId)
                 .orElseThrow(() -> new TaskNotFoundException(linkedTaskId));
-        
+
         if (!task.getProject().getId().equals(linkedTask.getProject().getId())) {
             throw new BadRequestException("Linked task must belong to the same project");
         }
-        
+
+        // Add bi-directional linking
         task.getLinkedTasks().add(linkedTask);
-        task = taskRepository.save(task);
+        linkedTask.getLinkedTasks().add(task);
+
+        taskRepository.save(task);
+        taskRepository.save(linkedTask);
+
         return mapToResponseWithWatching(task, currentUser);
     }
 

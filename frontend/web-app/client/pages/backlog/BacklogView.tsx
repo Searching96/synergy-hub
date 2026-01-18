@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { DragDropContext, DropResult, Droppable } from "@hello-pangea/dnd";
 import { useProject } from "@/context/ProjectContext";
 import { useAuth } from "@/context/AuthContext";
@@ -119,10 +119,30 @@ export default function BacklogView() {
   const [showIssueDetail, setShowIssueDetail] = useState(false);
   const [selectedIssueId, setSelectedIssueId] = useState<number | undefined>();
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const selectedTask = useMemo(
     () => tasks?.find((t) => t.id === selectedIssueId),
     [tasks, selectedIssueId]
   );
+
+  // If the URL includes ?selectedIssue=123, select that issue when possible
+  useEffect(() => {
+    const sel = searchParams.get("selectedIssue");
+    if (!sel) return;
+    const id = parseInt(sel, 10);
+    if (!isNaN(id)) {
+      setSelectedIssueId(id);
+      // showIssueDetail will be set when the task exists (see effect below)
+    }
+  }, [searchParams]);
+
+  // When tasks load and a selectedIssueId is set, open the detail panel
+  useEffect(() => {
+    if (selectedIssueId && selectedTask) {
+      setShowIssueDetail(true);
+    }
+  }, [selectedIssueId, selectedTask]);
 
   // Epic selection dialog state
   const [epicSelectOpen, setEpicSelectOpen] = useState(false);
@@ -202,8 +222,13 @@ export default function BacklogView() {
     if (!tasks) return { sprintTasks: [], backlogTasks: [] };
     const activeTasks = tasks.filter((task) => !task.archived && task.type !== "EPIC");
     const sprintId = currentSprint?.id;
+    // Normalize IDs to string to avoid mismatches between number vs string IDs
+    const sprintIdStr = sprintId == null ? undefined : String(sprintId);
     return {
-      sprintTasks: activeTasks.filter((task) => task.sprintId === sprintId),
+      sprintTasks: activeTasks.filter((task) => {
+        if (!sprintIdStr) return false;
+        return String(task.sprintId) === sprintIdStr;
+      }),
       backlogTasks: activeTasks.filter((task) => !task.sprintId),
     };
   }, [tasks, currentSprint?.id]);
@@ -263,6 +288,19 @@ export default function BacklogView() {
 
     console.log("DnD: Attempting mutation", { taskId, targetSprintId });
     try {
+      // Check if the task is a story
+      const task = tasks.find((t) => t.id === taskId);
+      if (task?.type === "STORY") {
+        console.log("DnD: Task is a story, moving associated tasks");
+        const associatedTasks = tasks.filter((t) => t.parentTaskId === taskId);
+
+        // Move all associated tasks
+        for (const subtask of associatedTasks) {
+          await moveTask.mutateAsync({ taskId: subtask.id, sprintId: targetSprintId });
+        }
+      }
+
+      // Move the main task (story or individual task)
       await moveTask.mutateAsync({ taskId, sprintId: targetSprintId });
       console.log("DnD: Mutation success");
       toast.success(targetSprintId ? "Task moved to sprint" : "Task moved to backlog");
@@ -761,7 +799,11 @@ export default function BacklogView() {
                               onUpdateAssignee={handleUpdateAssignee}
                               isProjectArchived={isProjectArchived}
                               onClick={() => {
+                                // select issue and sync to URL
                                 setSelectedIssueId(task.id);
+                                const sp = new URLSearchParams(searchParams.toString());
+                                sp.set("selectedIssue", String(task.id));
+                                setSearchParams(sp);
                                 setShowIssueDetail(true);
                               }}
                               onAddEpic={handleAddEpic}
@@ -810,6 +852,9 @@ export default function BacklogView() {
             onClose={() => {
               setShowIssueDetail(false);
               setSelectedIssueId(undefined);
+              const sp = new URLSearchParams(searchParams.toString());
+              sp.delete("selectedIssue");
+              setSearchParams(sp);
             }}
           />
         )}

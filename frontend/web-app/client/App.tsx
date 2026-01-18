@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
+import { OrganizationProvider } from "@/context/OrganizationContext";
 import PrivateRoute from "@/components/guards/PrivateRoute";
 import { OrganizationGuard } from "@/components/guards/OrganizationGuard";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -85,9 +86,10 @@ const App = () => (
         v7_startTransition: true,
         v7_relativeSplatPath: true,
       }}
-    >
-      <AuthProvider>
-        <TooltipProvider>
+      >
+        <AuthProvider>
+          <OrganizationProvider>
+            <TooltipProvider>
           <OfflineBanner />
           <Toaster />
 
@@ -148,6 +150,7 @@ const App = () => (
             </Suspense>
           </GenericErrorBoundary>
         </TooltipProvider>
+        </OrganizationProvider>
       </AuthProvider>
     </BrowserRouter>
   </QueryClientProvider>

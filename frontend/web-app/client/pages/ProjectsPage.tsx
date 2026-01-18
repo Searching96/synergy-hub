@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Briefcase, Users, CheckCircle2, Clock, Plus, Calendar, Archive, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Project } from "@/types/project.types";
+import { useOrganization } from "@/context/OrganizationContext";
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
@@ -48,6 +49,8 @@ export default function ProjectsPage() {
 
   const createProject = useCreateProject();
 
+  const { organizationId, loading: orgLoading } = useOrganization();
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -62,6 +65,14 @@ export default function ProjectsPage() {
       toast({
         title: "Error",
         description: "Project name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!organizationId) {
+      toast({
+        title: "Error",
+        description: "Organization context missing. Please select or create an organization before creating a project.",
         variant: "destructive",
       });
       return;
@@ -145,7 +156,11 @@ export default function ProjectsPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+          <Button
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+            disabled={orgLoading || organizationId === null}
+          >
             <Plus className="h-4 w-4 mr-2" />
             New Project
           </Button>
@@ -342,7 +357,11 @@ export default function ProjectsPage() {
               </div>
             </div>
 
-            <DialogFooter>
+              {organizationId === null && !orgLoading && (
+                <div className="p-3 mb-2 rounded bg-yellow-50 text-sm text-yellow-800">Organization not found — select or create an organization in settings.</div>
+              )}
+
+              <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
@@ -353,7 +372,7 @@ export default function ProjectsPage() {
               <Button
                 type="submit"
                 className="bg-blue-600 hover:bg-blue-700"
-                disabled={createProject.isPending}
+                disabled={createProject.isPending || orgLoading || organizationId === null}
               >
                 {createProject.isPending ? "Creating..." : "Create Project"}
               </Button>

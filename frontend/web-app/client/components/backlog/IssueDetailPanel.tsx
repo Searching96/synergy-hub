@@ -334,9 +334,7 @@ export default function IssueDetailPanel({
           </div>
         </div>
 
-
-
-        {/* Linked Issues Section */}
+        {/* Linked Tasks Section */}
         <div className="px-4 py-4 border-b border-gray-200">
           <h3 className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide flex items-center justify-between">
             Linked Issues
@@ -366,6 +364,32 @@ export default function IssueDetailPanel({
             )}
           </div>
         </div>
+
+        {/* Linked Tasks Section */}
+        {linkedTasksList.length > 0 && (
+          <div className="px-4 py-3 border-t border-gray-200">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Linked Tasks</h3>
+            <ul className="space-y-1">
+              {linkedTasksList.map((linkedTask) => (
+                <li key={linkedTask.id}>
+                  <a
+                    href={`#`} // Placeholder for navigation logic
+                    onClick={(e) => {
+                      e.preventDefault();
+                      // Logic to update the side panel with the linked task
+                      onClose();
+                      // Open the linked task (pseudo-code, replace with actual logic)
+                      openTaskInPanel(linkedTask.id);
+                    }}
+                    className="text-blue-500 hover:underline text-sm"
+                  >
+                    {linkedTask.title || `Task ${linkedTask.id}`}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Subtasks Section */}
         <div className="px-4 py-4 border-b border-gray-200">
