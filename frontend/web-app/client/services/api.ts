@@ -179,7 +179,25 @@ api.interceptors.response.use(
         try {
           const refreshToken = localStorage.getItem("refreshToken");
           if (!refreshToken) {
-            throw new Error("No refresh token available");
+            // No refresh token -> force logout and notify user
+            const authError = new Error("No refresh token available");
+
+            // Clear auth state
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            localStorage.removeItem("refreshToken");
+            api.defaults.headers.common["Authorization"] = "";
+
+            // Reject queued requests
+            processQueue(authError, null);
+
+            // Notify and redirect to login
+            toast.error("Session expired. Please log in again.", { duration: 3000 });
+            setTimeout(() => {
+              window.location.href = "/login";
+            }, 500);
+
+            return Promise.reject(authError);
           }
 
           // Use raw axios instance (not api) to avoid interceptor recursion

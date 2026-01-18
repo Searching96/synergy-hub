@@ -403,13 +403,14 @@ public class TaskService {
         Task task = taskRepository.findById(taskId)
             .orElseThrow(() -> new TaskNotFoundException(taskId));
 
-        // Handle epic children if this is an epic to prevent FK violation
-        if (task.getType() == TaskType.EPIC && task.getEpicChildren() != null) {
-            log.info("Nullifying epic reference for {} child tasks of epic {}", 
-                    task.getEpicChildren().size(), taskId);
-            task.getEpicChildren().forEach(child -> child.setEpic(null));
-            taskRepository.saveAll(task.getEpicChildren());
-        }
+        // Handle epic children and subtasks pointers before deletion
+        log.info("Nullifying references to task {} before deletion", taskId);
+        taskRepository.nullifyEpicReferences(taskId);
+        taskRepository.nullifyParentTaskReferences(taskId);
+        taskRepository.deleteIncomingLinks(taskId);
+        
+        // Note: subtasks themselves are deleted due to CascadeType.ALL on parentTask relationship,
+        // but we nullify pointers just in case there's a non-cascade path involved or to be safe.
 
         String taskTitle = task.getTitle();
         String projectName = task.getProject().getName();
