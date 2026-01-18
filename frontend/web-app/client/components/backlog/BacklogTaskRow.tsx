@@ -113,49 +113,7 @@ export default function BacklogTaskRow({
             (task.archived || isProjectArchived) && "opacity-60"
           )}
         >
-          {/* Hover actions for missing epic - moved left to avoid overlapping assignee */}
-          {!(task.epicTitle as string || task.epic?.title || task.epicName) && (
-            <div className="absolute right-40 top-1/2 -translate-y-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 p-1 rounded-md shadow-sm z-10 border">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 text-xs px-2 hover:bg-gray-100"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddEpic?.(task.id);
-                }}
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                Add epic
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="icon" variant="ghost" className="h-7 w-7 hover:bg-gray-100">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem>Move to</DropdownMenuItem>
-                  <DropdownMenuItem>Copy issue link</DropdownMenuItem>
-                  <DropdownMenuItem>Copy issue key</DropdownMenuItem>
-                  <DropdownMenuItem>Add flag</DropdownMenuItem>
-                  <DropdownMenuItem>Assignee</DropdownMenuItem>
-                  <DropdownMenuItem>Parent</DropdownMenuItem>
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>Story point estimate</DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent>
-                      {[1, 2, 3, 5, 8, 13].map((sp) => (
-                        <DropdownMenuItem key={sp}>{sp}</DropdownMenuItem>
-                      ))}
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                  <DropdownMenuItem>Split issue</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
+
 
           {/* Type Icon */}
           <TypeIcon className="h-4 w-4 text-muted-foreground" />
@@ -183,6 +141,37 @@ export default function BacklogTaskRow({
               )}>
                 {task.status.replace("_", " ")}
               </span>
+            </div>
+            {/* Hover Actions (Add Epic / Menu) */}
+            <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+              {!(task.epicTitle as string || task.epic?.title || task.epicName) && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-[10px] px-2 hover:bg-gray-100 text-muted-foreground mr-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddEpic?.(task.id);
+                  }}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add Epic
+                </Button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="icon" variant="ghost" className="h-6 w-6 hover:bg-gray-100 text-muted-foreground">
+                    <MoreHorizontal className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem>Move to</DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive" onClick={(e) => {
+                    e.stopPropagation();
+                    // Implement delete
+                  }}>Delete</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 

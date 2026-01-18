@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { X, Lock, Eye, Share2, MoreHorizontal, Paperclip, GitBranch, LinkIcon, Trash2, Download, Plus, Pencil } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -27,6 +28,7 @@ interface IssueDetailPanelProps {
   description?: string;
   projectId: number;
   onClose: () => void;
+  className?: string;
 }
 
 export default function IssueDetailPanel({
@@ -38,6 +40,7 @@ export default function IssueDetailPanel({
   description,
   projectId,
   onClose,
+  className,
 }: IssueDetailPanelProps) {
   const [isSubtaskDialogOpen, setIsSubtaskDialogOpen] = useState(false);
   const [subtaskTitle, setSubtaskTitle] = useState("");
@@ -60,6 +63,13 @@ export default function IssueDetailPanel({
   const isWatching = task?.watching || false;
   const watchersCount = task?.watchersCount || 0;
   const linkedTasksList = task?.linkedTasks || [];
+
+  // Prefer fetched task data over props, fall back to props (which are likely from list view)
+  const displayTitle = task?.title ?? title;
+  const displayStatus = task?.status ?? status;
+  const displayType = task?.type ?? issueType;
+  const displayDescription = task?.description ?? description;
+
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
@@ -144,7 +154,7 @@ export default function IssueDetailPanel({
   };
 
   return (
-    <div className="flex flex-col w-[420px] border-l border-gray-200 bg-white flex-shrink-0 overflow-hidden shadow-lg h-full">
+    <div className={cn("flex flex-col w-[420px] border-l border-gray-200 bg-white flex-shrink-0 overflow-hidden shadow-lg h-full", className)}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center gap-2">
@@ -215,12 +225,12 @@ export default function IssueDetailPanel({
         {/* Title Section */}
         <div className="px-4 py-4 border-b border-gray-200">
           <div className="flex items-start gap-3">
-            <div className={`${getTypeColor(issueType)} text-white rounded w-6 h-6 flex items-center justify-center flex-shrink-0 text-xs font-bold`}>
-              {issueType.charAt(0)}
+            <div className={`${getTypeColor(displayType)} text-white rounded w-6 h-6 flex items-center justify-center flex-shrink-0 text-xs font-bold`}>
+              {displayType.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-semibold text-gray-900 leading-tight">
-                {title}
+                {displayTitle}
               </h2>
             </div>
           </div>
@@ -269,7 +279,7 @@ export default function IssueDetailPanel({
         {/* Status */}
         <div className="px-4 py-3 border-b border-gray-200">
           <div className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
-            {status}
+            {displayStatus}
           </div>
         </div>
 
@@ -278,8 +288,8 @@ export default function IssueDetailPanel({
           <h3 className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">
             Description
           </h3>
-          {description ? (
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{description}</p>
+          {displayDescription ? (
+            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{displayDescription}</p>
           ) : (
             <p className="text-sm text-gray-400 italic">Add a description...</p>
           )}
@@ -421,15 +431,41 @@ export default function IssueDetailPanel({
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-xs text-gray-600">Type</span>
-              <span className="text-xs font-medium text-gray-900">{issueType}</span>
+              <span className="text-xs font-medium text-gray-900">{displayType}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-xs text-gray-600">Status</span>
-              <span className="text-xs font-medium text-gray-900">{status}</span>
+              <span className="text-xs font-medium text-gray-900">{displayStatus}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-xs text-gray-600">Task ID</span>
               <span className="text-xs font-medium text-gray-900">{taskId}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-600">Priority</span>
+              <span className="text-xs font-medium text-gray-900">{task?.priority || "None"}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-600">Story Points</span>
+              <span className="text-xs font-medium text-gray-900">{task?.storyPoints || "-"}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-600">Assignee</span>
+              <span className="text-xs font-medium text-gray-900">
+                {task?.assigneeName || task?.assignee?.name || "Unassigned"}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-600">Reporter</span>
+              <span className="text-xs font-medium text-gray-900">
+                {task?.reporterName || task?.reporter?.name || "Unknown"}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-600">Due Date</span>
+              <span className="text-xs font-medium text-gray-900">
+                {task?.dueDate ? new Date(task.dueDate).toLocaleDateString() : "None"}
+              </span>
             </div>
           </div>
         </div>

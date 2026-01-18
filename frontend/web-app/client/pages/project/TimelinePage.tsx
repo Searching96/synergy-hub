@@ -2,9 +2,9 @@ import { useState, useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useProject } from "@/context/ProjectContext";
-import { taskService } from "@/services/task.service";
-import { sprintService } from "@/services/sprint.service";
 import { ProjectBreadcrumb } from "@/components/project/ProjectBreadcrumb";
+import { useProjectTasks, useProjectEpics } from "@/hooks/useTasks";
+import { useProjectSprints } from "@/hooks/useSprints";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -33,39 +33,13 @@ export default function TimelinePage() {
   const [collapsedEpics, setCollapsedEpics] = useState<Record<string, boolean>>({});
 
   // Fetch Epics
-  const { data: epics = [], isLoading: isLoadingEpics } = useQuery({
-    queryKey: ["epics", projectId],
-    queryFn: async () => {
-      if (!projectId) return [];
-      const res = await taskService.getProjectEpics(projectId);
-      return res.data || [];
-    },
-    enabled: !!projectId,
-  });
+  const { data: epics = [], isLoading: isLoadingEpics } = useProjectEpics(projectId!);
 
-  // Fetch all tasks to find children
-  const { data: allTasks = [], isLoading: isLoadingTasks } = useQuery({
-    queryKey: ["tasks", projectId],
-    queryFn: async () => {
-      if (!projectId) return [];
-      const res = await taskService.getProjectTasks(projectId);
-      const data = res.data;
-      if (Array.isArray(data)) return data;
-      return data && 'content' in data ? (data as any).content : [];
-    },
-    enabled: !!projectId,
-  });
+  // Fetch all tasks
+  const { data: allTasks = [], isLoading: isLoadingTasks } = useProjectTasks(projectId!);
 
   // Fetch Sprints
-  const { data: sprints = [] } = useQuery({
-    queryKey: ["sprints", projectId],
-    queryFn: async () => {
-      if (!projectId) return [];
-      const res = await sprintService.getProjectSprints(projectId);
-      return res.data || [];
-    },
-    enabled: !!projectId,
-  });
+  const { data: sprints = [] } = useProjectSprints(projectId);
 
   // Search State
   const [searchQuery, setSearchQuery] = useState("");

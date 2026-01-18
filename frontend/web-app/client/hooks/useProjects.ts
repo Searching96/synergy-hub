@@ -14,6 +14,7 @@ export function useProjects(filter?: ProjectFilter) {
   return useQuery<ApiResponse<PaginatedResponse<Project>>>({
     queryKey: ["projects", filter],
     queryFn: () => projectService.getProjects(filter),
+    staleTime: 0, // Always fetch fresh data when filter changes
   });
 }
 

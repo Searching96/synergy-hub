@@ -1,7 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { taskService } from "@/services/task.service";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +8,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +16,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useProject } from "@/context/ProjectContext";
+import {
+  useProjectTasks,
+} from "@/hooks/useTasks";
 import {
   MoreHorizontal,
   Share2,
@@ -35,6 +37,8 @@ import {
   Frown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { taskService } from "@/services/task.service";
+import IssueDetailPanel from "@/components/backlog/IssueDetailPanel";
 
 interface IssueListItem {
   id: string;
@@ -50,14 +54,9 @@ export default function IssuesPage() {
   const [viewMode, setViewMode] = useState<"LIST" | "DETAIL">("LIST");
   const [activeId, setActiveId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
 
-  const { data: tasksResponse, isLoading, error } = useQuery({
-    queryKey: ["tasks", projectId],
-    queryFn: () => taskService.getProjectTasks(projectId!),
-    enabled: !!projectId,
-  });
-
-  const allIssues = (tasksResponse?.data || []) as any[];
+  const { data: allIssues = [], isLoading, error } = useProjectTasks(projectId!);
 
   const filteredIssues = useMemo(() => {
     return allIssues.filter((issue) => {
@@ -85,6 +84,7 @@ export default function IssuesPage() {
       setActiveId(filteredIssues.length > 0 ? filteredIssues[0].id : null);
     }
   }, [filteredIssues, activeId]);
+
   const projectLabel = project?.name || "Project";
 
   return (
@@ -166,6 +166,51 @@ export default function IssuesPage() {
         </div>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedIssues.length > 0 && (
+        <div className="flex items-center justify-between bg-zinc-900 text-white px-4 py-3 rounded-lg shadow-lg animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex items-center gap-3">
+            <div className="font-semibold text-sm">{selectedIssues.length} selected</div>
+            <Separator orientation="vertical" className="h-4 bg-white/20" />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white/80 hover:bg-white/10 hover:text-white h-auto py-1 px-2"
+              onClick={() => setSelectedIssues([])}
+            >
+              Clear
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={async () => {
+                if (!confirm(`Are you sure you want to delete ${selectedIssues.length} issues?`)) return;
+
+                const toastId = toast.loading("Deleting issues...");
+                try {
+                  await Promise.all(selectedIssues.map(id => taskService.deleteTask(parseInt(id))));
+                  toast.success(`Deleted ${selectedIssues.length} issues`);
+                  setSelectedIssues([]);
+                  // Invalidate queries would happen automatically if keys match, or we force it:
+                  // queryClient.invalidateQueries({ queryKey: ["tasks", projectId] });
+                  // For now, simple page or list refresh relies on query invalidation or optimistic updates (not implemented here fully)
+                  window.location.reload(); // Simple brute force update for now until QueryClient is accessible
+                } catch (err) {
+                  console.error(err);
+                  toast.error("Failed to delete some issues");
+                } finally {
+                  toast.dismiss(toastId);
+                }
+              }}
+            >
+              Delete Selected
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Grid */}
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-12">
         {/* Left Column: Issue List */}
@@ -184,24 +229,66 @@ export default function IssuesPage() {
             {filteredIssues.map((issue) => {
               const isActive = issue.id === activeId;
               return (
-                <button
+                <div
                   key={issue.id}
                   onClick={() => setActiveId(issue.id)}
-                  className={`w-full text-left border rounded-lg p-3 flex items-start gap-3 transition-colors ${isActive && viewMode === 'DETAIL' ? "bg-blue-50 border-blue-200" : "hover:bg-muted"
+                  className={`w-full text-left border rounded-lg p-3 flex items-center gap-3 transition-colors cursor-pointer group ${isActive && viewMode === 'DETAIL' ? "bg-blue-50 border-blue-200" : "hover:bg-muted"
                     }`}
                 >
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedIssues.includes(issue.id)}
+                      onCheckedChange={(checked) => {
+                        setSelectedIssues(prev =>
+                          checked
+                            ? [...prev, issue.id]
+                            : prev.filter(id => id !== issue.id)
+                        );
+                      }}
+                    />
+                  </div>
                   <div className="mt-0.5">
                     {/* Simplified icon logic */}
                     <CircleDot className="h-4 w-4 text-blue-500" />
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="text-sm font-semibold leading-tight">{issue.title}</div>
-                    <div className="text-xs text-muted-foreground">#{issue.id}</div>
+                  <div className="flex-1 space-y-1 min-w-0">
+                    <div className="text-sm font-semibold leading-tight truncate">{issue.title}</div>
+                    <div className="text-xs text-muted-foreground flex items-center gap-2">
+                      <span>#{issue.id}</span>
+                      {issue.status && <Badge variant="outline" className="text-[10px] h-4 px-1">{issue.status}</Badge>}
+                    </div>
                   </div>
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>{issue.assigneeName ? issue.assigneeName.substring(0, 2).toUpperCase() : "UN"}</AvatarFallback>
-                  </Avatar>
-                </button>
+
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className="text-[10px]">
+                        {issue.assigneeName
+                          ? issue.assigneeName.substring(0, 2).toUpperCase()
+                          : (issue.assignee?.name
+                            ? issue.assignee.name.substring(0, 2).toUpperCase()
+                            : "UN")}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); /* Implement Edit */ }}>
+                          Edit Issue
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); /* Implement Delete */ }}>
+                          Delete Issue
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -209,57 +296,18 @@ export default function IssuesPage() {
 
         {/* Center Column: Issue Detail (Only show in DETAIL mode) */}
         {viewMode === 'DETAIL' && activeIssue && (
-          <div className="lg:col-span-9 space-y-4">
-            {/* Detail View Content */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div className="lg:col-span-8 space-y-4">
-                {/* Meta Header */}
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-sm text-muted-foreground">
-                    {project?.name} / #{activeIssue.id}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h2 className="text-2xl font-semibold">{activeIssue.title}</h2>
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* ... keep generic action buttons for visual completeness ... */}
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div className="space-y-2">
-                  <div className="text-sm font-semibold">Description</div>
-                  <div className="border rounded-lg p-3 text-sm text-muted-foreground bg-background whitespace-pre-wrap">
-                    {activeIssue.description || "No description provided."}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Meta Sidebar (within detail view) */}
-              <div className="lg:col-span-4 space-y-3">
-                <div className="border rounded-lg p-4 space-y-4">
-                  <div className="space-y-1">
-                    <span className="text-xs font-semibold text-muted-foreground">Status</span>
-                    <Badge>{activeIssue.status}</Badge>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs font-semibold text-muted-foreground">Assignee</span>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback>{activeIssue.assigneeName ? activeIssue.assigneeName.substring(0, 2) : "UN"}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm">{activeIssue.assigneeName || "Unassigned"}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs font-semibold text-muted-foreground">Priority</span>
-                    <Badge variant="outline">{activeIssue.priority}</Badge>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="lg:col-span-9 h-[calc(100vh-12rem)]">
+            <IssueDetailPanel
+              taskId={parseInt(activeIssue.id)}
+              projectId={parseInt(projectId!)}
+              issueKey={`${projectLabel.substring(0, 4).toUpperCase()}-${activeIssue.id}`}
+              issueType={activeIssue.type}
+              title={activeIssue.title}
+              status={activeIssue.status}
+              description={activeIssue.description || ""}
+              onClose={() => setViewMode("LIST")}
+              className="w-full border-none shadow-none h-full"
+            />
           </div>
         )}
       </div>

@@ -18,7 +18,15 @@ interface TeamSelectProps {
 export function TeamSelect({ value, onValueChange, disabled }: TeamSelectProps) {
     const { data: teams = [], isLoading } = useQuery({
         queryKey: ["teams"],
-        queryFn: () => teamService.getOrganizationTeams(),
+        queryFn: async () => {
+            try {
+                return await teamService.getOrganizationTeams();
+            } catch (error) {
+                console.warn("Failed to fetch teams:", error);
+                return [];
+            }
+        },
+        retry: false, // Don't retry if org ID is missing
     });
 
     return (

@@ -24,8 +24,23 @@ export interface ApiResponse<T> {
 
 const getOrgId = (): number => {
   const orgId = localStorage.getItem("organizationId");
-  if (!orgId) throw new Error("Organization ID not found");
-  return parseInt(orgId, 10);
+  if (orgId) return parseInt(orgId, 10);
+
+  // Fallback: Try to get from auth storage
+  try {
+    const userStr = localStorage.getItem("user");
+    console.log("DEBUG: getOrgId fallback, userStr:", userStr);
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      if (user.organizationId) {
+        localStorage.setItem("organizationId", String(user.organizationId));
+        return user.organizationId;
+      }
+    }
+  } catch (e) {
+    console.error("DEBUG: getOrgId parsing error", e);
+  }
+  throw new Error("DEBUG: Organization ID missing (New Code)");
 };
 
 export const teamService = {

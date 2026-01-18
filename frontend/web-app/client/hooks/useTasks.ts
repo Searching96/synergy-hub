@@ -41,10 +41,26 @@ export function useTask(taskId: number) {
   });
 }
 
-export function useProjectTasks(projectId: number, params?: any) {
+export function useProjectTasks(projectId: number | string, params?: any) {
   return useQuery({
     queryKey: ["tasks", projectId, params],
-    queryFn: () => taskService.getProjectTasks(projectId, params),
+    queryFn: async () => {
+      const response = await taskService.getProjectTasks(projectId, params);
+      const data = response.data;
+      if (Array.isArray(data)) return data;
+      return (data as any)?.content || [];
+    },
+    enabled: !!projectId,
+  });
+}
+
+export function useProjectEpics(projectId: number | string) {
+  return useQuery({
+    queryKey: ["epics", projectId],
+    queryFn: async () => {
+      const response = await taskService.getProjectEpics(projectId);
+      return response.data || [];
+    },
     enabled: !!projectId,
   });
 }

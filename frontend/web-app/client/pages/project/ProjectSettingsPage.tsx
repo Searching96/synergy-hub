@@ -99,6 +99,28 @@ export default function ProjectSettingsPage() {
     },
   });
 
+  const unarchiveProjectMutation = useMutation({
+    mutationFn: (projectId: number) => projectService.unarchiveProject(projectId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      // Invalidate specific project query as well to update the local 'project' object if possible, 
+      // but 'useProject' typically listens to '["project", id]'.
+      queryClient.invalidateQueries({ queryKey: ["project", project?.id] });
+
+      toast({
+        title: "Success",
+        description: "Project restored successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.response?.data?.error || error?.response?.data?.message || "Failed to restore project",
+        variant: "destructive",
+      });
+    },
+  });
+
   const addMemberMutation = useMutation({
     mutationFn: (data: { email: string; role: string }) =>
       projectService.addProjectMember(project?.id, data),
@@ -178,7 +200,11 @@ export default function ProjectSettingsPage() {
     archiveProjectMutation.mutate(project.id);
   };
 
-  // Sync form state with project data
+  const handleUnarchiveProject = () => {
+    if (!project?.id) return;
+    unarchiveProjectMutation.mutate(project.id);
+  };
+
   // Sync form state with project data
   useEffect(() => {
     if (project) {
@@ -328,19 +354,37 @@ export default function ProjectSettingsPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between p-4 border border-orange-300 rounded-lg">
               <div>
-                <h3 className="font-semibold">Archive Project</h3>
+                <h3 className="font-semibold">
+                  {project?.status === "ARCHIVED" ? "Restore Project" : "Archive Project"}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  Archive this project. It can be restored from the archived projects list.
+                  {project?.status === "ARCHIVED"
+                    ? "Restore this project to the active list. You will be able to edit it again."
+                    : "Archive this project. It can be restored from the archived projects list."}
                 </p>
               </div>
-              <Button
-                variant="outline"
-                className="border-orange-300 text-orange-600 hover:bg-orange-50"
-                onClick={() => setArchiveDialogOpen(true)}
-              >
-                <Archive className="mr-2 h-4 w-4" />
-                Archive
-              </Button>
+
+              {project?.status === "ARCHIVED" ? (
+                <Button
+                  variant="outline"
+                  className="border-green-300 text-green-700 hover:bg-green-50"
+                  onClick={handleUnarchiveProject}
+                  disabled={unarchiveProjectMutation.isPending}
+                >
+                  {unarchiveProjectMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Archive className="mr-2 h-4 w-4" />
+                  Restore
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="border-orange-300 text-orange-600 hover:bg-orange-50"
+                  onClick={() => setArchiveDialogOpen(true)}
+                >
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archive
+                </Button>
+              )}
             </div>
 
             <div className="flex items-center justify-between p-4 border border-destructive rounded-lg">

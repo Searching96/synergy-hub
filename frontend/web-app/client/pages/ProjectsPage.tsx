@@ -22,7 +22,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Briefcase, Users, CheckCircle2, Clock, Plus, Calendar, Archive, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Project } from "@/types/project.types";
-import { TeamSelect } from "@/components/project/TeamSelect";
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
@@ -55,7 +54,6 @@ export default function ProjectsPage() {
     description: "",
     startDate: "",
     endDate: "",
-    teamId: undefined as string | undefined,
   });
 
   const handleCreateProject = async (e: React.FormEvent) => {
@@ -70,11 +68,10 @@ export default function ProjectsPage() {
     }
     try {
       await createProject.mutateAsync({
-        ...formData,
-        teamId: formData.teamId ? parseInt(formData.teamId) : undefined
+        ...formData
       });
       setIsCreateDialogOpen(false);
-      setFormData({ name: "", description: "", startDate: "", endDate: "", teamId: undefined });
+      setFormData({ name: "", description: "", startDate: "", endDate: "" });
       toast({ title: "Success", description: "Project created successfully" });
     } catch (error) {
       // Error handled by mutation
@@ -244,9 +241,9 @@ export default function ProjectsPage() {
                         <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
                           <Calendar className="h-3 w-3" />
                           <span>
-                            {project.startDate && new Date(project.startDate).toLocaleDateString()}
+                            {project.startDate && new Date(project.startDate).toLocaleDateString('en-GB')}
                             {project.startDate && project.endDate && " - "}
-                            {project.endDate && new Date(project.endDate).toLocaleDateString()}
+                            {project.endDate && new Date(project.endDate).toLocaleDateString('en-GB')}
                           </span>
                         </div>
                       )}
@@ -319,13 +316,6 @@ export default function ProjectsPage() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <TeamSelect
-                  value={formData.teamId}
-                  onValueChange={(val) => setFormData({ ...formData, teamId: val })}
                 />
               </div>
 

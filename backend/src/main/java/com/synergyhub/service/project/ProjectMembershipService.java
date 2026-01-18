@@ -41,6 +41,10 @@ public class ProjectMembershipService {
         User memberUser = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
+        if (memberUser.getOrganization() == null || project.getOrganization() == null) {
+            throw new InvalidProjectMemberException("User or Project is not associated with an organization");
+        }
+
         if (!memberUser.getOrganization().getId().equals(project.getOrganization().getId())) {
             throw InvalidProjectMemberException.differentOrganization();
         }
