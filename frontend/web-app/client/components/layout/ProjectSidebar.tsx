@@ -11,8 +11,10 @@ import {
   ChevronLeft,
   List,
   ListChecks,
-  Plus
+  Plus,
+  ChevronRight
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useProject } from "@/context/ProjectContext";
 
 const planningNavItems = [
@@ -30,35 +32,55 @@ const otherNavItems = [
   { title: "Settings", href: "/settings", icon: Settings },
 ];
 
-export default function ProjectSidebar() {
+interface ProjectSidebarProps {
+  isCollapsed: boolean;
+  onToggle: () => void;
+}
+
+export default function ProjectSidebar({ isCollapsed, onToggle }: ProjectSidebarProps) {
   const location = useLocation();
   const { projectId } = useParams<{ projectId: string }>();
   const { project, isLoading } = useProject();
 
   return (
-    <aside className="fixed left-0 top-14 z-30 hidden h-[calc(100vh-3.5rem)] w-64 border-r bg-background lg:block">
+    <aside
+      className={cn(
+        "fixed left-0 top-14 z-30 hidden h-[calc(100vh-3.5rem)] border-r bg-background transition-[width] duration-300 lg:block",
+        isCollapsed ? "w-16" : "w-64"
+      )}
+    >
       <div className="flex h-full flex-col">
         {/* Project Header */}
-        <div className="p-4">
-
-          {isLoading ? (
-            <div className="h-6 w-3/4 bg-muted animate-pulse rounded" />
-          ) : (
-            <h2 className="text-lg font-semibold truncate">{project?.name || "Project"}</h2>
-          )}
-
-          {project?.description && (
-            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-              {project.description}
-            </p>
-          )}
+        <div className={cn("flex items-center p-4", isCollapsed ? "justify-center px-2" : "justify-between")}>
+          <div className={cn("overflow-hidden transition-all", isCollapsed ? "w-0 opacity-0" : "flex-1")}>
+            {isLoading ? (
+              <div className="h-6 w-3/4 bg-muted animate-pulse rounded" />
+            ) : (
+              <h2 className="text-lg font-semibold truncate">{project?.name || "Project"}</h2>
+            )}
+            {!isCollapsed && project?.description && (
+              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                {project.description}
+              </p>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggle}
+            className={cn("shrink-0", isCollapsed && "bg-transparent hover:bg-transparent")}
+          >
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 space-y-6 p-3 overflow-y-auto">
+        <nav className="flex-1 space-y-6 p-3 overflow-y-auto overflow-x-hidden">
           {/* Planning Group */}
           <div>
-            <div className="px-3 pb-2 text-[10px] font-semibold tracking-wider text-muted-foreground">PLANNING</div>
+            {!isCollapsed && (
+              <div className="px-3 pb-2 text-[10px] font-semibold tracking-wider text-muted-foreground">PLANNING</div>
+            )}
             <div className="space-y-1">
               {planningNavItems.map((item) => {
                 const href = `/projects/${projectId}${item.href}`;
@@ -68,24 +90,28 @@ export default function ProjectSidebar() {
                   <Link
                     key={item.href}
                     to={href}
+                    title={isCollapsed ? item.title : undefined}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                       isActive
                         ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                      isCollapsed && "justify-center px-0"
                     )}
                   >
-                    <Icon className="h-4 w-4" />
-                    {item.title}
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {!isCollapsed && <span>{item.title}</span>}
                   </Link>
                 );
               })}
-
             </div>
           </div>
 
           {/* Other Links */}
           <div className="space-y-1">
+            {!isCollapsed && (
+              <div className="px-3 pb-2 pt-4 text-[10px] font-semibold tracking-wider text-muted-foreground">OTHERS</div>
+            )}
             {otherNavItems.map((item) => {
               const href = `/projects/${projectId}${item.href}`;
               const isActive = location.pathname === href;
@@ -97,25 +123,27 @@ export default function ProjectSidebar() {
                   key={item.href}
                   to={isDisabled ? "#" : href}
                   onClick={(e) => isDisabled && e.preventDefault()}
+                  title={isCollapsed ? item.title : undefined}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                     isActive
                       ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                    isDisabled && "opacity-50 cursor-not-allowed hover:bg-transparent hover:text-muted-foreground"
+                    isDisabled && "opacity-50 cursor-not-allowed hover:bg-transparent hover:text-muted-foreground",
+                    isCollapsed && "justify-center px-0"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
-                  {item.title}
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {!isCollapsed && <span>{item.title}</span>}
                 </Link>
               );
             })}
           </div>
         </nav>
 
-        {/* Project Stats */}
-        {project?.stats && (
-          <div className="border-t p-4 space-y-2">
+        {/* Project Stats - Hide when collapsed */}
+        {!isCollapsed && project?.stats && (
+          <div className="border-t p-4 space-y-2 fade-in">
             <div className="text-xs font-medium text-muted-foreground">
               Project Stats
             </div>

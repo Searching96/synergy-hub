@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { X, ChevronRight, ChevronDown, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -37,6 +38,7 @@ export default function EpicPanel({
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newEpicName, setNewEpicName] = useState("");
   const createTask = useCreateTask();
+  const queryClient = useQueryClient();
 
   const toggleExpanded = (id: string) => {
     const newSet = new Set(expandedItems);
@@ -69,8 +71,11 @@ export default function EpicPanel({
         storyPoints: null,
       });
       setNewEpicName("");
+      setNewEpicName("");
       setIsCreateDialogOpen(false);
-      // Toast handled by hook
+      // Invalidate epics query to refresh list immediately
+      queryClient.invalidateQueries({ queryKey: ["epics", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["epics", String(projectId)] }); // Try both string/number to be safe
     } catch (error) {
       console.error("Failed to create epic", error);
     }
@@ -98,8 +103,8 @@ export default function EpicPanel({
           <button
             onClick={() => toggleExpanded("issues-without-epic")}
             className={`w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${selectedEpicId === "none"
-                ? "bg-blue-50 border-l-4 border-purple-600"
-                : ""
+              ? "bg-blue-50 border-l-4 border-purple-600"
+              : ""
               }`}
           >
             {isExpanded("issues-without-epic") ? (
@@ -127,8 +132,8 @@ export default function EpicPanel({
                 toggleExpanded(epic.id);
               }}
               className={`w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${selectedEpicId === epic.id
-                  ? "bg-blue-50 border-l-4 border-purple-600 pl-3"
-                  : ""
+                ? "bg-blue-50 border-l-4 border-purple-600 pl-3"
+                : ""
                 }`}
             >
               {isExpanded(epic.id) ? (

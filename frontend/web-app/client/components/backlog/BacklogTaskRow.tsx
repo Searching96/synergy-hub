@@ -44,6 +44,7 @@ interface BacklogTaskRowProps {
   isProjectArchived?: boolean;
   onClick?: () => void;
   onAddEpic?: (taskId: number) => void;
+  onDelete?: (taskId: number) => void;
 }
 
 const typeIcons = {
@@ -69,6 +70,7 @@ export default function BacklogTaskRow({
   onUpdateAssignee,
   isProjectArchived,
   onAddEpic,
+  onDelete,
   ...props
 }: BacklogTaskRowProps) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -165,11 +167,20 @@ export default function BacklogTaskRow({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={(e) => {
+                    e.stopPropagation();
+                    props.onClick ? props.onClick() : handleClick(e as any);
+                  }}>
+                    Edit
+                  </DropdownMenuItem>
                   <DropdownMenuItem>Move to</DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-destructive" onClick={(e) => {
                     e.stopPropagation();
-                    // Implement delete
-                  }}>Delete</DropdownMenuItem>
+                    onDelete?.(task.id);
+                  }}>
+                    Delete
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
