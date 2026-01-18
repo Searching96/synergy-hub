@@ -7,6 +7,8 @@ import com.synergyhub.dto.request.OrganizationEmailRequest;
 import com.synergyhub.dto.request.UpdateOrganizationRequest;
 import com.synergyhub.dto.response.ApiResponse;
 import com.synergyhub.dto.response.OrganizationResponse;
+import com.synergyhub.dto.response.OrganizationMemberResponse;
+import com.synergyhub.dto.response.PagedResponse;
 import com.synergyhub.dto.response.UserOrganizationResponse;
 import com.synergyhub.repository.UserRepository;
 import com.synergyhub.security.UserPrincipal;
@@ -16,6 +18,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -54,6 +59,22 @@ public class OrganizationController {
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         OrganizationResponse response = organizationService.getOrganization(id, currentUser.getUser());
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/{id}/members")
+    public ResponseEntity<ApiResponse<PagedResponse<OrganizationMemberResponse>>> getMembers(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "joinedAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        Sort sort = direction.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        PagedResponse<OrganizationMemberResponse> response = organizationService.getOrganizationMembers(id, currentUser.getUser(), pageable);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

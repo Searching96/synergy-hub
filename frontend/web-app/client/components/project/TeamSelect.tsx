@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { teamService } from "@/services/team.service";
+import { useOrganization } from "@/context/OrganizationContext";
 import { Loader2, Users } from "lucide-react";
 
 interface TeamSelectProps {
@@ -16,8 +17,10 @@ interface TeamSelectProps {
 }
 
 export function TeamSelect({ value, onValueChange, disabled }: TeamSelectProps) {
+    const { organizationId, loading: orgLoading } = useOrganization();
+
     const { data: teams = [], isLoading } = useQuery({
-        queryKey: ["teams"],
+        queryKey: ["teams", organizationId],
         queryFn: async () => {
             try {
                 return await teamService.getOrganizationTeams();
@@ -26,6 +29,7 @@ export function TeamSelect({ value, onValueChange, disabled }: TeamSelectProps) 
                 return [];
             }
         },
+        enabled: !!organizationId && !orgLoading,
         retry: false, // Don't retry if org ID is missing
     });
 
@@ -37,7 +41,7 @@ export function TeamSelect({ value, onValueChange, disabled }: TeamSelectProps) 
             <Select
                 value={value ? String(value) : undefined}
                 onValueChange={onValueChange}
-                disabled={disabled || isLoading}
+                disabled={disabled || isLoading || orgLoading || !organizationId}
             >
                 <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a team" />
@@ -49,7 +53,7 @@ export function TeamSelect({ value, onValueChange, disabled }: TeamSelectProps) 
                         </div>
                     ) : teams.length === 0 ? (
                         <div className="p-2 text-sm text-muted-foreground text-center">
-                            No teams found
+                            {organizationId ? "No teams found" : "No organization selected"}
                         </div>
                     ) : (
                         teams.map((team) => (

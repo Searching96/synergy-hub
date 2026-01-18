@@ -2,6 +2,8 @@ package com.synergyhub.repository;
 
 import com.synergyhub.domain.entity.UserOrganization;
 import com.synergyhub.domain.entity.UserOrganizationId;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,4 +22,6 @@ public interface UserOrganizationRepository extends JpaRepository<UserOrganizati
 
     @Query("SELECT uo FROM UserOrganization uo WHERE uo.user.id = :userId AND uo.status = 'ACTIVE'")
     List<UserOrganization> findActiveOrganizationsByUserId(@Param("userId") Long userId);
+
+    Page<UserOrganization> findByOrganizationId(Long organizationId, Pageable pageable);
 }

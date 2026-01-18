@@ -12,6 +12,7 @@ import com.synergyhub.exception.InvalidProjectMemberException;
 import com.synergyhub.exception.ResourceNotFoundException;
 import com.synergyhub.repository.ProjectMemberRepository;
 import com.synergyhub.repository.UserRepository;
+import com.synergyhub.service.organization.OrganizationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class ProjectMembershipService {
 
     private final ProjectMemberRepository projectMemberRepository;
     private final UserRepository userRepository;
+    private final OrganizationService organizationService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -41,13 +43,12 @@ public class ProjectMembershipService {
         User memberUser = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
-        if (memberUser.getOrganization() == null || project.getOrganization() == null) {
-            throw new InvalidProjectMemberException("User or Project is not associated with an organization");
+        if (project.getOrganization() == null) {
+            throw new InvalidProjectMemberException("Project is not associated with an organization");
         }
 
-        if (!memberUser.getOrganization().getId().equals(project.getOrganization().getId())) {
-            throw InvalidProjectMemberException.differentOrganization();
-        }
+        // Automatically add user to organization if they are not already a member
+        organizationService.ensureUserIsMember(memberUser, project.getOrganization());
 
         if (projectMemberRepository.existsByProjectIdAndUserId(project.getId(), userId)) {
             throw InvalidProjectMemberException.alreadyMember(memberUser.getEmail(), project.getName());
