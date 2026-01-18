@@ -244,6 +244,18 @@ public class TaskService {
                 changes.append(String.format("Assignee: %s → %s; ", oldAssignee, assignee.getName()));
             }
             task.setAssignee(assignee);
+
+            // If this is a STORY, assign all its child TASKs to the same assignee
+            if (task.getType() == TaskType.STORY) {
+                // Find all child tasks of this story
+                java.util.List<Task> childTasks = taskRepository.findByParentTaskIdInOrganization(task.getId(), orgId);
+                for (Task child : childTasks) {
+                    if (child.getType() == TaskType.TASK && (child.getAssignee() == null || !child.getAssignee().getId().equals(assignee.getId()))) {
+                        child.setAssignee(assignee);
+                        taskRepository.save(child);
+                    }
+                }
+            }
         }
 
         if (request.getSprintId() != null) {
@@ -382,6 +394,9 @@ public class TaskService {
             newLocation = sprint.getName();
         }
 
+        // Recursively move all children to the same sprint
+        moveChildrenToSprint(task, task.getSprint());
+
         Task savedTask = taskRepository.save(task);
 
         auditLogService.createAuditLog(
@@ -393,6 +408,25 @@ public class TaskService {
                 null);
 
         return mapToResponseWithWatching(savedTask, currentUser);
+    }
+
+    private void moveChildrenToSprint(Task parent, Sprint sprint) {
+        // Move epic children
+        if (parent.getEpicChildren() != null) {
+            for (Task child : parent.getEpicChildren()) {
+                child.setSprint(sprint);
+                moveChildrenToSprint(child, sprint);
+                taskRepository.save(child);
+            }
+        }
+        // Move subtasks
+        if (parent.getSubtasks() != null) {
+            for (Task sub : parent.getSubtasks()) {
+                sub.setSprint(sprint);
+                moveChildrenToSprint(sub, sprint);
+                taskRepository.save(sub);
+            }
+        }
     }
 
     @PreAuthorize("@projectSecurity.hasTaskAccess(#taskId, #currentUser)")

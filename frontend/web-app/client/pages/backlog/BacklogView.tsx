@@ -572,7 +572,7 @@ export default function BacklogView() {
                   <span className="text-xs px-2 py-1 bg-gray-100 rounded border text-gray-600 font-medium">
                     {sprintTasks.length} {sprintTasks.length === 1 ? "issue" : "issues"}
                   </span>
-                  {currentSprint && currentSprint.status !== "ACTIVE" && (
+                  {currentSprint && currentSprint.status !== "ACTIVE" && currentSprint.status !== "COMPLETED" && (
                     <Button
                       size="sm"
                       variant="default"
@@ -580,7 +580,7 @@ export default function BacklogView() {
                         e.stopPropagation();
                         setStartModalOpen(true);
                       }}
-                      disabled={!isAdmin || isProjectArchived || sprintTasks.length === 0}
+                      disabled={isProjectArchived || sprintTasks.length === 0}
                       className="ml-2"
                     >
                       <Play className="h-4 w-4 mr-2" />
@@ -595,7 +595,7 @@ export default function BacklogView() {
                         e.stopPropagation();
                         setCompleteModalOpen(true);
                       }}
-                      disabled={!isAdmin || isProjectArchived}
+                      disabled={isProjectArchived}
                       className="ml-2"
                     >
                       <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -799,11 +799,10 @@ export default function BacklogView() {
                               onUpdateAssignee={handleUpdateAssignee}
                               isProjectArchived={isProjectArchived}
                               onClick={() => {
-                                // select issue and sync to URL
+                                // select issue and sync to board URL
                                 setSelectedIssueId(task.id);
-                                const sp = new URLSearchParams(searchParams.toString());
-                                sp.set("selectedIssue", String(task.id));
-                                setSearchParams(sp);
+                                const url = `/projects/${projectId}/board?selectedIssue=${task.id}`;
+                                window.history.replaceState({}, '', url);
                                 setShowIssueDetail(true);
                               }}
                               onAddEpic={handleAddEpic}
@@ -839,7 +838,6 @@ export default function BacklogView() {
           </DragDropContext>
         </div>
 
-        {/* Issue Detail Panel - Right Column (Collapsible) */}
         {showIssueDetail && selectedIssueId && selectedTask && (
           <IssueDetailPanel
             taskId={selectedIssueId}
@@ -849,12 +847,17 @@ export default function BacklogView() {
             title={selectedTask.title || "No Title"}
             status={selectedTask.status || "TO_DO"}
             description={selectedTask.description || ""}
+            onTaskChange={(newTaskId) => {
+              // Switch to the new task and update board URL
+              setSelectedIssueId(newTaskId);
+              const url = `/projects/${projectId}/board?selectedIssue=${newTaskId}`;
+              window.history.replaceState({}, '', url);
+            }}
             onClose={() => {
               setShowIssueDetail(false);
               setSelectedIssueId(undefined);
-              const sp = new URLSearchParams(searchParams.toString());
-              sp.delete("selectedIssue");
-              setSearchParams(sp);
+              const url = `/projects/${projectId}/board`;
+              window.history.replaceState({}, '', url);
             }}
           />
         )}

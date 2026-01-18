@@ -77,20 +77,23 @@ export default function YourWork() {
                 <TableCell className="text-xs text-muted-foreground">{key}</TableCell>
                 <TableCell className="text-sm">
                   <a
-                    href={`/projects/${issue.projectKey}/board?selectedIssue=${issue.id}`}
+                    href={`/projects/${issue.projectId}/board?selectedIssue=${issue.id}`}
                     className="text-blue-500 hover:underline"
                   >
                     {String(issue.title || issue.summary)}
                   </a>
-                  {issue.linkedTaskId && (
+                  {issue.linkedTasks && issue.linkedTasks.length > 0 && (
                     <div className="mt-1 text-xs">
-                      Linked Task: 
-                      <a
-                        href={`/projects/${issue.projectKey}/board?selectedIssue=${issue.linkedTaskId}`}
-                        className="text-blue-500 hover:underline"
-                      >
-                        {`Task ${issue.linkedTaskId}`}
-                      </a>
+                      Linked Issue:
+                      {issue.linkedTasks.map((linked) => (
+                        <a
+                          key={linked.id}
+                          href={`/projects/${issue.projectId}/board?selectedIssue=${linked.id}`}
+                          className="ml-1 text-blue-500 hover:underline"
+                        >
+                          {linked.title || `Task ${linked.id}`}
+                        </a>
+                      ))}
                     </div>
                   )}
                 </TableCell>

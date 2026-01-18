@@ -28,6 +28,7 @@ interface IssueDetailPanelProps {
   description?: string;
   projectId: number;
   onClose: () => void;
+  onTaskChange?: (taskId: number) => void; // NEW: callback to switch to another task
   className?: string;
 }
 
@@ -40,6 +41,7 @@ export default function IssueDetailPanel({
   description,
   projectId,
   onClose,
+  onTaskChange, // NEW
   className,
 }: IssueDetailPanelProps) {
   const [isSubtaskDialogOpen, setIsSubtaskDialogOpen] = useState(false);
@@ -70,6 +72,17 @@ export default function IssueDetailPanel({
   const displayType = task?.type ?? issueType;
   const displayDescription = task?.description ?? description;
 
+  // NEW: Handler to open a linked task
+  const openTaskInPanel = (linkedTaskId: number) => {
+    if (onTaskChange) {
+      onTaskChange(linkedTaskId);
+      // Also update board URL
+      const url = `/projects/${projectId}/board?selectedIssue=${linkedTaskId}`;
+      window.history.replaceState({}, '', url);
+    } else {
+      toast.info(`Open task ${linkedTaskId} (handler not configured)`);
+    }
+  };
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
@@ -87,7 +100,7 @@ export default function IssueDetailPanel({
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) { // 10MB limit
-      toast.error("File details is too large (max 10MB)");
+      toast.error("File size is too large (max 10MB)");
       return;
     }
 
@@ -114,8 +127,7 @@ export default function IssueDetailPanel({
         type: "SUBTASK",
         projectId: projectId,
         parentTaskId: taskId,
-        storyPoints: null, // Backend validates @Min(1) so 0 fails. Null skips validation if not @NotNull.
-        // reporterId is handled by backend from context usually, or passing current user
+        storyPoints: null,
       });
       setSubtaskTitle("");
       setIsSubtaskDialogOpen(false);
@@ -334,7 +346,7 @@ export default function IssueDetailPanel({
           </div>
         </div>
 
-        {/* Linked Tasks Section */}
+        {/* Linked Issues Section */}
         <div className="px-4 py-4 border-b border-gray-200">
           <h3 className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide flex items-center justify-between">
             Linked Issues
@@ -348,12 +360,16 @@ export default function IssueDetailPanel({
               <p className="text-sm text-gray-500 italic">No linked issues yet.</p>
             ) : (
               linkedTasksList.map((lt: any) => (
-                <div key={lt.id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-100">
+                <div 
+                  key={lt.id} 
+                  className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-100"
+                  onClick={() => openTaskInPanel(lt.id)}
+                >
                   <div className={`${getTypeColor(lt.type)} text-white rounded w-4 h-4 flex items-center justify-center flex-shrink-0 text-[10px] font-bold`}>
                     {lt.type.charAt(0)}
                   </div>
                   <span className="text-xs text-gray-500 font-mono">{issueKey.split('-')[0]}-{lt.id}</span>
-                  <span className="text-sm text-gray-700 truncate flex-1">
+                  <span className="text-blue-500 hover:underline text-sm flex-1 truncate">
                     {lt.title}
                   </span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
@@ -362,72 +378,6 @@ export default function IssueDetailPanel({
                 </div>
               ))
             )}
-          </div>
-        </div>
-
-        {/* Linked Tasks Section */}
-        {linkedTasksList.length > 0 && (
-          <div className="px-4 py-3 border-t border-gray-200">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Linked Tasks</h3>
-            <ul className="space-y-1">
-              {linkedTasksList.map((linkedTask) => (
-                <li key={linkedTask.id}>
-                  <a
-                    href={`#`} // Placeholder for navigation logic
-                    onClick={(e) => {
-                      e.preventDefault();
-                      // Logic to update the side panel with the linked task
-                      onClose();
-                      // Open the linked task (pseudo-code, replace with actual logic)
-                      openTaskInPanel(linkedTask.id);
-                    }}
-                    className="text-blue-500 hover:underline text-sm"
-                  >
-                    {linkedTask.title || `Task ${linkedTask.id}`}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Subtasks Section */}
-        <div className="px-4 py-4 border-b border-gray-200">
-          <h3 className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide flex items-center justify-between">
-            Subtasks
-            <Button variant="ghost" size="sm" className="h-5 px-1 text-xs" onClick={() => setIsSubtaskDialogOpen(true)}>
-              <Plus className="h-3 w-3 mr-1" /> Add
-            </Button>
-          </h3>
-
-          <div className="space-y-1">
-            {subtasks.length === 0 ? (
-              <p className="text-sm text-gray-500 italic">No subtasks yet.</p>
-            ) : (
-              subtasks.map((st: any) => (
-                <div key={st.id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-100">
-                  <div className="bg-gray-600 text-white rounded w-4 h-4 flex items-center justify-center flex-shrink-0 text-[9px] font-bold">
-                    S
-                  </div>
-                  <span className="text-xs text-gray-500 font-mono">{issueKey.split('-')[0]}-{st.id}</span>
-                  <span className={`text-sm ${st.status === 'DONE' ? 'line-through text-gray-400' : 'text-gray-700'} truncate flex-1`}>
-                    {st.title}
-                  </span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
-                    {st.status}
-                  </span>
-                </div>
-              ))
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start text-xs text-muted-foreground mt-2"
-              onClick={() => setIsSubtaskDialogOpen(true)}
-            >
-              <Plus className="h-3.5 w-3.5 mr-2" />
-              Create subtask
-            </Button>
           </div>
         </div>
 
@@ -493,10 +443,10 @@ export default function IssueDetailPanel({
             </div>
           </div>
         </div>
-      </div >
+      </div>
 
       {/* Subtask Dialog */}
-      < Dialog open={isSubtaskDialogOpen} onOpenChange={setIsSubtaskDialogOpen} >
+      <Dialog open={isSubtaskDialogOpen} onOpenChange={setIsSubtaskDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Create Subtask</DialogTitle>
@@ -522,7 +472,7 @@ export default function IssueDetailPanel({
             </DialogFooter>
           </form>
         </DialogContent>
-      </Dialog >
-    </div >
+      </Dialog>
+    </div>
   );
 }

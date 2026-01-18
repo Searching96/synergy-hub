@@ -95,10 +95,9 @@ export default function BacklogTaskRow({
       return;
     }
 
-    const next = new URLSearchParams(searchParams);
-    next.delete("create");
-    next.set("issue", `${projectKey}-${task.id}`);
-    setSearchParams(next);
+    // Go to board link with selectedIssue
+    const url = `/projects/${task.projectId || ''}/board?selectedIssue=${task.id}`;
+    window.location.href = url;
   };
 
   return (
