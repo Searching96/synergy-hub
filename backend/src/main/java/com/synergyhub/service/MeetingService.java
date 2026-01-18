@@ -75,6 +75,21 @@ public class MeetingService {
         meeting = meetingRepository.save(meeting);
         return mapToResponse(meeting);
     }
+
+    @Transactional
+    public MeetingResponse leaveMeeting(Long meetingId, User user) {
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new RuntimeException("Meeting not found"));
+
+        meeting.getParticipants().removeIf(p -> p.getId().equals(user.getId()));
+        
+        // If no more participants (including organizer), and it was in progress, maybe end it?
+        // Actually, let's keep it simple: just remove the participant. 
+        // If the organizer leaves, we could optionally end it, but let's stick to simple leave logic first.
+        
+        meeting = meetingRepository.save(meeting);
+        return mapToResponse(meeting);
+    }
     
     @Transactional(readOnly = true)
     public MeetingResponse getMeeting(Long meetingId) {

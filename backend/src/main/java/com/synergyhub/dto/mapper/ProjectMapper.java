@@ -27,6 +27,8 @@ public abstract class ProjectMapper {
     @Mapping(target = "memberCount", expression = "java(project.getProjectMembers() != null ? project.getProjectMembers().size() : 0)")
     @Mapping(target = "taskCount", expression = "java(project.getTasks() != null ? project.getTasks().size() : 0)")
     @Mapping(target = "completedTaskCount", expression = "java(project.getTasks() != null ? (int) project.getTasks().stream().filter(task -> \"DONE\".equals(task.getStatus())).count() : 0)")
+    @Mapping(target = "teamId", source = "team.id")
+    @Mapping(target = "teamName", source = "team.name")
     public abstract ProjectResponse toProjectResponse(Project project);
 
     public abstract List<ProjectResponse> toProjectResponseList(List<Project> projects);
@@ -41,6 +43,7 @@ public abstract class ProjectMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "organization", ignore = true)
     @Mapping(target = "projectLead", ignore = true)
+    @Mapping(target = "team", ignore = true)
     @Mapping(target = "status", constant = "ACTIVE")
     @Mapping(target = "projectMembers", ignore = true)
     @Mapping(target = "sprints", ignore = true)
@@ -51,6 +54,7 @@ public abstract class ProjectMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "organization", ignore = true)
     @Mapping(target = "projectLead", ignore = true)
+    @Mapping(target = "team", ignore = true)
     @Mapping(target = "projectMembers", ignore = true)
     @Mapping(target = "sprints", ignore = true)
     @Mapping(target = "tasks", ignore = true)

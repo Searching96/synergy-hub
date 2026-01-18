@@ -36,6 +36,9 @@ public class CreateProjectRequest {
     // Optional: Add initial members with their roles
     private Set<MemberWithRole> members;
 
+    // Optional: Assign a team to the project
+    private Long teamId;
+
     @Data
     @Builder
     @NoArgsConstructor

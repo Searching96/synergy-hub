@@ -49,6 +49,7 @@ export default function IssuesPage() {
   const { project } = useProject();
   const [viewMode, setViewMode] = useState<"LIST" | "DETAIL">("LIST");
   const [activeId, setActiveId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: tasksResponse, isLoading, error } = useQuery({
     queryKey: ["tasks", projectId],
@@ -56,27 +57,34 @@ export default function IssuesPage() {
     enabled: !!projectId,
   });
 
-  // Define a minimal Task type if not imported, or use 'any' with care if imports are complex.
-  // Better to use imported type, but for now let's just use 'any' to avoid breaking builds if types are missing, 
-  // but we fix the logic flaw.
-  const issues = (tasksResponse?.data || []) as any[];
+  const allIssues = (tasksResponse?.data || []) as any[];
+
+  const filteredIssues = useMemo(() => {
+    return allIssues.filter((issue) => {
+      const matchesSearch =
+        issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        issue.id.toString().includes(searchQuery) ||
+        (issue.description && issue.description.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      return matchesSearch;
+    });
+  }, [allIssues, searchQuery]);
 
   const activeIssue = useMemo(() => {
     if (activeId) {
-      return issues.find((i) => i.id === activeId);
+      return filteredIssues.find((i) => i.id === activeId);
     }
-    return issues.length > 0 ? issues[0] : null;
-  }, [issues, activeId]);
+    return filteredIssues.length > 0 ? filteredIssues[0] : null;
+  }, [filteredIssues, activeId]);
 
   useEffect(() => {
-    if (!activeId && issues.length > 0) {
-      setActiveId(issues[0].id);
-    } else if (activeId && !issues.find((i) => i.id === activeId)) {
+    if (!activeId && filteredIssues.length > 0) {
+      setActiveId(filteredIssues[0].id);
+    } else if (activeId && !filteredIssues.find((i) => i.id === activeId)) {
       // Active issue no longer exists, reset to first
-      setActiveId(issues.length > 0 ? issues[0].id : null);
+      setActiveId(filteredIssues.length > 0 ? filteredIssues[0].id : null);
     }
-  }, [issues, activeId]);
-
+  }, [filteredIssues, activeId]);
   const projectLabel = project?.name || "Project";
 
   return (
@@ -98,7 +106,19 @@ export default function IssuesPage() {
               <Share2 className="h-4 w-4 mr-2" />
               Share
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => {
+              const csvContent = "data:text/csv;charset=utf-8,"
+                + "ID,Title,Status,Assignee,Priority\n"
+                + filteredIssues.map(i => `${i.id},"${i.title}",${i.status},"${i.assigneeName || 'Unassigned'}",${i.priority}`).join("\n");
+              const encodedUri = encodeURI(csvContent);
+              const link = document.createElement("a");
+              link.setAttribute("href", encodedUri);
+              link.setAttribute("download", `${project?.name || 'Project'}_Issues.csv`);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              toast.success("Issues exported successfully");
+            }}>
               <Download className="h-4 w-4 mr-2" />
               Export issues
             </Button>
@@ -133,7 +153,12 @@ export default function IssuesPage() {
               <Sparkles className="h-4 w-4" />
             </Button>
             <div className="relative w-full">
-              <Input placeholder="Search issues" className="pl-3 pr-10" />
+              <Input
+                placeholder="Search issues"
+                className="pl-3 pr-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
           </div>
@@ -150,13 +175,13 @@ export default function IssuesPage() {
               <span>Created</span>
               <ChevronsUpDown className="h-4 w-4" />
             </div>
-            <span>{issues.length} issues</span>
+            <span>{filteredIssues.length} issues</span>
           </div>
 
           <div className="space-y-2">
             {isLoading && <div>Loading issues...</div>}
-            {!isLoading && issues.length === 0 && <div>No issues found.</div>}
-            {issues.map((issue) => {
+            {!isLoading && filteredIssues.length === 0 && <div>No issues found.</div>}
+            {filteredIssues.map((issue) => {
               const isActive = issue.id === activeId;
               return (
                 <button

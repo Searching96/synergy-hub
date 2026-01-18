@@ -25,4 +25,6 @@ public class ProjectResponse {
     private Integer memberCount;
     private Integer taskCount;
     private Integer completedTaskCount;
+    private Long teamId;
+    private String teamName;
 }

@@ -30,4 +30,6 @@ public class UpdateProjectRequest {
     private LocalDate endDate;
 
     private ProjectStatus status; // ACTIVE, COMPLETED, ARCHIVED
+
+    private Long teamId;
 }

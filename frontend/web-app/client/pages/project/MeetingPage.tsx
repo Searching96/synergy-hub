@@ -94,7 +94,7 @@ export default function MeetingPage() {
     if (!meeting) return;
 
     try {
-      // await meetingService.leaveMeeting(meeting.id); // Not implemented yet
+      await meetingService.leaveMeeting(meeting.id);
       navigate(`/projects/${projectId}/meetings`);
     } catch (err) {
       console.error("Failed to leave meeting:", err);

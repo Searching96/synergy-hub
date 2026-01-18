@@ -191,3 +191,77 @@ export function useUnarchiveTask() {
     },
   });
 }
+
+export function useWatchTask() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (taskId: number | string) => taskService.watchTask(taskId),
+    onSuccess: (response, taskId) => {
+      queryClient.setQueryData(["task", typeof taskId === 'string' ? parseInt(taskId) : taskId], response);
+      // Invalidate projects to update counter if any
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast({
+        title: "Watching",
+        description: "You are now watching this issue",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.response?.data?.message || "Failed to watch issue",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useUnwatchTask() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (taskId: number | string) => taskService.unwatchTask(taskId),
+    onSuccess: (response, taskId) => {
+      queryClient.setQueryData(["task", typeof taskId === 'string' ? parseInt(taskId) : taskId], response);
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast({
+        title: "Unwatched",
+        description: "You stopped watching this issue",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.response?.data?.message || "Failed to unwatch issue",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useLinkTasks() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ taskId, linkedTaskId }: { taskId: number | string, linkedTaskId: number | string }) =>
+      taskService.linkTasks(taskId, linkedTaskId),
+    onSuccess: (_, variables) => {
+      const id = typeof variables.taskId === 'string' ? parseInt(variables.taskId) : variables.taskId;
+      queryClient.invalidateQueries({ queryKey: ["task", id] });
+      toast({
+        title: "Linked",
+        description: "Tasks linked successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.response?.data?.message || "Failed to link tasks",
+        variant: "destructive",
+      });
+    },
+  });
+}

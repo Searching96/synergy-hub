@@ -1,5 +1,5 @@
 import api from './api';
-import type { ChatMessage, SendMessageRequest } from '@/types/chat.types';
+import type { ChatMessage, SendMessageRequest, EditMessageRequest, DeleteMessageRequest } from '@/types/chat.types';
 
 export const chatService = {
     getProjectMessages: async (projectId: number): Promise<ChatMessage[]> => {
@@ -15,15 +15,26 @@ export const chatService = {
         });
         return mapToChatMessage(response.data.data);
     },
+
+    editMessage: async (data: EditMessageRequest): Promise<ChatMessage> => {
+        const response = await api.put(`/chat/messages/${data.messageId}`, {
+            content: data.message
+        });
+        return mapToChatMessage(response.data.data);
+    },
+
+    deleteMessage: async (data: DeleteMessageRequest): Promise<void> => {
+        await api.delete(`/chat/messages/${data.messageId}`);
+    },
 };
 
 // Mapper to convert Backend DTO to Frontend Type
-// Backend: { id, content, sentAt, userId, userName, userAvatar, channelId }
-// Frontend: { id, projectId, userId, user: {id, name, avatar}, message, timestamp, ... }
+// Backend: { id, content, sentAt, updatedAt, userId, userName, userAvatar, channelId, edited }
+// Frontend: { id, projectId, userId, user: {id, name, avatar}, message, timestamp, edited, editedAt ... }
 function mapToChatMessage(dto: any): ChatMessage {
     return {
         id: dto.id,
-        projectId: dto.projectId || 0, // Extract from DTO if available
+        projectId: dto.projectId || 0,
         userId: dto.userId,
         user: {
             id: dto.userId,
@@ -32,5 +43,7 @@ function mapToChatMessage(dto: any): ChatMessage {
         },
         message: dto.content,
         timestamp: dto.sentAt,
-    } as ChatMessage; // Cast to ensure it matches the interface exactly
+        edited: dto.edited,
+        editedAt: dto.updatedAt,
+    } as ChatMessage;
 }

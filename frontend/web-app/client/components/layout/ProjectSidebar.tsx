@@ -1,8 +1,8 @@
 import { Link, useLocation, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { 
-  LayoutDashboard, 
-  ListTodo, 
+import {
+  LayoutDashboard,
+  ListTodo,
   Calendar,
   Activity,
   MessageSquare,
@@ -40,13 +40,13 @@ export default function ProjectSidebar() {
       <div className="flex h-full flex-col">
         {/* Project Header */}
         <div className="p-4">
-          
+
           {isLoading ? (
             <div className="h-6 w-3/4 bg-muted animate-pulse rounded" />
           ) : (
             <h2 className="text-lg font-semibold truncate">{project?.name || "Project"}</h2>
           )}
-          
+
           {project?.description && (
             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
               {project.description}
@@ -80,13 +80,7 @@ export default function ProjectSidebar() {
                   </Link>
                 );
               })}
-              <button
-                type="button"
-                className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-              >
-                <Plus className="h-4 w-4" />
-                Add view
-              </button>
+
             </div>
           </div>
 

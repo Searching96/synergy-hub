@@ -70,3 +70,5 @@ build.log
 # OS
 .DS_Store
 Thumbs.db
+
+.agent

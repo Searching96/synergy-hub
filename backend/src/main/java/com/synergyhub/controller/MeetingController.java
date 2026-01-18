@@ -65,6 +65,19 @@ public class MeetingController {
         ));
     }
 
+    @PostMapping("/{meetingId}/leave")
+    public ResponseEntity<ApiResponse<MeetingResponse>> leaveMeeting(
+            @PathVariable Long meetingId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        
+        User user = userRepository.findById(principal.getId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return ResponseEntity.ok(ApiResponse.success(
+                meetingService.leaveMeeting(meetingId, user)
+        ));
+    }
+
     @GetMapping("/{meetingId}/token")
     public ResponseEntity<ApiResponse<String>> getJoinToken(
             @PathVariable Long meetingId,

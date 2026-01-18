@@ -167,5 +167,23 @@ export const taskService = {
     );
     const url = (typeof data === 'object' && (data as any).url) ? (data as any).url : data;
     window.open(url, '_blank');
+  },
+
+  // Watch a task
+  async watchTask(taskId: number | string): Promise<ApiResponse<Task>> {
+    const response = await api.put<ApiResponse<Task>>(`/tasks/${taskId}/watch`);
+    return response.data;
+  },
+
+  // Unwatch a task
+  async unwatchTask(taskId: number | string): Promise<ApiResponse<Task>> {
+    const response = await api.delete<ApiResponse<Task>>(`/tasks/${taskId}/watch`);
+    return response.data;
+  },
+
+  // Link tasks
+  async linkTasks(taskId: number | string, linkedTaskId: number | string): Promise<ApiResponse<Task>> {
+    const response = await api.post<ApiResponse<Task>>(`/tasks/${taskId}/links/${linkedTaskId}`);
+    return response.data;
   }
 };

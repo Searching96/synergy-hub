@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { Trash2, UserPlus, Loader2, Mail, Archive } from "lucide-react";
 import { ProjectBreadcrumb } from "@/components/project/ProjectBreadcrumb";
+import { TeamSelect } from "@/components/project/TeamSelect";
 
 export default function ProjectSettingsPage() {
   const { project } = useProject();
@@ -55,6 +56,7 @@ export default function ProjectSettingsPage() {
   // Details form state
   const [name, setName] = useState(project?.name || "");
   const [description, setDescription] = useState(project?.description || "");
+  const [teamId, setTeamId] = useState<string | undefined>(project?.teamId ? String(project.teamId) : undefined);
 
   // Add member dialog state
   const [addMemberOpen, setAddMemberOpen] = useState(false);
@@ -139,7 +141,11 @@ export default function ProjectSettingsPage() {
   });
 
   const handleUpdateDetails = () => {
-    updateProjectMutation.mutate({ name, description });
+    updateProjectMutation.mutate({
+      name,
+      description,
+      teamId: teamId ? parseInt(teamId) : undefined
+    });
   };
 
   const handleAddMember = () => {
@@ -178,6 +184,7 @@ export default function ProjectSettingsPage() {
     if (project) {
       setName(project.name);
       setDescription(project.description || "");
+      setTeamId(project.teamId ? String(project.teamId) : undefined);
     }
   }, [project]);
 
@@ -221,6 +228,13 @@ export default function ProjectSettingsPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Enter project description"
                 rows={4}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <TeamSelect
+                value={teamId}
+                onValueChange={setTeamId}
               />
             </div>
 
@@ -394,6 +408,8 @@ export default function ProjectSettingsPage() {
                   Project Leads and Product Owners have full access. Developers, Testers, and Designers can manage tasks. Stakeholders are read-only.
                 </p>
               </div>
+
+
             </div>
 
             <DialogFooter>

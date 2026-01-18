@@ -36,6 +36,8 @@ export interface Project {
   owner: ProjectOwner;
   members: ProjectMember[];
   stats: ProjectStats;
+  teamId?: number;
+  teamName?: string;
 }
 
 interface ProjectContextType {

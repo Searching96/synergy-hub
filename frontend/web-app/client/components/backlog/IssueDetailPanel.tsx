@@ -10,7 +10,11 @@ import {
   useUploadAttachment,
   useDeleteAttachment,
   useTaskSubtasks,
-  useCreateSubtask
+  useCreateSubtask,
+  useWatchTask,
+  useUnwatchTask,
+  useLinkTasks,
+  useTask
 } from "@/hooks/useTasks";
 import { taskService } from "@/services/task.service";
 
@@ -41,13 +45,21 @@ export default function IssueDetailPanel({
 
   const { data: attachmentsData } = useTaskAttachments(taskId);
   const { data: subtasksResponse } = useTaskSubtasks(taskId);
+  const { data: taskResponse } = useTask(taskId);
 
   const uploadAttachment = useUploadAttachment();
   const deleteAttachment = useDeleteAttachment();
   const createSubtask = useCreateSubtask();
+  const watchTask = useWatchTask();
+  const unwatchTask = useUnwatchTask();
+  const linkTasks = useLinkTasks();
 
   const attachments = attachmentsData || [];
   const subtasks = subtasksResponse?.data || [];
+  const task = taskResponse?.data;
+  const isWatching = task?.watching || false;
+  const watchersCount = task?.watchersCount || 0;
+  const linkedTasksList = task?.linkedTasks || [];
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
@@ -102,6 +114,35 @@ export default function IssueDetailPanel({
     }
   };
 
+  const handleToggleWatch = async () => {
+    try {
+      if (isWatching) {
+        await unwatchTask.mutateAsync(taskId);
+      } else {
+        await watchTask.mutateAsync(taskId);
+      }
+    } catch (error) {
+      console.error("Failed to toggle watch", error);
+    }
+  };
+
+  const handleLinkTask = async () => {
+    const linkedTaskIdStr = prompt("Enter Task ID to link:");
+    if (!linkedTaskIdStr) return;
+
+    const linkedTaskId = parseInt(linkedTaskIdStr);
+    if (isNaN(linkedTaskId)) {
+      toast.error("Invalid Task ID");
+      return;
+    }
+
+    try {
+      await linkTasks.mutateAsync({ taskId, linkedTaskId });
+    } catch (error) {
+      console.error("Failed to link task", error);
+    }
+  };
+
   return (
     <div className="flex flex-col w-[420px] border-l border-gray-200 bg-white flex-shrink-0 overflow-hidden shadow-lg h-full">
       {/* Header */}
@@ -123,10 +164,18 @@ export default function IssueDetailPanel({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-gray-500"
-            onClick={() => toast.info("Watching feature coming soon")}
+            className={`h-8 w-8 ${isWatching ? "text-blue-600 bg-blue-50" : "text-gray-500"}`}
+            onClick={handleToggleWatch}
+            disabled={watchTask.isPending || unwatchTask.isPending}
           >
-            <Eye className="h-4 w-4" />
+            <div className="relative">
+              <Eye className="h-4 w-4" />
+              {watchersCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-[8px] rounded-full w-3 h-3 flex items-center justify-center">
+                  {watchersCount}
+                </span>
+              )}
+            </div>
           </Button>
           <Button
             variant="ghost"
@@ -209,10 +258,11 @@ export default function IssueDetailPanel({
             variant="outline"
             size="sm"
             className="flex items-center gap-1 text-xs h-8"
-            onClick={() => toast.info("Linking feature coming soon")}
+            onClick={handleLinkTask}
+            disabled={linkTasks.isPending}
           >
             <LinkIcon className="h-3.5 w-3.5" />
-            Link
+            {linkTasks.isPending ? "Linking..." : "Link"}
           </Button>
         </div>
 
@@ -268,6 +318,39 @@ export default function IssueDetailPanel({
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+
+
+        {/* Linked Issues Section */}
+        <div className="px-4 py-4 border-b border-gray-200">
+          <h3 className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide flex items-center justify-between">
+            Linked Issues
+            <Button variant="ghost" size="sm" className="h-5 px-1 text-xs" onClick={handleLinkTask}>
+              <Plus className="h-3 w-3 mr-1" /> Link
+            </Button>
+          </h3>
+
+          <div className="space-y-1">
+            {linkedTasksList.length === 0 ? (
+              <p className="text-sm text-gray-500 italic">No linked issues yet.</p>
+            ) : (
+              linkedTasksList.map((lt: any) => (
+                <div key={lt.id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-100">
+                  <div className={`${getTypeColor(lt.type)} text-white rounded w-4 h-4 flex items-center justify-center flex-shrink-0 text-[10px] font-bold`}>
+                    {lt.type.charAt(0)}
+                  </div>
+                  <span className="text-xs text-gray-500 font-mono">{issueKey.split('-')[0]}-{lt.id}</span>
+                  <span className="text-sm text-gray-700 truncate flex-1">
+                    {lt.title}
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                    {lt.status}
+                  </span>
                 </div>
               ))
             )}
@@ -350,10 +433,10 @@ export default function IssueDetailPanel({
             </div>
           </div>
         </div>
-      </div>
+      </div >
 
       {/* Subtask Dialog */}
-      <Dialog open={isSubtaskDialogOpen} onOpenChange={setIsSubtaskDialogOpen}>
+      < Dialog open={isSubtaskDialogOpen} onOpenChange={setIsSubtaskDialogOpen} >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Create Subtask</DialogTitle>
@@ -379,7 +462,7 @@ export default function IssueDetailPanel({
             </DialogFooter>
           </form>
         </DialogContent>
-      </Dialog>
-    </div>
+      </Dialog >
+    </div >
   );
 }

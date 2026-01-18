@@ -148,17 +148,50 @@ export default function ChatPage() {
   };
 
   const handleEditMessage = async (messageId: number, newText: string) => {
-    toast({
-      title: "Not Implemented",
-      description: "Message editing coming soon!",
-    });
+    if (!projectId) return;
+
+    // 1. Optimistic Update
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId ? { ...msg, message: newText, edited: true } : msg
+      )
+    );
+
+    try {
+      // 2. Network Request
+      await chatService.editMessage({ messageId, message: newText });
+    } catch (error) {
+      console.error("Failed to edit message:", error);
+      // Revert or show error - for simplicity, just show error toast
+      // A better way would be to reload messages
+      loadMessages(true);
+      toast({
+        title: "Error",
+        description: "Failed to edit message. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteMessage = async (messageId: number) => {
-    toast({
-      title: "Not Implemented",
-      description: "Message deletion coming soon!",
-    });
+    if (!projectId) return;
+
+    // 1. Optimistic Update
+    setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+
+    try {
+      // 2. Network Request
+      await chatService.deleteMessage({ messageId });
+    } catch (error) {
+      console.error("Failed to delete message:", error);
+      // Revert
+      loadMessages(true);
+      toast({
+        title: "Error",
+        description: "Failed to delete message. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleReactToMessage = async (messageId: number, emoji: string) => {

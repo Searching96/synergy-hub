@@ -36,6 +36,10 @@ public class Project {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id", nullable = false)
     private Organization organization;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private Team team;
     
     @NotBlank(message = "Project name is required")
     @Size(max = 100, message = "Project name must not exceed 100 characters")
