@@ -10,8 +10,10 @@ public class ChatMessageResponse {
     private Long id;
     private String content;
     private LocalDateTime sentAt;
+    private LocalDateTime updatedAt;
     private Long userId;
     private String userName;
     private String userAvatar; // Optional
     private Long channelId;
+    private boolean edited;
 }

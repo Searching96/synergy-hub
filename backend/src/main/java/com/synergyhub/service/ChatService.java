@@ -86,14 +86,45 @@ public class ChatService {
         return getChannelMessages(channel.getId());
     }
 
+    @Transactional
+    public ChatMessageResponse editMessage(Long messageId, String content, User user) {
+        ChatMessage message = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("Message not found"));
+
+        if (!message.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("You can only edit your own messages");
+        }
+
+        message.setContent(content);
+        message.setEdited(true);
+        message.setUpdatedAt(LocalDateTime.now());
+        
+        message = chatMessageRepository.save(message);
+        return mapToResponse(message);
+    }
+
+    @Transactional
+    public void deleteMessage(Long messageId, User user) {
+        ChatMessage message = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("Message not found"));
+
+        if (!message.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("You can only delete your own messages");
+        }
+
+        chatMessageRepository.delete(message);
+    }
+
     private ChatMessageResponse mapToResponse(ChatMessage message) {
         return ChatMessageResponse.builder()
                 .id(message.getId())
                 .content(message.getContent())
                 .sentAt(message.getSentAt())
+                .updatedAt(message.getUpdatedAt())
                 .userId(message.getUser().getId())
                 .userName(message.getUser().getName())
                 .channelId(message.getChannel().getId())
+                .edited(message.isEdited())
                 .build();
     }
 }

@@ -41,6 +41,9 @@ public interface TaskMapper {
     @Mapping(target = "subtaskCount", expression = "java(task.getSubtasks().size())")
     @Mapping(target = "completedSubtaskCount", source = "subtasks", qualifiedByName = "countCompletedSubtasks")
     
+    @Mapping(target = "watchersCount", expression = "java(task.getWatchers().size())")
+    @Mapping(target = "linkedTasks", source = "linkedTasks")
+    
     TaskResponse toTaskResponse(Task task);
 
     // ========== TASK SUMMARY RESPONSE ==========

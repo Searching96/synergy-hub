@@ -372,4 +372,25 @@ public class TaskController {
 
                 return ResponseEntity.ok(ApiResponse.success(children));
         }
+
+        /**
+         * Link tasks
+         * POST /api/tasks/{taskId}/links/{linkedTaskId}
+         */
+        @PostMapping("/api/tasks/{taskId}/links/{linkedTaskId}")
+        @PreAuthorize("isAuthenticated()")
+        public ResponseEntity<ApiResponse<TaskResponse>> linkTasks(
+                        @PathVariable @Positive(message = "Task ID must be positive") Long taskId,
+                        @PathVariable @Positive(message = "Linked Task ID must be positive") Long linkedTaskId,
+                        @AuthenticationPrincipal UserPrincipal currentUser) {
+
+                log.info("Linking task: {} to task: {} by user: {}", taskId, linkedTaskId, currentUser.getId());
+
+                User user = userRepository.findByEmailWithRolesAndPermissions(currentUser.getEmail())
+                                .orElseThrow();
+
+                TaskResponse task = taskService.linkTasks(taskId, linkedTaskId, user);
+
+                return ResponseEntity.ok(ApiResponse.success("Tasks linked successfully", task));
+        }
 }

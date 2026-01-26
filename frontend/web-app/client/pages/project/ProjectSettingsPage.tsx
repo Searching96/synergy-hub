@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { Trash2, UserPlus, Loader2, Mail, Archive } from "lucide-react";
 import { ProjectBreadcrumb } from "@/components/project/ProjectBreadcrumb";
+import { TeamSelect } from "@/components/project/TeamSelect";
 
 export default function ProjectSettingsPage() {
   const { project } = useProject();
@@ -55,6 +56,7 @@ export default function ProjectSettingsPage() {
   // Details form state
   const [name, setName] = useState(project?.name || "");
   const [description, setDescription] = useState(project?.description || "");
+  const [teamId, setTeamId] = useState<string | undefined>(project?.teamId ? String(project.teamId) : undefined);
 
   // Add member dialog state
   const [addMemberOpen, setAddMemberOpen] = useState(false);
@@ -92,6 +94,28 @@ export default function ProjectSettingsPage() {
       toast({
         title: "Error",
         description: error?.response?.data?.error || error?.response?.data?.message || "Failed to archive project",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const unarchiveProjectMutation = useMutation({
+    mutationFn: (projectId: number) => projectService.unarchiveProject(projectId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      // Invalidate specific project query as well to update the local 'project' object if possible, 
+      // but 'useProject' typically listens to '["project", id]'.
+      queryClient.invalidateQueries({ queryKey: ["project", project?.id] });
+
+      toast({
+        title: "Success",
+        description: "Project restored successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.response?.data?.error || error?.response?.data?.message || "Failed to restore project",
         variant: "destructive",
       });
     },
@@ -139,7 +163,11 @@ export default function ProjectSettingsPage() {
   });
 
   const handleUpdateDetails = () => {
-    updateProjectMutation.mutate({ name, description });
+    updateProjectMutation.mutate({
+      name,
+      description,
+      teamId: teamId ? parseInt(teamId) : undefined
+    });
   };
 
   const handleAddMember = () => {
@@ -172,12 +200,17 @@ export default function ProjectSettingsPage() {
     archiveProjectMutation.mutate(project.id);
   };
 
-  // Sync form state with project data
+  const handleUnarchiveProject = () => {
+    if (!project?.id) return;
+    unarchiveProjectMutation.mutate(project.id);
+  };
+
   // Sync form state with project data
   useEffect(() => {
     if (project) {
       setName(project.name);
       setDescription(project.description || "");
+      setTeamId(project.teamId ? String(project.teamId) : undefined);
     }
   }, [project]);
 
@@ -221,6 +254,13 @@ export default function ProjectSettingsPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Enter project description"
                 rows={4}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <TeamSelect
+                value={teamId}
+                onValueChange={setTeamId}
               />
             </div>
 
@@ -314,19 +354,37 @@ export default function ProjectSettingsPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between p-4 border border-orange-300 rounded-lg">
               <div>
-                <h3 className="font-semibold">Archive Project</h3>
+                <h3 className="font-semibold">
+                  {project?.status === "ARCHIVED" ? "Restore Project" : "Archive Project"}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  Archive this project. It can be restored from the archived projects list.
+                  {project?.status === "ARCHIVED"
+                    ? "Restore this project to the active list. You will be able to edit it again."
+                    : "Archive this project. It can be restored from the archived projects list."}
                 </p>
               </div>
-              <Button
-                variant="outline"
-                className="border-orange-300 text-orange-600 hover:bg-orange-50"
-                onClick={() => setArchiveDialogOpen(true)}
-              >
-                <Archive className="mr-2 h-4 w-4" />
-                Archive
-              </Button>
+
+              {project?.status === "ARCHIVED" ? (
+                <Button
+                  variant="outline"
+                  className="border-green-300 text-green-700 hover:bg-green-50"
+                  onClick={handleUnarchiveProject}
+                  disabled={unarchiveProjectMutation.isPending}
+                >
+                  {unarchiveProjectMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Archive className="mr-2 h-4 w-4" />
+                  Restore
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="border-orange-300 text-orange-600 hover:bg-orange-50"
+                  onClick={() => setArchiveDialogOpen(true)}
+                >
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archive
+                </Button>
+              )}
             </div>
 
             <div className="flex items-center justify-between p-4 border border-destructive rounded-lg">
@@ -394,6 +452,8 @@ export default function ProjectSettingsPage() {
                   Project Leads and Product Owners have full access. Developers, Testers, and Designers can manage tasks. Stakeholders are read-only.
                 </p>
               </div>
+
+
             </div>
 
             <DialogFooter>

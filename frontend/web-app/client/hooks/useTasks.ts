@@ -41,10 +41,26 @@ export function useTask(taskId: number) {
   });
 }
 
-export function useProjectTasks(projectId: number, params?: any) {
+export function useProjectTasks(projectId: number | string, params?: any) {
   return useQuery({
     queryKey: ["tasks", projectId, params],
-    queryFn: () => taskService.getProjectTasks(projectId, params),
+    queryFn: async () => {
+      const response = await taskService.getProjectTasks(projectId, params);
+      const data = response.data;
+      if (Array.isArray(data)) return data;
+      return (data as any)?.content || [];
+    },
+    enabled: !!projectId,
+  });
+}
+
+export function useProjectEpics(projectId: number | string) {
+  return useQuery({
+    queryKey: ["epics", projectId],
+    queryFn: async () => {
+      const response = await taskService.getProjectEpics(projectId);
+      return response.data || [];
+    },
     enabled: !!projectId,
   });
 }
@@ -186,6 +202,105 @@ export function useUnarchiveTask() {
       toast({
         title: "Error",
         description: error?.response?.data?.message || "Failed to unarchive issue",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useWatchTask() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (taskId: number | string) => taskService.watchTask(taskId),
+    onSuccess: (response, taskId) => {
+      queryClient.setQueryData(["task", typeof taskId === 'string' ? parseInt(taskId) : taskId], response);
+      // Invalidate projects to update counter if any
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast({
+        title: "Watching",
+        description: "You are now watching this issue",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.response?.data?.message || "Failed to watch issue",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useUnwatchTask() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (taskId: number | string) => taskService.unwatchTask(taskId),
+    onSuccess: (response, taskId) => {
+      queryClient.setQueryData(["task", typeof taskId === 'string' ? parseInt(taskId) : taskId], response);
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast({
+        title: "Unwatched",
+        description: "You stopped watching this issue",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.response?.data?.message || "Failed to unwatch issue",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useLinkTasks() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ taskId, linkedTaskId }: { taskId: number | string, linkedTaskId: number | string }) =>
+      taskService.linkTasks(taskId, linkedTaskId),
+    onSuccess: (_, variables) => {
+      const id = typeof variables.taskId === 'string' ? parseInt(variables.taskId) : variables.taskId;
+      queryClient.invalidateQueries({ queryKey: ["task", id] });
+      toast({
+        title: "Linked",
+        description: "Tasks linked successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.response?.data?.message || "Failed to link tasks",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useDeleteTask() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (taskId: number | string) => taskService.deleteTask(taskId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["backlog"] });
+      queryClient.invalidateQueries({ queryKey: ["board"] });
+      toast({
+        title: "Success",
+        description: "Issue deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.response?.data?.message || "Failed to delete issue",
         variant: "destructive",
       });
     },

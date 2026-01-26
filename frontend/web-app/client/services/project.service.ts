@@ -85,4 +85,10 @@ export const projectService = {
     const response = await api.put<ApiResponse<ProjectMember>>(`/projects/${projectId}/members/${userId}/role`, { role });
     return response.data;
   },
+
+  // Assign team to project
+  async assignTeamToProject(projectId: number | string, teamId: number | string): Promise<ApiResponse<Project>> {
+    const response = await api.put<ApiResponse<Project>>(`/projects/${projectId}/team/${teamId}`);
+    return response.data;
+  },
 };

@@ -27,8 +27,8 @@ public class SprintValidator {
         if (daysBetween < 7) {
             throw new IllegalArgumentException("Sprint duration must be at least 7 days");
         }
-        if (daysBetween > 30) {
-            throw new IllegalArgumentException("Sprint duration cannot exceed 30 days");
+        if (daysBetween > 32) {
+            throw new IllegalArgumentException("Sprint duration cannot exceed 32 days");
         }
     }
 }

@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
+import { OrganizationProvider } from "@/context/OrganizationContext";
 import PrivateRoute from "@/components/guards/PrivateRoute";
 import { OrganizationGuard } from "@/components/guards/OrganizationGuard";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -19,6 +20,7 @@ const LoginPage = lazy(() => import("./pages/auth/LoginPage"));
 const RegisterPage = lazy(() => import("./pages/auth/RegisterPage"));
 const EmailVerificationPage = lazy(() => import("./pages/auth/EmailVerificationPage"));
 const OAuth2RedirectHandler = lazy(() => import("./pages/auth/OAuth2RedirectHandler"));
+const DebugLoginPage = lazy(() => import("./pages/auth/DebugLoginPage"));
 const OrganizationWelcome = lazy(() => import("./pages/organization/OrganizationWelcome"));
 const YourWork = lazy(() => import("./pages/dashboard/YourWork"));
 const BoardPage = lazy(() => import("./pages/board/BoardPage"));
@@ -84,9 +86,10 @@ const App = () => (
         v7_startTransition: true,
         v7_relativeSplatPath: true,
       }}
-    >
-      <AuthProvider>
-        <TooltipProvider>
+      >
+        <AuthProvider>
+          <OrganizationProvider>
+            <TooltipProvider>
           <OfflineBanner />
           <Toaster />
 
@@ -99,6 +102,7 @@ const App = () => (
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/verify-email" element={<EmailVerificationPage />} />
                 <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
+                <Route path="/debug/:email" element={<DebugLoginPage />} />
 
                 {/* ========== AUTHENTICATED BUT NO ORG - Organization Setup ========== */}
                 <Route element={<PrivateRoute />}>
@@ -146,6 +150,7 @@ const App = () => (
             </Suspense>
           </GenericErrorBoundary>
         </TooltipProvider>
+        </OrganizationProvider>
       </AuthProvider>
     </BrowserRouter>
   </QueryClientProvider>

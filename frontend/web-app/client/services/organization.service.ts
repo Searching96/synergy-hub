@@ -40,6 +40,24 @@ export interface UserOrganizationResponse {
   userId?: number;
 }
 
+export interface OrganizationMember {
+  userId: number;
+  name: string;
+  email: string;
+  role: string;
+  joinedAt: string;
+  status: string;
+}
+
+export interface PagedResponse<T> {
+  content: T[];
+  pageNumber: number;
+  pageSize: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+}
+
 export const organizationService = {
   // ========== EXISTING ENDPOINTS ==========
 
@@ -124,6 +142,17 @@ export const organizationService = {
   // Reject join request (admin only)
   rejectJoinRequest: async (orgId: number, userId: number) => {
     const response = await api.post(`/organizations/${orgId}/reject-request/${userId}`);
+    return response.data;
+  },
+
+  // Get organization members with pagination
+  getOrganizationMembers: async (orgId: number, page = 0, size = 10): Promise<{
+    success: boolean;
+    data: PagedResponse<OrganizationMember>;
+  }> => {
+    const response = await api.get(`/organizations/${orgId}/members`, {
+      params: { page, size }
+    });
     return response.data;
   },
 };

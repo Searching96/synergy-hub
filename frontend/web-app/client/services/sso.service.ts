@@ -11,10 +11,43 @@ import type {
   ApiResponse,
 } from "@/types/sso.types";
 
+export interface Result<T, E = Error> {
+  success: boolean;
+  data?: T;
+  error?: E;
+}
+
 const getOrgId = (): number => {
   const orgId = localStorage.getItem("organizationId");
-  if (!orgId) throw new Error("Organization ID not found");
-  return parseInt(orgId, 10);
+  if (orgId) return parseInt(orgId, 10);
+
+  // Fallback: Try to get from auth storage
+  try {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      if (user.organizationId) {
+        localStorage.setItem("organizationId", String(user.organizationId));
+        return user.organizationId;
+      }
+    }
+  } catch (e) {
+    console.error("Error parsing user data:", e);
+  }
+
+  return -1;
+};
+
+const getOrgIdAsync = async (): Promise<Result<number>> => {
+  const orgId = getOrgId();
+  if (orgId !== -1) {
+    return { success: true, data: orgId };
+  }
+
+  return {
+    success: false,
+    error: new Error("Organization ID not found. Please try logging in again or selecting an organization.")
+  };
 };
 
 export const ssoService = {

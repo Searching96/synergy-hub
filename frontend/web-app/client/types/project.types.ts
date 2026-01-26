@@ -14,6 +14,8 @@ export interface Project {
     name: string;
     email: string;
   };
+  teamId?: number;
+  teamName?: string;
 }
 
 export interface ProjectDetails extends Project {
@@ -50,12 +52,15 @@ export interface CreateProjectDto {
   description?: string;
   startDate?: string;
   endDate?: string;
+  teamId?: number;
 }
 
 export interface UpdateProjectDto {
   name?: string;
   description?: string;
+  startDate?: string;
   endDate?: string;
+  teamId?: number;
 }
 
 export interface PaginatedResponse<T> {

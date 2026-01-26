@@ -138,21 +138,26 @@ export default function Topbar() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
-          <Button
-            className="bg-blue-600 hover:bg-blue-700 hidden sm:flex"
-            onClick={handleCreateIssue}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create
-          </Button>
-
-          <Button
-            size="icon"
-            className="bg-blue-600 hover:bg-blue-700 sm:hidden"
-            onClick={handleCreateIssue}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+          {/* Create Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700 gap-2">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Create</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleCreateIssue}>
+                Create Issue
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/projects")}>
+                Create Project
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/teams/create")}>
+                Create Team
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Settings Dropdown */}
           <DropdownMenu>
@@ -165,11 +170,9 @@ export default function Topbar() {
               <DropdownMenuItem onClick={() => navigate("/settings")}>
                 Profile Settings
               </DropdownMenuItem>
-              {isAdmin && (
-                <DropdownMenuItem onClick={() => navigate("/settings/organization")}>
-                  Organization
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem onClick={() => navigate("/settings/organization")}>
+                Organization
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 

@@ -32,6 +32,11 @@ export const meetingService = {
     getJoinToken: async (meetingId: string): Promise<string> => {
         const response = await api.get(`/meetings/${meetingId}/token`);
         return response.data.data;
+    },
+
+    leaveMeeting: async (meetingId: string): Promise<Meeting> => {
+        const response = await api.post(`/meetings/${meetingId}/leave`);
+        return mapToMeeting(response.data.data);
     }
 };
 

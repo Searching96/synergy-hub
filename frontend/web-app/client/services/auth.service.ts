@@ -23,6 +23,12 @@ const authService = {
     if (response.data.success && response.data.data.accessToken) {
       localStorage.setItem("token", response.data.data.accessToken);
       localStorage.setItem("user", JSON.stringify(response.data.data.user));
+
+      // Explicitly store organizationId if present
+      if (response.data.data.user.organizationId) {
+        localStorage.setItem("organizationId", String(response.data.data.user.organizationId));
+      }
+
       // Store refresh token if provided
       if (response.data.data.refreshToken) {
         localStorage.setItem("refreshToken", response.data.data.refreshToken);

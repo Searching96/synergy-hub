@@ -13,7 +13,19 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, Mail, MapPin, Save, Trash2, AlertTriangle, Loader2 } from "lucide-react";
+import { Building2, Mail, MapPin, Save, Trash2, AlertTriangle, Loader2, Users, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { PaginationControls } from "@/components/ui/PaginationControls";
+import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
 
 import { organizationService } from "@/services/organization.service";
 import { toast } from "sonner";
@@ -40,6 +52,20 @@ export default function OrganizationSettingsPage() {
 
   // Get organization ID from user context
   const organizationId = user?.organizationId;
+
+  // Pagination state for members
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Fetch organization members
+  const { data: membersResponse, isLoading: isMembersLoading } = useQuery({
+    queryKey: ["organization-members", organizationId, page, pageSize],
+    queryFn: () => organizationService.getOrganizationMembers(organizationId!, page - 1, pageSize),
+    enabled: !!organizationId,
+  });
+
+  const membersData = membersResponse?.data;
+  const members = membersData?.content || [];
 
   const {
     organization,
@@ -359,6 +385,93 @@ export default function OrganizationSettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Members Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Organization Members
+          </CardTitle>
+          <CardDescription>
+            View and manage users in your organization
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Joined At</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isMembersLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : members.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No members found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  members.map((member) => (
+                    <TableRow key={member.userId}>
+                      <TableCell className="font-medium">{member.name}</TableCell>
+                      <TableCell>{member.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{member.role}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={member.status === 'ACTIVE' ? 'secondary' : 'outline'}
+                          className={cn(
+                            "capitalize",
+                            member.status === 'ACTIVE' && "bg-green-100 text-green-800 hover:bg-green-100 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"
+                          )}
+                        >
+                          {member.status.toLowerCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(member.joinedAt).toLocaleDateString()}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {membersData && membersData.totalPages > 1 && (
+            <PaginationControls
+              page={page}
+              pageSize={pageSize}
+              totalPages={membersData.totalPages}
+              totalItems={membersData.totalElements}
+              hasNextPage={!membersData.last}
+              hasPreviousPage={page > 1}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
+            />
+          )}
+        </CardContent>
+      </Card>
 
       {/* Danger Zone Card */}
       {canDelete && (

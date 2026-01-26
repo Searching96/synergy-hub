@@ -22,7 +22,7 @@ export default function TeamCreatePage() {
       toast.success("Team created successfully!");
       navigate(-1);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to create team");
+      toast.error(error.response?.data?.message || error.message || "Failed to create team");
     } finally {
       setIsSubmitting(false);
     }

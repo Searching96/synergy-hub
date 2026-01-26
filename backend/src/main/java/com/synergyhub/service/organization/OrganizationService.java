@@ -9,6 +9,8 @@ import com.synergyhub.domain.entity.UserOrganizationId;
 import com.synergyhub.dto.request.CreateOrganizationRequest;
 import com.synergyhub.dto.request.UpdateOrganizationRequest;
 import com.synergyhub.dto.response.OrganizationResponse;
+import com.synergyhub.dto.response.OrganizationMemberResponse;
+import com.synergyhub.dto.response.PagedResponse;
 import com.synergyhub.dto.response.UserResponse;
 import com.synergyhub.events.organization.OrganizationCreatedEvent;
 import com.synergyhub.events.organization.OrganizationUpdatedEvent;
@@ -22,6 +24,8 @@ import com.synergyhub.security.OrganizationSecurity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -98,6 +102,30 @@ public class OrganizationService {
         organizationSecurity.requireReadAccess(organization, actor);
 
         return mapToResponse(organization);
+    }
+
+    /**
+     * Get paginated members of an organization
+     */
+    @Transactional(readOnly = true)
+    public PagedResponse<OrganizationMemberResponse> getOrganizationMembers(Long organizationId, User actor, Pageable pageable) {
+        log.info("Fetching members for organization: {}", organizationId);
+
+        Organization organization = organizationLifecycleService.getOrganizationById(organizationId);
+
+        // SECURITY GUARD: Check read access
+        organizationSecurity.requireReadAccess(organization, actor);
+
+        Page<UserOrganization> membershipPage = userOrganizationRepository.findByOrganizationId(organizationId, pageable);
+
+        return PagedResponse.fromPage(membershipPage.map(uo -> OrganizationMemberResponse.builder()
+                .userId(uo.getUser().getId())
+                .name(uo.getUser().getName())
+                .email(uo.getUser().getEmail())
+                .role(uo.getRole() != null ? uo.getRole().getName() : "NO_ROLE")
+                .joinedAt(uo.getJoinedAt())
+                .status(uo.getStatus().name())
+                .build()));
     }
 
     /**
@@ -199,6 +227,36 @@ public class OrganizationService {
 
         log.info("User {} successfully joined organization {}", user.getId(), org.getId());
         return mapToResponse(org);
+    }
+
+    /**
+     * Ensures a user is a member of an organization.
+     * If not already a member, adds them with the default role.
+     */
+    @Transactional
+    public void ensureUserIsMember(User user, Organization organization) {
+        if (!userOrganizationRepository.existsByIdUserIdAndIdOrganizationId(user.getId(), organization.getId())) {
+            log.info("Automatically adding user {} to organization {}", user.getId(), organization.getId());
+            
+            UserOrganization userOrg = UserOrganization.builder()
+                    .id(new UserOrganizationId(user.getId(), organization.getId()))
+                    .user(user)
+                    .organization(organization)
+                    .isPrimary(userOrganizationRepository.findByIdUserId(user.getId()).isEmpty())
+                    .status(MembershipStatus.ACTIVE)
+                    .joinedAt(LocalDateTime.now())
+                    .build();
+            userOrganizationRepository.save(userOrg);
+            
+            // Assign default TEAM_MEMBER role
+            assignDefaultRole(user, organization, userOrg);
+            
+            // Update User entity if it's the first org or if needed
+            if (user.getOrganization() == null) {
+                user.setOrganization(organization);
+                userRepository.save(user);
+            }
+        }
     }
 
     /**

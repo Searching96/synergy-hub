@@ -51,6 +51,9 @@ export interface Task {
   epic?: { id: number; title: string } | null;
   epicTitle?: string | null; // Match backend response
   attachments?: Attachment[];
+  watching?: boolean;
+  watchersCount?: number;
+  linkedTasks?: Task[];
   [key: string]: unknown;
 }
 

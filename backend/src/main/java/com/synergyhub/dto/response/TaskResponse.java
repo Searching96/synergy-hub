@@ -59,6 +59,11 @@ public class TaskResponse {
     private int subtaskCount; // ✅ Total number of subtasks
     private int completedSubtaskCount; // ✅ How many are done
     
+    // ✅ Watching & Linking
+    private boolean watching;
+    private int watchersCount;
+    private List<TaskSummaryResponse> linkedTasks;
+    
     @Data
     @Builder
     public static class UserSummary {

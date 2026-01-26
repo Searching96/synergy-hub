@@ -43,7 +43,12 @@ export default function YourWork() {
     }
 
     if (!issues || issues.length === 0) {
-      return <div className="text-muted-foreground text-sm">No assigned issues yet.</div>;
+      return (
+        <div className="flex flex-col items-center justify-center py-12 border rounded-lg bg-muted/20 border-dashed">
+          <Briefcase className="h-10 w-10 text-muted-foreground mb-3 opacity-50" />
+          <p className="text-muted-foreground text-sm mb-4">No issues assigned to you.</p>
+        </div>
+      );
     }
 
     return (
@@ -52,7 +57,7 @@ export default function YourWork() {
           <TableRow>
             <TableHead className="w-[80px]">Type</TableHead>
             <TableHead className="w-[120px]">Key</TableHead>
-            <TableHead>Summary</TableHead>
+            <TableHead>Title</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Priority</TableHead>
           </TableRow>
@@ -70,7 +75,28 @@ export default function YourWork() {
                   </span>
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">{key}</TableCell>
-                <TableCell className="text-sm">{String(issue.title || issue.summary)}</TableCell>
+                <TableCell className="text-sm">
+                  <a
+                    href={`/projects/${issue.projectId}/board?selectedIssue=${issue.id}`}
+                    className="text-blue-500 hover:underline"
+                  >
+                    {String(issue.title || issue.summary)}
+                  </a>
+                  {issue.linkedTasks && issue.linkedTasks.length > 0 && (
+                    <div className="mt-1 text-xs">
+                      Linked Issue:
+                      {issue.linkedTasks.map((linked) => (
+                        <a
+                          key={linked.id}
+                          href={`/projects/${issue.projectId}/board?selectedIssue=${linked.id}`}
+                          className="ml-1 text-blue-500 hover:underline"
+                        >
+                          {linked.title || `Task ${linked.id}`}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Badge variant="secondary">{issue.status}</Badge>
                 </TableCell>

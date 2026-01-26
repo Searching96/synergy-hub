@@ -51,5 +51,39 @@ public class ChatController {
                 chatService.getProjectMessages(projectId)
         ));
     }
+
+    @PutMapping("/messages/{messageId}")
+    public ResponseEntity<ApiResponse<ChatMessageResponse>> editMessage(
+            @PathVariable Long messageId,
+            @RequestBody com.synergyhub.dto.request.UpdateChatMessageRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        
+        User user = userRepository.findById(principal.getId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        ChatMessageResponse message = chatService.editMessage(messageId, request.getContent(), user);
+        
+        // Broadcast update to WebSocket subscribers
+        String destination = "/topic/project/message-update"; // Generic or specific
+        messagingTemplate.convertAndSend(destination, message);
+        
+        return ResponseEntity.ok(ApiResponse.success(message));
+    }
+
+    @DeleteMapping("/messages/{messageId}")
+    public ResponseEntity<ApiResponse<Void>> deleteMessage(
+            @PathVariable Long messageId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        
+        User user = userRepository.findById(principal.getId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        chatService.deleteMessage(messageId, user);
+        
+        // Broadcast deletion
+        messagingTemplate.convertAndSend("/topic/project/message-delete", messageId);
+        
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 }
 

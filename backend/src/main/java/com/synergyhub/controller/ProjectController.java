@@ -74,6 +74,21 @@ public class ProjectController {
                 ApiResponse.success("Project updated successfully", response));
     }
 
+    @PutMapping("/{projectId}/team/{teamId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<ProjectResponse>> assignTeamToProject(
+            @PathVariable @Positive(message = "Project ID must be positive") Long projectId,
+            @PathVariable @Positive(message = "Team ID must be positive") Long teamId,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest httpRequest) {
+
+        User user = getUser(principal);
+        String ipAddress = ipResolver.resolveClientIp(httpRequest);
+
+        ProjectResponse project = projectService.assignTeamToProject(projectId, teamId, user, ipAddress);
+        return ResponseEntity.ok(ApiResponse.success("Team assigned successfully", project));
+    }
+
     @DeleteMapping("/{projectId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> deleteProject(

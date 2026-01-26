@@ -82,4 +82,16 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     // Organization-scoped query: explicit JPQL
     @Query("SELECT t FROM Task t WHERE t.project.organization.id = :orgId")
     List<Task> findAllByOrganizationId(@Param("orgId") Long orgId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Task t SET t.epic = null WHERE t.epic.id = :epicId")
+    void nullifyEpicReferences(@Param("epicId") Long epicId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Task t SET t.parentTask = null WHERE t.parentTask.id = :parentTaskId")
+    void nullifyParentTaskReferences(@Param("parentTaskId") Long parentTaskId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query(value = "DELETE FROM task_links WHERE linked_task_id = :taskId", nativeQuery = true)
+    void deleteIncomingLinks(@Param("taskId") Long taskId);
 }

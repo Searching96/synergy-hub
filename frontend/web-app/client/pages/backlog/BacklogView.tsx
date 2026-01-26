@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { DragDropContext, DropResult, Droppable } from "@hello-pangea/dnd";
 import { useProject } from "@/context/ProjectContext";
 import { useAuth } from "@/context/AuthContext";
@@ -13,6 +13,7 @@ import { useCreateTask } from "@/hooks/useTasks";
 import { taskService } from "@/services/task.service";
 import { sprintService } from "@/services/sprint.service";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { useDeleteTask } from "@/hooks/useTasks";
 import BacklogTaskRow from "@/components/backlog/BacklogTaskRow";
 import EpicPanel from "@/components/backlog/EpicPanel";
 import EpicSelectDialog from "@/components/backlog/EpicSelectDialog";
@@ -67,6 +68,7 @@ export default function BacklogView() {
   const completeSprint = useCompleteSprint(projectId);
   const startSprint = useStartSprint(projectId);
   const createTask = useCreateTask();
+  const deleteTask = useDeleteTask();
   const queryClient = useQueryClient();
 
   const [createSprintOpen, setCreateSprintOpen] = useState(false);
@@ -88,6 +90,22 @@ export default function BacklogView() {
       // Silent fail - not critical
     }
   }, [isSprintCollapsed]);
+
+  const [isBacklogCollapsed, setIsBacklogCollapsed] = useState(() => {
+    try {
+      if (typeof window !== "undefined") {
+        return localStorage.getItem("backlogCollapsed") === "true";
+      }
+    } catch { }
+    return false;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("backlogCollapsed", isBacklogCollapsed.toString());
+    } catch { }
+  }, [isBacklogCollapsed]);
+
   const [startModalOpen, setStartModalOpen] = useState(false);
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [completeDestination, setCompleteDestination] = useState<"backlog" | "new">("backlog");
@@ -101,10 +119,30 @@ export default function BacklogView() {
   const [showIssueDetail, setShowIssueDetail] = useState(false);
   const [selectedIssueId, setSelectedIssueId] = useState<number | undefined>();
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const selectedTask = useMemo(
     () => tasks?.find((t) => t.id === selectedIssueId),
     [tasks, selectedIssueId]
   );
+
+  // If the URL includes ?selectedIssue=123, select that issue when possible
+  useEffect(() => {
+    const sel = searchParams.get("selectedIssue");
+    if (!sel) return;
+    const id = parseInt(sel, 10);
+    if (!isNaN(id)) {
+      setSelectedIssueId(id);
+      // showIssueDetail will be set when the task exists (see effect below)
+    }
+  }, [searchParams]);
+
+  // When tasks load and a selectedIssueId is set, open the detail panel
+  useEffect(() => {
+    if (selectedIssueId && selectedTask) {
+      setShowIssueDetail(true);
+    }
+  }, [selectedIssueId, selectedTask]);
 
   // Epic selection dialog state
   const [epicSelectOpen, setEpicSelectOpen] = useState(false);
@@ -182,10 +220,15 @@ export default function BacklogView() {
 
   const { sprintTasks, backlogTasks } = useMemo(() => {
     if (!tasks) return { sprintTasks: [], backlogTasks: [] };
-    const activeTasks = tasks.filter((task) => !task.archived);
+    const activeTasks = tasks.filter((task) => !task.archived && task.type !== "EPIC");
     const sprintId = currentSprint?.id;
+    // Normalize IDs to string to avoid mismatches between number vs string IDs
+    const sprintIdStr = sprintId == null ? undefined : String(sprintId);
     return {
-      sprintTasks: activeTasks.filter((task) => task.sprintId === sprintId),
+      sprintTasks: activeTasks.filter((task) => {
+        if (!sprintIdStr) return false;
+        return String(task.sprintId) === sprintIdStr;
+      }),
       backlogTasks: activeTasks.filter((task) => !task.sprintId),
     };
   }, [tasks, currentSprint?.id]);
@@ -245,6 +288,19 @@ export default function BacklogView() {
 
     console.log("DnD: Attempting mutation", { taskId, targetSprintId });
     try {
+      // Check if the task is a story
+      const task = tasks.find((t) => t.id === taskId);
+      if (task?.type === "STORY") {
+        console.log("DnD: Task is a story, moving associated tasks");
+        const associatedTasks = tasks.filter((t) => t.parentTaskId === taskId);
+
+        // Move all associated tasks
+        for (const subtask of associatedTasks) {
+          await moveTask.mutateAsync({ taskId: subtask.id, sprintId: targetSprintId });
+        }
+      }
+
+      // Move the main task (story or individual task)
       await moveTask.mutateAsync({ taskId, sprintId: targetSprintId });
       console.log("DnD: Mutation success");
       toast.success(targetSprintId ? "Task moved to sprint" : "Task moved to backlog");
@@ -273,6 +329,16 @@ export default function BacklogView() {
     } catch (err: any) {
       const message = err?.response?.data?.error || err?.response?.data?.message || "Failed to update assignee";
       toast.error(message);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: number) => {
+    if (window.confirm("Are you sure you want to delete this task? This action cannot be undone.")) {
+      try {
+        await deleteTask.mutateAsync(taskId);
+      } catch {
+        // notification handled in mutation
+      }
     }
   };
 
@@ -469,7 +535,7 @@ export default function BacklogView() {
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           <DragDropContext onDragEnd={handleDragEnd}>
             {/* Sprint Container */}
-            <section className="border-b border-gray-200 flex-1 min-h-0 flex flex-col overflow-hidden">
+            <section className={`border-b border-gray-200 transition-all ${isSprintCollapsed ? "flex-none" : "flex-1 min-h-0"} flex flex-col overflow-hidden`}>
               {/* Sprint Header */}
               <header
                 className="flex items-center justify-between px-4 py-3 bg-white border-b cursor-pointer hover:bg-gray-50 transition-colors flex-shrink-0"
@@ -506,7 +572,7 @@ export default function BacklogView() {
                   <span className="text-xs px-2 py-1 bg-gray-100 rounded border text-gray-600 font-medium">
                     {sprintTasks.length} {sprintTasks.length === 1 ? "issue" : "issues"}
                   </span>
-                  {currentSprint && currentSprint.status !== "ACTIVE" && (
+                  {currentSprint && currentSprint.status !== "ACTIVE" && currentSprint.status !== "COMPLETED" && (
                     <Button
                       size="sm"
                       variant="default"
@@ -514,7 +580,7 @@ export default function BacklogView() {
                         e.stopPropagation();
                         setStartModalOpen(true);
                       }}
-                      disabled={!isAdmin || isProjectArchived || sprintTasks.length === 0}
+                      disabled={isProjectArchived || sprintTasks.length === 0}
                       className="ml-2"
                     >
                       <Play className="h-4 w-4 mr-2" />
@@ -529,7 +595,7 @@ export default function BacklogView() {
                         e.stopPropagation();
                         setCompleteModalOpen(true);
                       }}
-                      disabled={!isAdmin || isProjectArchived}
+                      disabled={isProjectArchived}
                       className="ml-2"
                     >
                       <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -575,6 +641,7 @@ export default function BacklogView() {
                             onUpdateAssignee={handleUpdateAssignee}
                             isProjectArchived={isProjectArchived}
                             onAddEpic={handleAddEpic}
+                            onDelete={handleDeleteTask}
                           />
                         ))
                       )}
@@ -602,11 +669,18 @@ export default function BacklogView() {
             </section>
 
             {/* Backlog Container */}
-            <section className="border-b border-gray-200 flex-1 min-h-0 flex flex-col overflow-hidden">
+            <section className={`border-b border-gray-200 transition-all ${isBacklogCollapsed ? "flex-none" : "flex-1 min-h-0"} flex flex-col overflow-hidden`}>
               {/* Backlog Header */}
-              <header className="flex items-center justify-between px-4 py-3 bg-white border-b flex-shrink-0">
+              <header
+                className="flex items-center justify-between px-4 py-3 bg-white border-b flex-shrink-0 cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => setIsBacklogCollapsed((prev) => !prev)}
+              >
                 <div className="flex items-center gap-3">
-                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                  {isBacklogCollapsed ? (
+                    <ChevronRight className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-gray-500" />
+                  )}
                   <div>
                     <h2 className="text-sm font-bold uppercase tracking-wide">
                       Backlog ({backlogTasks.length} {backlogTasks.length === 1 ? "issue" : "issues"})
@@ -617,7 +691,10 @@ export default function BacklogView() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setCreateSprintOpen(true)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCreateSprintOpen(true);
+                  }}
                   disabled={isProjectArchived}
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -626,134 +703,141 @@ export default function BacklogView() {
               </header>
 
               {/* Backlog Body */}
-              <Droppable droppableId="backlog" type="TASK">
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`flex-1 min-h-0 overflow-y-auto p-4 transition-colors ${snapshot.isDraggingOver ? "bg-blue-50" : "bg-gray-50"
-                      }`}
-                  >
-                    {draftIssues.map((draft) => (
-                      <div
-                        key={draft.id}
-                        className="bg-white border rounded-lg p-3 mb-2 grid grid-cols-[auto_auto_1fr_auto_auto] gap-3 items-center"
-                      >
-                        <Select
-                          value={draft.type}
-                          onValueChange={(value) => {
-                            if (value === "MANAGE") {
-                              window.open("/settings/issue-types", "_blank");
-                              return;
-                            }
-                            updateDraftIssue(draft.id, { type: value as DraftIssue["type"] });
-                          }}
-                        >
-                          <SelectTrigger className="h-8 text-xs w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="STORY">Story</SelectItem>
-                            <SelectItem value="TASK">Task</SelectItem>
-                            <SelectItem value="BUG">Bug</SelectItem>
-                            <SelectItem value="MANAGE">Manage issue types</SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        <span className="text-sm font-medium text-muted-foreground">NEW</span>
-
-                        <Input
-                          autoFocus
-                          value={draft.title}
-                          onChange={(e) => updateDraftIssue(draft.id, { title: e.target.value })}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              handleDraftCreate(draft);
-                            }
-                            if (e.key === "Escape") {
-                              removeDraftIssue(draft.id);
-                            }
-                          }}
-                          placeholder="What needs to be done?"
-                          className="h-8 text-sm"
-                        />
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8"
-                          onClick={() => handleDraftCreate(draft)}
-                          disabled={createTask.isPending || draft.title.trim().length === 0}
-                        >
-                          Add
-                        </Button>
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8"
-                          onClick={() => removeDraftIssue(draft.id)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    ))}
-
-                    {backlogTasks.length === 0 && draftIssues.length === 0 ? (
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg min-h-[120px] flex items-center justify-center text-center p-6 bg-white">
-                        <p className="text-sm text-gray-500">
-                          Your backlog is empty
-                        </p>
-                      </div>
-                    ) : (
-                      backlogTasks.map((task, index) => (
+              {!isBacklogCollapsed && (
+                <Droppable droppableId="backlog" type="TASK">
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`flex-1 min-h-0 overflow-y-auto p-4 transition-colors ${snapshot.isDraggingOver ? "bg-blue-50" : "bg-gray-50"
+                        }`}
+                    >
+                      {draftIssues.map((draft) => (
                         <div
-                          key={task.id}
-                          className=""
+                          key={draft.id}
+                          className="bg-white border rounded-lg p-3 mb-2 grid grid-cols-[auto_auto_1fr_auto_auto] gap-3 items-center"
                         >
-                          <BacklogTaskRow
-                            task={task}
-                            index={index}
-                            projectKey={projectKey}
-                            members={members}
-                            onUpdateStoryPoints={handleUpdateStoryPoints}
-                            onUpdateAssignee={handleUpdateAssignee}
-                            isProjectArchived={isProjectArchived}
-                            onClick={() => {
-                              setSelectedIssueId(task.id);
-                              setShowIssueDetail(true);
+                          <Select
+                            value={draft.type}
+                            onValueChange={(value) => {
+                              if (value === "MANAGE") {
+                                window.open("/settings/issue-types", "_blank");
+                                return;
+                              }
+                              updateDraftIssue(draft.id, { type: value as DraftIssue["type"] });
                             }}
-                            onAddEpic={handleAddEpic}
-                          />
-                        </div>
-                      ))
-                    )}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
+                          >
+                            <SelectTrigger className="h-8 text-xs w-24">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="STORY">Story</SelectItem>
+                              <SelectItem value="TASK">Task</SelectItem>
+                              <SelectItem value="BUG">Bug</SelectItem>
+                              <SelectItem value="MANAGE">Manage issue types</SelectItem>
+                            </SelectContent>
+                          </Select>
 
-              {/* Backlog Footer */}
-              <div className="px-4 py-3 border-t bg-white flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-gray-600 hover:text-gray-900"
-                    disabled={isProjectArchived}
-                    onClick={addDraftIssue}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create issue
-                  </Button>
+                          <span className="text-sm font-medium text-muted-foreground">NEW</span>
+
+                          <Input
+                            autoFocus
+                            value={draft.title}
+                            onChange={(e) => updateDraftIssue(draft.id, { title: e.target.value })}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleDraftCreate(draft);
+                              }
+                              if (e.key === "Escape") {
+                                removeDraftIssue(draft.id);
+                              }
+                            }}
+                            placeholder="What needs to be done?"
+                            className="h-8 text-sm"
+                          />
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => handleDraftCreate(draft)}
+                            disabled={createTask.isPending || draft.title.trim().length === 0}
+                          >
+                            Add
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => removeDraftIssue(draft.id)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      ))}
+
+                      {backlogTasks.length === 0 && draftIssues.length === 0 ? (
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg min-h-[120px] flex items-center justify-center text-center p-6 bg-white">
+                          <p className="text-sm text-gray-500">
+                            Your backlog is empty
+                          </p>
+                        </div>
+                      ) : (
+                        backlogTasks.map((task, index) => (
+                          <div
+                            key={task.id}
+                            className=""
+                          >
+                            <BacklogTaskRow
+                              task={task}
+                              index={index}
+                              projectKey={projectKey}
+                              members={members}
+                              onUpdateStoryPoints={handleUpdateStoryPoints}
+                              onUpdateAssignee={handleUpdateAssignee}
+                              isProjectArchived={isProjectArchived}
+                              onClick={() => {
+                                // select issue and sync to board URL
+                                setSelectedIssueId(task.id);
+                                const url = `/projects/${projectId}/board?selectedIssue=${task.id}`;
+                                window.history.replaceState({}, '', url);
+                                setShowIssueDetail(true);
+                              }}
+                              onAddEpic={handleAddEpic}
+                              onDelete={handleDeleteTask}
+                            />
+                          </div>
+                        ))
+                      )}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              )}
+
+              {/* Backlog Footer - Only when expanded */}
+              {!isBacklogCollapsed && (
+                <div className="px-4 py-3 border-t bg-white flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-600 hover:text-gray-900"
+                      disabled={isProjectArchived}
+                      onClick={addDraftIssue}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create issue
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </section>
           </DragDropContext>
         </div>
 
-        {/* Issue Detail Panel - Right Column (Collapsible) */}
         {showIssueDetail && selectedIssueId && selectedTask && (
           <IssueDetailPanel
             taskId={selectedIssueId}
@@ -763,9 +847,17 @@ export default function BacklogView() {
             title={selectedTask.title || "No Title"}
             status={selectedTask.status || "TO_DO"}
             description={selectedTask.description || ""}
+            onTaskChange={(newTaskId) => {
+              // Switch to the new task and update board URL
+              setSelectedIssueId(newTaskId);
+              const url = `/projects/${projectId}/board?selectedIssue=${newTaskId}`;
+              window.history.replaceState({}, '', url);
+            }}
             onClose={() => {
               setShowIssueDetail(false);
               setSelectedIssueId(undefined);
+              const url = `/projects/${projectId}/board`;
+              window.history.replaceState({}, '', url);
             }}
           />
         )}

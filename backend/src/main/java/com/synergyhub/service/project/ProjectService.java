@@ -88,6 +88,13 @@ public class ProjectService {
         membershipService.updateMemberRole(project, userId, request.getRole(), currentUser, ipAddress);
     }
 
+    public ProjectResponse assignTeamToProject(Long projectId, Long teamId, User currentUser, String ipAddress) {
+        Project project = getProjectById(projectId);
+        projectSecurity.requireLeadOrAdmin(project, currentUser);
+        Project updated = lifecycleService.assignTeamToProject(project, teamId, currentUser, ipAddress);
+        return projectMapper.toProjectResponse(updated);
+    }
+
     @Transactional(readOnly = true)
     public ProjectResponse getProject(Long projectId, User currentUser) {
         Project project = getProjectById(projectId);

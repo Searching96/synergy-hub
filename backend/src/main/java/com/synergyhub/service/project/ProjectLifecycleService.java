@@ -10,7 +10,10 @@ import com.synergyhub.events.project.ProjectArchivedEvent;
 import com.synergyhub.events.project.ProjectCreatedEvent;
 import com.synergyhub.events.project.ProjectUpdatedEvent;
 import com.synergyhub.exception.ProjectNameAlreadyExistsException;
+import com.synergyhub.domain.entity.Team;
+import com.synergyhub.exception.ResourceNotFoundException;
 import com.synergyhub.repository.ProjectRepository;
+import com.synergyhub.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -21,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProjectLifecycleService {
 
     private final ProjectRepository projectRepository;
+    private final TeamRepository teamRepository;
     private final ProjectMembershipService membershipService;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -37,7 +41,17 @@ public class ProjectLifecycleService {
         project.setProjectLead(owner);
         project.setStatus(ProjectStatus.ACTIVE);
         project.setStartDate(request.getStartDate());
+        project.setStartDate(request.getStartDate());
         project.setEndDate(request.getEndDate());
+
+        if (request.getTeamId() != null) {
+            Team team = teamRepository.findById(request.getTeamId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Team", "id", request.getTeamId()));
+            if (!team.getOrganization().getId().equals(owner.getOrganization().getId())) {
+                throw new IllegalArgumentException("Team does not belong to the same organization");
+            }
+            project.setTeam(team);
+        }
 
         Project savedProject = projectRepository.save(project);
 
@@ -62,7 +76,17 @@ public class ProjectLifecycleService {
         if (request.getDescription() != null) project.setDescription(request.getDescription());
         if (request.getStatus() != null) project.setStatus(request.getStatus());
         if (request.getStartDate() != null) project.setStartDate(request.getStartDate());
+        if (request.getStartDate() != null) project.setStartDate(request.getStartDate());
         if (request.getEndDate() != null) project.setEndDate(request.getEndDate());
+
+        if (request.getTeamId() != null) {
+            Team team = teamRepository.findById(request.getTeamId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Team", "id", request.getTeamId()));
+            if (!team.getOrganization().getId().equals(project.getOrganization().getId())) {
+                throw new IllegalArgumentException("Team does not belong to the same organization");
+            }
+            project.setTeam(team);
+        }
 
         Project updated = projectRepository.save(project);
         
@@ -88,6 +112,22 @@ public class ProjectLifecycleService {
         
         eventPublisher.publishEvent(new ProjectUpdatedEvent(unarchived, actor, ipAddress));
         return unarchived;
+    }
+
+    @Transactional
+    public Project assignTeamToProject(Project project, Long teamId, User actor, String ipAddress) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new ResourceNotFoundException("Team", "id", teamId));
+        
+        if (!team.getOrganization().getId().equals(project.getOrganization().getId())) {
+             throw new IllegalArgumentException("Team does not belong to the same organization");
+        }
+        
+        project.setTeam(team);
+        Project updated = projectRepository.save(project);
+        
+        eventPublisher.publishEvent(new ProjectUpdatedEvent(updated, actor, ipAddress));
+        return updated;
     }
 
     @Transactional
